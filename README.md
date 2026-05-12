@@ -107,3 +107,32 @@ La base de datos sigue un modelo fuertemente relacional. *Nota arquitectónica: 
 ## 📂 Estructura de Carpetas Recomendada (Clean Architecture)
 
 Para que el equipo de trabajo o cualquier agente de IA entienda el código, se recomienda la siguiente estructura basada en *Clean Architecture* orientada a Flutter:
+[file-tag: README.md]
+
+```text
+lib/
+│
+├── core/                   # Archivos compartidos, utilidades y configuración
+│   ├── constants/          # Constantes (colores, arrays musicales de transposición)
+│   ├── network/            # Configuración de mDNS y discovery de red
+│   └── database/           # Configuración de SQLite y migraciones
+│
+├── protos/                 # Definiciones de gRPC (.proto) 
+│   ├── hymn_control.proto  # Contratos de los mensajes LAN
+│   └── generated/          # Código Dart autogenerado por protoc
+│
+├── data/                   # Capa de datos
+│   ├── models/             # Modelos de SQLite (HimnoModel, UsuarioModel...)
+│   ├── datasources/        # Consultas crudas a SQLite y llamadas gRPC
+│   └── repositories/       # Implementación de los repositorios
+│
+├── domain/                 # Lógica de negocio pura (independiente del framework)
+│   ├── entities/           # Entidades (Himno, ArregloMusical)
+│   ├── usecases/           # Casos de uso (ej. TransposeChordsUseCase, CreateForkUseCase)
+│   └── repositories/       # Interfaces de repositorios
+│
+└── presentation/           # Capa visual (Flutter UI)
+    ├── app_display/        # UI específica para la PC / TV (Visualización)
+    ├── app_controller/     # UI específica para el Celular (Control Remoto)
+    ├── shared_widgets/     # Widgets comunes (ej. renderizador de ChordPro)
+    └── state_management/   # Gestores de estado (Riverpod, Bloc, o Provider)
