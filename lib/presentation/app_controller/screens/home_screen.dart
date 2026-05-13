@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   HymnFilter _selectedFilter = HymnFilter.todos;
   bool _isConnected = false; // Estado de conexión (placeholder)
+  String _searchQuery = '';
 
   // Lista de himnos de ejemplo (placeholder)
   final List<HymnModel> _himnos = const [
@@ -74,6 +75,33 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Lista filtrada de himnos según búsqueda y filtro seleccionado
+  List<HymnModel> get _filteredHimnos {
+    return _himnos.where((himno) {
+      // Filtrar por texto de búsqueda
+      final matchesSearch = _searchQuery.isEmpty ||
+          himno.titulo.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          himno.numero.contains(_searchQuery);
+
+      // Filtrar por categoría
+      bool matchesFilter = true;
+      switch (_selectedFilter) {
+        case HymnFilter.oficiales:
+          matchesFilter = himno.esOficial;
+          break;
+        case HymnFilter.inspiradas:
+          matchesFilter = !himno.esOficial;
+          break;
+        case HymnFilter.todos:
+        case HymnFilter.porCategoria:
+          matchesFilter = true;
+          break;
+      }
+
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -109,10 +137,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: HymnSearchBar(
               controller: _searchController,
               onChanged: (value) {
-                setState(() {});
+                setState(() {
+                  _searchQuery = value;
+                });
               },
               onClear: () {
-                setState(() {});
+                setState(() {
+                  _searchQuery = '';
+                });
               },
             ),
           ),
@@ -153,32 +185,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Lista de himnos
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _himnos.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final himno = _himnos[index];
-                // Filtrar según selección
-                if (_selectedFilter == HymnFilter.oficiales && !himno.esOficial) {
-                  return const SizedBox.shrink();
-                }
-                if (_selectedFilter == HymnFilter.inspiradas && himno.esOficial) {
-                  return const SizedBox.shrink();
-                }
-                return HymnCard(
-                  himno: himno,
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/hymn-detail',
-                      arguments: himno,
-                    );
-                  },
-                );
-              },
-            ),
+            child: _filteredHimnos.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 64,
+                          color: colorScheme.outline,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No se encontraron himnos',
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _filteredHimnos.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final himno = _filteredHimnos[index];
+                      return HymnCard(
+                        himno: himno,
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/hymn-detail',
+                            arguments: himno,
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
