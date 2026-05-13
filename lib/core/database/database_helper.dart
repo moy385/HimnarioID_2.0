@@ -163,6 +163,35 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_estrofa_arreglo ON Estrofa_Arreglo(arreglo_musical_id, orden);');
     await db.execute('CREATE INDEX idx_pista_himno ON Pista_Audio(himno_id);');
     await db.execute('CREATE INDEX idx_historial_timestamp ON Historial_Reproduccion(timestamp DESC);');
+    await db.execute('CREATE INDEX idx_himno_activo ON Himno(activo);');
+
+    // Crear vistas
+    await db.execute('''
+      CREATE VIEW IF NOT EXISTS v_himno_resumen AS
+      SELECT
+        h.id,
+        h.titulo_principal,
+        h.numero_oficial,
+        h.tipo,
+        h.activo,
+        vp.pais,
+        vp.tonalidad_original
+      FROM Himno h
+      LEFT JOIN Version_Pais vp ON vp.himno_id = h.id AND vp.activo = 1
+      ORDER BY h.numero_oficial;
+    ''');
+
+    await db.execute('''
+      CREATE VIEW IF NOT EXISTS v_himno_estrofas AS
+      SELECT
+        vp.himno_id,
+        vp.id AS version_pais_id,
+        COUNT(e.id) AS total_estrofas,
+        SUM(CASE WHEN e.tipo = 'Coro' THEN 1 ELSE 0 END) AS total_coros
+      FROM Version_Pais vp
+      LEFT JOIN Estrofa e ON e.version_pais_id = vp.id
+      GROUP BY vp.himno_id, vp.id;
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
