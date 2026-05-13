@@ -1,4 +1,5 @@
 import 'package:logging/logging.dart';
+import '../core/database/database_helper.dart';
 
 /// Inicializador de la aplicación.
 /// Se encarga de configurar todos los servicios antes de que Flutter renderice.
@@ -31,8 +32,13 @@ class AppInitializer {
   }
 
   static Future<void> _initDatabase() async {
-    // TODO: Implementar inicialización de Drift/SQLite
-    _log.info('Base de datos: Pendiente de implementación');
+    try {
+      final db = await DatabaseHelper.instance.database;
+      _log.info('Base de datos inicializada correctamente: ${db.path}');
+    } catch (e) {
+      _log.severe('Error al inicializar la base de datos: $e');
+      rethrow;
+    }
   }
 
   static Future<void> _initPlatform() async {
