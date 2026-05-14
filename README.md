@@ -51,83 +51,93 @@ Este switch inyecta la lógica de la plataforma correspondiente, forzando a la a
 
 ---
 
-## 🗄️ Estructura de Base de Datos (SQLite)
+# 🗄️ Esquema de Base de Datos Definitivo (Himnario 2.0)
 
-La base de datos sigue un modelo fuertemente relacional. *Nota arquitectónica: La tabla de usuarios debe llamarse estrictamente `Usuario`.*
+Este documento detalla la estructura relacional de la base de datos, optimizada tanto para SQLite (entorno local embebido) como para SQL Server (entorno web en la nube).
 
-### Tablas Maestras
-* **`Himno`**
-  * `id` (PK, Integer)
-  * `titulo_principal` (Text)
-  * `numero_oficial` (Integer, Nullable)
-  * `tipo` (Integer: 1=Oficial, 2=Inspirada, 3=Convención)
-* **`Version_Pais`**
-  * `id` (PK, Integer)
-  * `himno_id` (FK -> Himno.id)
-  * `pais` (Text)
-  * `tonalidad_original` (Text, ej. "G")
-* **`Estrofa`** (Oficial)
-  * `id` (PK, Integer)
-  * `version_pais_id` (FK -> Version_Pais.id)
-  * `tipo` (Text: Coro, Estrofa, Puente)
-  * `orden` (Integer)
-  * `contenido` (Text, formato ChordPro)
+## 📖 Tablas Maestras
 
-### Tablas de Categorización (N:M)
-* **`Categoria`**
-  * `id` (PK, Integer)
-  * `nombre` (Text)
-* **`Himno_Categoria`**
-  * `himno_id` (FK -> Himno.id)
-  * `categoria_id` (FK -> Categoria.id)
+### `Himno`
+El registro principal de cada alabanza.
+* `id` (PK, Integer)
+* `titulo_principal` (Text)
+* `numero_oficial` (Integer, Nullable): Número en el himnario oficial (si aplica).
+* `tipo` (Integer): 1 = Oficial, 2 = Inspirada, 3 = Convención.
 
-### Sistema de Arreglos Personalizados (Forks) y Auditoría
-* **`Usuario`**
-  * `id` (PK, Integer)
-  * `nombre` (Text)
-  * `rol` (Text: Admin, Musico, Visualizador)
-* **`Arreglo_Musical`**
-  * `id` (PK, Integer)
-  * `version_pais_id` (FK -> Version_Pais.id)
-  * `usuario_id` (FK -> Usuario.id)
-  * `nombre_arreglo` (Text)
-  * `tonalidad_base` (Text)
-* **`Estrofa_Arreglo`** (Personalizada)
-  * `id` (PK, Integer)
-  * `arreglo_musical_id` (FK -> Arreglo_Musical.id)
-  * `tipo` (Text)
-  * `orden` (Integer)
-  * `contenido` (Text, formato ChordPro con las ediciones del músico)
+### `Version_Pais`
+Permite manejar variaciones de letra y tonalidad base según la región.
+* `id` (PK, Integer)
+* `himno_id` (FK -> Himno.id)
+* `pais` (Text): Ej. "El Salvador", "México", "General".
+* `tonalidad_original` (Text): Ej. "G", "Am".
 
-### Multimedia
-* **`Pista_Audio`**
-  * `id` (PK, Integer)
-  * `himno_id` (FK -> Himno.id)
-  * `ruta_archivo` (Text, ruta local)
-  * `descripcion` (Text)
-  * `usuario_donante_id` (FK -> Usuario.id)
+### `Estrofa` (Oficial)
+Contiene la letra original e inmutable.
+* `id` (PK, Integer)
+* `version_pais_id` (FK -> Version_Pais.id)
+* `tipo` (Text): Coro, Estrofa, Puente.
+* `orden` (Integer): Secuencia de aparición (1, 2, 3...).
+* `contenido` (Text): Letra con formato ChordPro (Ej. `[G]Dios es amor`).
 
--- NUEVA TABLA: Gestión de fondos (Imágenes y Videos)
-CREATE TABLE Fondo_Pantalla (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    tipo TEXT NOT NULL, -- Ej: 'imagen' o 'video'
-    ruta_archivo TEXT NOT NULL, -- Ruta local donde se guardó el archivo
-    es_predeterminado INTEGER DEFAULT 0 -- 1 si es el fondo por defecto (Boolean en SQLite)
-);
+---
 
--- Modificación en Tabla Usuario (Para soportar el login del candado)
-CREATE TABLE Usuario (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE, -- NUEVO: Para el login (ej: 'admin')
-    password_hash TEXT NOT NULL,   -- NUEVO: Nunca guardes 'admin123' en texto plano
-    nombre TEXT NOT NULL,
-    rol TEXT NOT NULL -- 'Admin', 'Musico'
-);
+## 🏷️ Tablas de Categorización (N:M)
 
--- DATO INICIAL (Seed) que debes ejecutar al crear la BD:
-INSERT INTO Usuario (username, password_hash, nombre, rol) 
-VALUES ('admin', 'hash_de_admin123', 'Administrador Principal', 'Admin');
+### `Categoria`
+* `id` (PK, Integer)
+* `nombre` (Text): Ej. "Adoración", "Avivamiento", "Santa Cena".
+
+### `Himno_Categoria`
+Tabla puente para la relación muchos a muchos.
+* `himno_id` (FK -> Himno.id)
+* `categoria_id` (FK -> Categoria.id)
+
+---
+
+## 🔐 Sistema de Arreglos Personalizados (Forks) y Administración
+
+### `Usuario`
+Gestión de acceso al backoffice y control de autoría de arreglos y pistas.
+* `id` (PK, Integer)
+* `username` (Text, UNIQUE): Credencial para el login (ej: 'admin').
+* `password_hash` (Text): Clave encriptada (Hash).
+* `nombre` (Text): Nombre a mostrar del usuario.
+* `rol` (Text): 'Admin', 'Musico', 'Visualizador'.
+
+### `Arreglo_Musical`
+Cabecera del "Fork" o versión alterada creada por un músico específico.
+* `id` (PK, Integer)
+* `version_pais_id` (FK -> Version_Pais.id): Apunta a la versión oficial base.
+* `usuario_id` (FK -> Usuario.id): Dueño del arreglo.
+* `nombre_arreglo` (Text): Ej. "Versión Acústica", "Tono bajado".
+* `tonalidad_base` (Text)
+
+### `Estrofa_Arreglo` (Personalizada)
+Las estrofas modificadas por el usuario, que se cargarán en lugar de las oficiales al activar el arreglo.
+* `id` (PK, Integer)
+* `arreglo_musical_id` (FK -> Arreglo_Musical.id)
+* `tipo` (Text)
+* `orden` (Integer)
+* `contenido` (Text): Formato ChordPro con las ediciones exclusivas del músico.
+
+---
+
+## 🎵 Multimedia y Apariencia
+
+### `Pista_Audio`
+* `id` (PK, Integer)
+* `himno_id` (FK -> Himno.id)
+* `ruta_archivo` (Text): Ruta local o URL de almacenamiento.
+* `descripcion` (Text): Ej. "Pista Acústica 120bpm".
+* `usuario_donante_id` (FK -> Usuario.id)
+
+### `Fondo_Pantalla`
+Gestión de fondos dinámicos utilizables durante el Modo Proyección.
+* `id` (PK, Integer)
+* `nombre` (Text): Ej. "Cielo Estrellado".
+* `tipo` (Text): 'imagen', 'video', 'color_solido'.
+* `ruta_archivo` (Text): Ruta local del asset multimedia.
+* `es_predeterminado` (Boolean/Integer): Indica si es el fondo a cargar por defecto (1 = Sí, 0 = No).
 
 ---
 
@@ -141,25 +151,40 @@ lib/
 │
 ├── core/                   # Archivos compartidos, utilidades y configuración
 │   ├── constants/          # Constantes (colores, arrays musicales de transposición)
-│   ├── network/            # Configuración de mDNS y discovery de red
-│   └── database/           # Configuración de SQLite y migraciones
+│   ├── network/            # Configuración de mDNS, WebSockets (SignalR)
+│   ├── database/           # Configuración de SQLite y migraciones
+│   └── window_manager/     # [NUEVO] Lógica para abrir la 2da ventana en PC (Desktop)
 │
 ├── protos/                 # Definiciones de gRPC (.proto) 
 │   ├── hymn_control.proto  # Contratos de los mensajes LAN
 │   └── generated/          # Código Dart autogenerado por protoc
 │
 ├── data/                   # Capa de datos
-│   ├── models/             # Modelos de SQLite (HimnoModel, UsuarioModel...)
-│   ├── datasources/        # Consultas crudas a SQLite y llamadas gRPC
+│   ├── models/             # Modelos de SQLite/JSON (HimnoModel, UsuarioModel...)
+│   ├── datasources/        # Consultas crudas a SQLite, llamadas gRPC y API Web
 │   └── repositories/       # Implementación de los repositorios
 │
 ├── domain/                 # Lógica de negocio pura (independiente del framework)
-│   ├── entities/           # Entidades (Himno, ArregloMusical)
-│   ├── usecases/           # Casos de uso (ej. TransposeChordsUseCase, CreateForkUseCase)
+│   ├── entities/           # Entidades (Himno, ArregloMusical, FondoPantalla)
+│   ├── usecases/           # Casos de uso (ej. TransposeChordsUseCase, LoginAdminUseCase)
 │   └── repositories/       # Interfaces de repositorios
 │
-└── presentation/           # Capa visual (Flutter UI)
-    ├── app_display/        # UI específica para la PC / TV (Visualización)
-    ├── app_controller/     # UI específica para el Celular (Control Remoto)
-    ├── shared_widgets/     # Widgets comunes (ej. renderizador de ChordPro)
-    └── state_management/   # Gestores de estado (Riverpod, Bloc, o Provider)
+└── presentation/           # Capa visual (Flutter UI) - [ACTUALIZADA PARA MODO DUAL]
+    │
+    ├── dual_mode_wrapper/  # [NUEVO] Wrapper principal y Switch (PC/Celular) para Dev
+    │
+    ├── views_personal/     # [EVOLUCIÓN] Antiguo app_controller
+    │   ├── dashboard/      # Buscador principal y filtros
+    │   └── hymn_scroll/    # Letra escrolleable, FAB dinámico y menús de músico
+    │
+    ├── views_projection/   # [EVOLUCIÓN] Antiguo app_display y control remoto
+    │   ├── controller/     # Panel minimalista del Emisor (Flechas, controles)
+    │   └── display/        # Fondo negro y recepción de estrofas (Receptor / 2da Ventana)
+    │
+    ├── views_admin/        # [NUEVO] El Backoffice (El Candado)
+    │   ├── login/          # Pantalla de validación admin
+    │   ├── crud_hymns/     # Creador/Editor de himnos con bloques ChordPro
+    │   └── crud_catalogs/  # ABM de Categorías, Países, Pistas y Fondos
+    │
+    ├── shared_widgets/     # Widgets comunes (renderizador de ChordPro, botones)
+    └── state_management/   # Gestores de estado (Riverpod/Provider)
