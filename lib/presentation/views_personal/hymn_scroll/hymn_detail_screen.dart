@@ -181,21 +181,24 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     HymnAppearanceState appearance,
   ) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Título
+        // Título centrado
         Text(
           himno.titulo,
-            style: textTheme.headlineSmall?.copyWith(
-              fontFamily: appearance.fontFamily,
-              color: appearance.textColor,
-              fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
-            ),
+          textAlign: TextAlign.center,
+          style: textTheme.headlineSmall?.copyWith(
+            fontFamily: appearance.fontFamily,
+            color: appearance.textColor,
+            fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
           ),
-          const SizedBox(height: 8),
-          // Etiquetas
+        ),
+        const SizedBox(height: 8),
+        // Etiquetas
         Wrap(
           spacing: 8,
+          runAlignment: WrapAlignment.center,
+          alignment: WrapAlignment.center,
           children: [
             Chip(
               label: Text(himno.categoria),
@@ -246,9 +249,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             : null,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Etiqueta de tipo de estrofa
+          // Etiqueta de tipo de estrofa (centrada)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -303,15 +306,16 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     final double chordFontSize = 14 * appearance.fontScale;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: parts.map((line) {
         if (!_showChords) {
-          // Sin acordes: mostrar solo texto plano
+          // Sin acordes: mostrar solo texto plano justificado
           final plainLine = line.replaceAll(chordRegex, '');
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Text(
               plainLine,
+              textAlign: TextAlign.justify,
               style: textTheme.bodyLarge?.copyWith(
                 fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
@@ -331,6 +335,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Text(
               line,
+              textAlign: TextAlign.justify,
               style: textTheme.bodyLarge?.copyWith(
                 fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
@@ -342,10 +347,11 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           );
         }
 
-        // Renderizar línea con acordes
+        // Renderizar línea con acordes justificada
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: RichText(
+            textAlign: TextAlign.justify,
             text: TextSpan(
               children: _parseChordsInLine(
                 line,
