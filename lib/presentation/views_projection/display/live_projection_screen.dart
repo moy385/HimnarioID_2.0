@@ -59,7 +59,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                   Text(
                     '#${liveState.hymn!.numero ?? liveState.hymn!.id}',
                     style: textTheme.displayLarge?.copyWith(
-                      fontFamily: appearance.presentationFontFamily,
+                      fontFamily: appearance.fontFamily,
                       color: colors.primary.withValues(alpha: 0.3),
                       fontWeight: FontWeight.bold,
                       fontSize: fontSize * 0.6,
@@ -71,7 +71,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                   Text(
                     liveState.hymn!.titulo,
                     style: textTheme.displayLarge?.copyWith(
-                      fontFamily: appearance.presentationFontFamily,
+                      fontFamily: appearance.fontFamily,
                       color: colors.primary,
                       fontSize: fontSize * 1.2,
                       fontWeight: FontWeight.bold,
@@ -105,10 +105,11 @@ class LiveProjectionScreen extends ConsumerWidget {
                         child: Text(
                           liveState.currentStanza?.contenido ?? '',
                           style: textTheme.bodyLarge?.copyWith(
-                            fontFamily: appearance.presentationFontFamily,
+                            fontFamily: appearance.fontFamily,
                             color: colors.primary,
                             fontSize: fontSize,
                             height: 1.8,
+                            fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
                           ),
                           textAlign: TextAlign.center,
                         ),

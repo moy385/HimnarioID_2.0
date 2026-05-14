@@ -186,14 +186,14 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         // Título
         Text(
           himno.titulo,
-          style: textTheme.headlineSmall?.copyWith(
-            fontFamily: appearance.fontFamily,
-            color: appearance.textColor,
-            fontWeight: FontWeight.bold,
+            style: textTheme.headlineSmall?.copyWith(
+              fontFamily: appearance.fontFamily,
+              color: appearance.textColor,
+              fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        // Etiquetas
+          const SizedBox(height: 8),
+          // Etiquetas
         Wrap(
           spacing: 8,
           children: [
@@ -317,6 +317,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
                 color: appearance.textColor,
                 fontSize: baseFontSize,
                 height: 1.6,
+                fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           );
@@ -335,6 +336,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
                 color: appearance.textColor,
                 fontSize: baseFontSize,
                 height: 1.6,
+                fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           );
@@ -381,6 +383,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               fontFamily: appearance.fontFamily,
               color: appearance.textColor,
               fontSize: baseFontSize,
+              fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         );
@@ -410,6 +413,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               fontFamily: appearance.fontFamily,
               color: appearance.textColor,
               fontSize: baseFontSize,
+              fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         );

@@ -359,15 +359,7 @@ void showBrushSheet(
                     ),
                     const SizedBox(height: 12),
 
-                    // -- Para lectura (modo personal) --
-                    Text(
-                      'Para lectura',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
@@ -375,49 +367,53 @@ void showBrushSheet(
                         _FontOption(
                           family: 'Merriweather',
                           label: 'Merriweather',
-                          previewText: 'Lectura',
+                          previewText: 'Texto',
                           isSelected: appearance.fontFamily == 'Merriweather',
                           onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather'),
                         ),
                         _FontOption(
                           family: 'Lora',
                           label: 'Lora',
-                          previewText: 'Lectura',
+                          previewText: 'Texto',
                           isSelected: appearance.fontFamily == 'Lora',
                           onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora'),
+                        ),
+                        _FontOption(
+                          family: 'Playfair Display',
+                          label: 'Playfair Display',
+                          previewText: 'Texto',
+                          isSelected: appearance.fontFamily == 'Playfair Display',
+                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display'),
+                        ),
+                        _FontOption(
+                          family: 'Cinzel',
+                          label: 'Cinzel',
+                          previewText: 'Texto',
+                          isSelected: appearance.fontFamily == 'Cinzel',
+                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // -- Para presentación (modo proyección) --
-                    Text(
-                      'Para presentación',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
+                    // ── Negritas ──
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'Negritas',
+                        style: textTheme.bodyLarge,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _FontOption(
-                          family: 'Playfair Display',
-                          label: 'Playfair Display',
-                          previewText: 'Proyección',
-                          isSelected: appearance.presentationFontFamily == 'Playfair Display',
-                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setPresentationFontFamily('Playfair Display'),
+                      subtitle: Text(
+                        'Aplicar negritas al texto del himno',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                        _FontOption(
-                          family: 'Cinzel',
-                          label: 'Cinzel',
-                          previewText: 'Proyección',
-                          isSelected: appearance.presentationFontFamily == 'Cinzel',
-                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setPresentationFontFamily('Cinzel'),
-                        ),
-                      ],
+                      ),
+                      value: appearance.isBold,
+                      onChanged: (bool value) {
+                        ref.read(hymnAppearanceProvider.notifier).setIsBold(value);
+                        setSheetState(() {});
+                      },
                     ),
                     const SizedBox(height: 24),
 

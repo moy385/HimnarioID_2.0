@@ -9,7 +9,7 @@ class HymnAppearanceState {
   final Color chordColor;
   final double fontScale;
   final String fontFamily;
-  final String presentationFontFamily;
+  final bool isBold;
 
   const HymnAppearanceState({
     this.bgColor = Colors.transparent,
@@ -17,7 +17,7 @@ class HymnAppearanceState {
     this.chordColor = const Color(0xFF6750A4),
     this.fontScale = 1.0,
     this.fontFamily = 'Merriweather',
-    this.presentationFontFamily = 'Playfair Display',
+    this.isBold = false,
   });
 
   HymnAppearanceState copyWith({
@@ -26,7 +26,7 @@ class HymnAppearanceState {
     Color? chordColor,
     double? fontScale,
     String? fontFamily,
-    String? presentationFontFamily,
+    bool? isBold,
   }) {
     return HymnAppearanceState(
       bgColor: bgColor ?? this.bgColor,
@@ -34,7 +34,7 @@ class HymnAppearanceState {
       chordColor: chordColor ?? this.chordColor,
       fontScale: fontScale ?? this.fontScale,
       fontFamily: fontFamily ?? this.fontFamily,
-      presentationFontFamily: presentationFontFamily ?? this.presentationFontFamily,
+      isBold: isBold ?? this.isBold,
     );
   }
 }
@@ -47,8 +47,8 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
   void setChordColor(Color color) => state = state.copyWith(chordColor: color);
   void setFontScale(double scale) => state = state.copyWith(fontScale: scale);
   void setFontFamily(String family) => state = state.copyWith(fontFamily: family);
-  void setPresentationFontFamily(String family) =>
-      state = state.copyWith(presentationFontFamily: family);
+  void setIsBold(bool value) => state = state.copyWith(isBold: value);
+  void toggleBold() => state = state.copyWith(isBold: !state.isBold);
   void reset() => state = const HymnAppearanceState();
 }
 
