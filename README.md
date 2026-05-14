@@ -107,6 +107,28 @@ La base de datos sigue un modelo fuertemente relacional. *Nota arquitectónica: 
   * `descripcion` (Text)
   * `usuario_donante_id` (FK -> Usuario.id)
 
+-- NUEVA TABLA: Gestión de fondos (Imágenes y Videos)
+CREATE TABLE Fondo_Pantalla (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL, -- Ej: 'imagen' o 'video'
+    ruta_archivo TEXT NOT NULL, -- Ruta local donde se guardó el archivo
+    es_predeterminado INTEGER DEFAULT 0 -- 1 si es el fondo por defecto (Boolean en SQLite)
+);
+
+-- Modificación en Tabla Usuario (Para soportar el login del candado)
+CREATE TABLE Usuario (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE, -- NUEVO: Para el login (ej: 'admin')
+    password_hash TEXT NOT NULL,   -- NUEVO: Nunca guardes 'admin123' en texto plano
+    nombre TEXT NOT NULL,
+    rol TEXT NOT NULL -- 'Admin', 'Musico'
+);
+
+-- DATO INICIAL (Seed) que debes ejecutar al crear la BD:
+INSERT INTO Usuario (username, password_hash, nombre, rol) 
+VALUES ('admin', 'hash_de_admin123', 'Administrador Principal', 'Admin');
+
 ---
 
 ## 📂 Estructura de Carpetas Recomendada (Clean Architecture)
