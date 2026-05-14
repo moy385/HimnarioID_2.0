@@ -251,21 +251,17 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Etiqueta de tipo de estrofa (centrada)
+          // Etiqueta de tipo de estrofa (gris con texto blanco)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: isChorus
-                  ? appearance.chordColor
-                  : colorScheme.surfaceContainerHighest,
+              color: Colors.grey.shade600,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              estrofa.tipo.value.toUpperCase(),
+              '${estrofa.tipo.value.toUpperCase()} ${estrofa.orden}',
               style: textTheme.labelSmall?.copyWith(
-                color: isChorus
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurfaceVariant,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
