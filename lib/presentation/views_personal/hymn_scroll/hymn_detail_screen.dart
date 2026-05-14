@@ -669,11 +669,24 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     // Si se seleccionó un himno (distinto del actual), navegar a su detalle
     if (result != null && result > 0 && result != widget.himno.id) {
       if (!mounted) return;
-      Navigator.pushReplacementNamed(
-        context,
-        '/hymn-detail',
-        arguments: result,
-      );
+      // Buscar el objeto Himno completo desde el repositorio
+      try {
+        final himno = await ref.read(hymnRepositoryProvider).getHymnById(result);
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/hymn-detail',
+            arguments: himno,
+          );
+        }
+      } catch (e) {
+        HymnDetailScreen._log.warning('Error al cargar himno desde lupa: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al abrir el himno')),
+          );
+        }
+      }
     }
   }
 }

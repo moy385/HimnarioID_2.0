@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -255,5 +253,30 @@ class DatabaseHelper {
         );
       ''');
     }
+  }
+
+  /// Guarda un valor en la tabla Configuracion.
+  /// Si la clave ya existe, la actualiza.
+  Future<void> setConfig(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'Configuracion',
+      {'clave': key, 'valor': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Lee un valor de la tabla Configuracion.
+  /// Retorna `null` si la clave no existe.
+  Future<String?> getConfig(String key) async {
+    final db = await database;
+    final result = await db.query(
+      'Configuracion',
+      where: 'clave = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return result.first['valor'] as String;
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/database_helper.dart';
+
 /// Estado global de apariencia para el modo personal.
 /// Controla fondo, colores de texto/acordes y tamaño de fuente.
 class HymnAppearanceState {
@@ -40,19 +42,103 @@ class HymnAppearanceState {
 }
 
 class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
-  HymnAppearanceNotifier() : super(const HymnAppearanceState());
+  final DatabaseHelper _dbHelper;
 
-  void setBgColor(Color color) => state = state.copyWith(bgColor: color);
-  void setTextColor(Color color) => state = state.copyWith(textColor: color);
-  void setChordColor(Color color) => state = state.copyWith(chordColor: color);
-  void setFontScale(double scale) => state = state.copyWith(fontScale: scale);
-  void setFontFamily(String family) => state = state.copyWith(fontFamily: family);
-  void setIsBold(bool value) => state = state.copyWith(isBold: value);
-  void toggleBold() => state = state.copyWith(isBold: !state.isBold);
-  void reset() => state = const HymnAppearanceState();
+  HymnAppearanceNotifier(this._dbHelper) : super(const HymnAppearanceState()) {
+    _loadFromDb();
+  }
+
+  /// Carga las preferencias guardadas desde la BD
+  Future<void> _loadFromDb() async {
+    try {
+      final fontFamily = await _dbHelper.getConfig('font_family');
+      final isBold = await _dbHelper.getConfig('is_bold');
+      final bgColor = await _dbHelper.getConfig('bg_color');
+      final textColor = await _dbHelper.getConfig('text_color');
+      final chordColor = await _dbHelper.getConfig('chord_color');
+      final fontScale = await _dbHelper.getConfig('font_scale');
+
+      state = state.copyWith(
+        fontFamily: fontFamily ?? 'Merriweather',
+        isBold: isBold == 'true',
+        bgColor: bgColor != null ? _hexToColor(bgColor) : Colors.transparent,
+        textColor: textColor != null ? _hexToColor(textColor) : const Color(0xFF1C1B1F),
+        chordColor: chordColor != null ? _hexToColor(chordColor) : const Color(0xFF6750A4),
+        fontScale: fontScale != null ? double.tryParse(fontScale) ?? 1.0 : 1.0,
+      );
+    } catch (e) {
+      // Si falla la carga, usar valores por defecto
+    }
+  }
+
+  /// Guarda las preferencias actuales en la BD
+  Future<void> _saveToDb() async {
+    try {
+      await _dbHelper.setConfig('font_family', state.fontFamily);
+      await _dbHelper.setConfig('is_bold', state.isBold.toString());
+      await _dbHelper.setConfig('bg_color', _colorToHex(state.bgColor));
+      await _dbHelper.setConfig('text_color', _colorToHex(state.textColor));
+      await _dbHelper.setConfig('chord_color', _colorToHex(state.chordColor));
+      await _dbHelper.setConfig('font_scale', state.fontScale.toString());
+    } catch (e) {
+      // Silent fail en escritura
+    }
+  }
+
+  /// Convierte Color a string hex (ej: #FF6750A4)
+  String _colorToHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  }
+
+  /// Convierte string hex a Color
+  Color _hexToColor(String hex) {
+    hex = hex.replaceFirst('#', '');
+    return Color(int.parse(hex, radix: 16));
+  }
+
+  // ─── Setters (todos guardan después de cambiar) ───
+  void setBgColor(Color color) {
+    state = state.copyWith(bgColor: color);
+    _saveToDb();
+  }
+
+  void setTextColor(Color color) {
+    state = state.copyWith(textColor: color);
+    _saveToDb();
+  }
+
+  void setChordColor(Color color) {
+    state = state.copyWith(chordColor: color);
+    _saveToDb();
+  }
+
+  void setFontScale(double scale) {
+    state = state.copyWith(fontScale: scale);
+    _saveToDb();
+  }
+
+  void setFontFamily(String family) {
+    state = state.copyWith(fontFamily: family);
+    _saveToDb();
+  }
+
+  void setIsBold(bool value) {
+    state = state.copyWith(isBold: value);
+    _saveToDb();
+  }
+
+  void toggleBold() {
+    state = state.copyWith(isBold: !state.isBold);
+    _saveToDb();
+  }
+
+  void reset() {
+    state = const HymnAppearanceState();
+    _saveToDb();
+  }
 }
 
 final hymnAppearanceProvider =
     StateNotifierProvider<HymnAppearanceNotifier, HymnAppearanceState>((ref) {
-  return HymnAppearanceNotifier();
+  return HymnAppearanceNotifier(DatabaseHelper.instance);
 });
