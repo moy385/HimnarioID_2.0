@@ -17,5 +17,4 @@ analyzer:
     unused_import: error
   exclude:
     - "**/*.g.dart"
-    - "**/*.freezed.dart"
     - "lib/proto/generated/**"

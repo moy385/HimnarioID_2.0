@@ -28,40 +28,69 @@ class HymnSearchBar extends StatelessWidget {
           color: colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        style: TextStyle(
-          color: colorScheme.onSurface,
-        ),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-          ),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          suffixIcon: controller?.text.isNotEmpty == true
-              ? IconButton(
-                  icon: Icon(
-                    Icons.clear_rounded,
-                    color: colorScheme.onSurfaceVariant,
+      child: controller != null
+          ? ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller!,
+              builder: (context, value, child) {
+                final isNotEmpty = value.text.isNotEmpty;
+                return TextField(
+                  controller: controller,
+                  onChanged: onChanged,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
                   ),
-                  onPressed: () {
-                    controller?.clear();
-                    onClear?.call();
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
-        ),
-      ),
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    hintStyle: TextStyle(
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    suffixIcon: isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.clear_rounded,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onPressed: () {
+                              controller!.clear();
+                              onClear?.call();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                  ),
+                );
+              },
+            )
+          : TextField(
+              onChanged: onChanged,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+              ),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: TextStyle(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+              ),
+            ),
     );
   }
 }

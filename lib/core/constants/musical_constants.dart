@@ -8,18 +8,18 @@ class MusicalConstants {
   /// Arreglo circular de notas en orden cromático ascendente.
   /// Cada nota representa un semitono.
   static const List<String> chromaticScale = [
-    'C',  // 0
+    'C', // 0
     'C#', // 1
-    'D',  // 2
+    'D', // 2
     'D#', // 3
-    'E',  // 4
-    'F',  // 5
+    'E', // 4
+    'F', // 5
     'F#', // 6
-    'G',  // 7
+    'G', // 7
     'G#', // 8
-    'A',  // 9
+    'A', // 9
     'A#', // 10
-    'B',  // 11
+    'B', // 11
   ];
 
   /// Notas equivalentes en notación bemol (para mostrar al usuario)
@@ -39,14 +39,50 @@ class MusicalConstants {
 
   /// Acordes mayores para validación
   static const List<String> majorChords = [
-    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
-    'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
+    'C',
+    'C#',
+    'Db',
+    'D',
+    'D#',
+    'Eb',
+    'E',
+    'F',
+    'F#',
+    'Gb',
+    'G',
+    'G#',
+    'Ab',
+    'A',
+    'A#',
+    'Bb',
+    'B',
   ];
 
   /// Prefijos de acordes (menores, séptima, etc.)
   static const List<String> chordSuffixes = [
-    '', 'm', '7', 'm7', 'Maj7', 'maj7', 'dim', 'dim7',
-    'aug', 'sus', 'sus2', 'sus4', 'add9', '9', '11', '13',
-    '6', 'm6', '7sus4', '7b5', '7#5', 'm7b5', '°', 'ø',
+    '',
+    'm',
+    '7',
+    'm7',
+    'Maj7',
+    'maj7',
+    'dim',
+    'dim7',
+    'aug',
+    'sus',
+    'sus2',
+    'sus4',
+    'add9',
+    '9',
+    '11',
+    '13',
+    '6',
+    'm6',
+    '7sus4',
+    '7b5',
+    '7#5',
+    'm7b5',
+    '°',
+    'ø',
   ];
 }

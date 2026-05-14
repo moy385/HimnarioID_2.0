@@ -16,6 +16,9 @@ dependencies:
 
   # Base de datos local (SQLite)
   sqflite_common_ffi: ^2.3.7
+
+  # Criptografía (SHA256 para hashing de contraseñas)
+  crypto: ^3.0.0
   path_provider: ^2.1.0
   path: ^1.9.0
 
@@ -26,11 +29,18 @@ dependencies:
   freezed_annotation: ^2.4.0
   json_annotation: ^4.9.0
 
+  # Proto
+  protobuf: ^6.0.0
+
   # Audio
   audioplayers: ^6.6.0
 
   # UI Desktop
   window_manager: ^0.5.1
+  desktop_multi_window: ^0.3.0
+
+  # File Picker
+  file_picker: ^8.0.0
 
   # Utilidades
   uuid: ^4.4.0
@@ -54,3 +64,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/database/
+    - assets/audio/
+    - assets/images/backgrounds/

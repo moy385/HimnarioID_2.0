@@ -1,28 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../domain/entities/himno.dart';
 
-/// Modelo de datos para himnos (placeholder)
-class HymnModel {
-  final int id;
-  final String numero;
-  final String titulo;
-  final String categoria;
-  final String? primeraLinea;
-  final bool esOficial;
-
-  const HymnModel({
-    required this.id,
-    required this.numero,
-    required this.titulo,
-    required this.categoria,
-    this.primeraLinea,
-    this.esOficial = true,
-  });
-}
-
-/// Widget de tarjeta de himno para listas
-/// Compatible con tema claro y oscuro
+/// Widget de tarjeta de himno para listas.
+/// Recibe una entidad [Himno] del dominio.
+/// Compatible con tema claro y oscuro.
 class HymnCard extends StatelessWidget {
-  final HymnModel himno;
+  final Himno himno;
   final VoidCallback? onTap;
 
   const HymnCard({
@@ -62,7 +45,7 @@ class HymnCard extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  himno.numero,
+                  '${himno.numero ?? ''}',
                   style: textTheme.titleMedium?.copyWith(
                     color: colorScheme.onPrimaryContainer,
                     fontWeight: FontWeight.bold,

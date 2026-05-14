@@ -1,7 +1,8 @@
 import '../constants/musical_constants.dart';
 
 // ExpReg para extraer acordes de formato ChordPro: [G] [Am7] [C#m]
-final _chordPattern = RegExp(r'\[([A-G][#b]?[A-Ga-g0-9]*)\]');
+final _chordPattern =
+    RegExp(r'\[([A-G][#b]?[a-zA-Z0-9+#b]*(?:/[A-G][#b]?)?)\]');
 
 /// Transpone acordes en contenido ChordPro.
 ///
@@ -22,6 +23,8 @@ String transposeChordPro(String content, int semitones) {
 /// Transpone una nota individual aplicando el sufijo del acorde.
 ///
 /// [chord] - raíz del acorde con posible sufijo (ej: "Am7", "G", "C#m")
+/// También maneja acordes con bajo como "G/B" o "Am/C", transponiendo
+/// tanto la raíz como la nota del bajo.
 /// [semitones] - semitonos a mover
 String _transposeChord(String chord, int semitones) {
   // Extraer raíz (primera letra mayúscula + posible # o b)
@@ -29,10 +32,27 @@ String _transposeChord(String chord, int semitones) {
   if (rootMatch == null) return chord;
 
   final root = rootMatch.group(1)!;
-  final suffix = chord.substring(root.length);
+  String rest = chord.substring(root.length);
 
+  // Detectar y extraer nota del bajo (ej: "/B", "/C#", "/Bb")
+  String? bassNote;
+  final bassMatch = RegExp(r'/([A-G][#b]?)$').firstMatch(rest);
+  if (bassMatch != null) {
+    bassNote = bassMatch.group(1)!;
+    rest = rest.substring(0, rest.length - bassMatch.group(0)!.length);
+  }
+
+  // Transponer raíz
   final transposedRoot = _transposeRoot(root, semitones);
-  return '$transposedRoot$suffix';
+  String result = '$transposedRoot$rest';
+
+  // Transponer bajo si existe
+  if (bassNote != null) {
+    final transposedBass = _transposeRoot(bassNote, semitones);
+    result = '$result/$transposedBass';
+  }
+
+  return result;
 }
 
 /// Transpone la raíz del acorde en la escala cromática.

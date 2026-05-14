@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/auth_providers.dart';
+import 'crud_hymns/hymn_list_screen.dart';
+import 'crud_catalogs/catalog_panel_screen.dart';
+
+/// Pantalla principal del panel de administración con navegación tipo Drawer.
+///
+/// Muestra un [NavigationDrawer] estilo hamburger menu con las opciones:
+/// - Administrar Himnos
+/// - Catálogos
+/// - Cerrar sesión (como [ListTile] independiente)
+///
+/// El cuerpo cambia según la opción seleccionada en el drawer.
+/// Cuando no hay ninguna opción seleccionada (estado inicial) se muestra
+/// una pantalla de bienvenida.
+class AdminPanelScreen extends ConsumerStatefulWidget {
+  const AdminPanelScreen({super.key});
+
+  @override
+  ConsumerState<AdminPanelScreen> createState() => _AdminPanelScreenState();
+}
+
+class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
+  /// -1 = bienvenida, 0 = Himnos, 1 = Catálogos
+  int _selectedDrawerIndex = -1;
+
+  static const _titles = <String>[
+    'Panel de Administración',
+    'Administrar Himnos',
+    'Catálogos',
+  ];
+
+  String get _title => _titles[_selectedDrawerIndex + 1];
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_title),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
+            onPressed: () {
+              ref.read(authProvider.notifier).logout();
+              Navigator.of(context).pushReplacementNamed('/login');
+            },
+          ),
+        ],
+      ),
+      drawer: NavigationDrawer(
+        selectedIndex: _selectedDrawerIndex,
+        onDestinationSelected: (int index) {
+          setState(() => _selectedDrawerIndex = index);
+          Navigator.of(context).pop();
+        },
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(color: colorScheme.primaryContainer),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(
+                  Icons.admin_panel_settings,
+                  size: 40,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'HimnarioID Admin',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                Text(
+                  user?.nombre ?? 'Admin',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const NavigationDrawerDestination(
+            icon: Icon(Icons.edit_note_outlined),
+            selectedIcon: Icon(Icons.edit_note),
+            label: Text('Administrar Himnos'),
+          ),
+          const NavigationDrawerDestination(
+            icon: Icon(Icons.build_outlined),
+            selectedIcon: Icon(Icons.build),
+            label: Text('Catálogos'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Cerrar sesión'),
+            onTap: () {
+              ref.read(authProvider.notifier).logout();
+              Navigator.of(context).pushReplacementNamed('/login');
+            },
+          ),
+        ],
+      ),
+      body: _selectedDrawerIndex == -1 ? _buildWelcome(theme, colorScheme) : _buildScreen(),
+    );
+  }
+
+  Widget _buildWelcome(ThemeData theme, ColorScheme colorScheme) {
+    final user = ref.watch(currentUserProvider);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(
+            Icons.admin_panel_settings,
+            size: 64,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Bienvenido, ${user?.nombre ?? "Admin"}',
+            style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Selecciona una opción del menú',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScreen() {
+    switch (_selectedDrawerIndex) {
+      case 0:
+        return const HymnListScreen();
+      case 1:
+        return const CatalogPanelScreen();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+}

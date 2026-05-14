@@ -1,0 +1,268 @@
+import 'dart:async';
+
+import 'package:grpc/grpc.dart';
+import 'package:logging/logging.dart';
+
+import '../../../core/errors/exceptions.dart';
+import '../../../domain/repositories/control_repository.dart' as domain;
+import '../../../proto/generated/hymn_control.pbgrpc.dart';
+
+/// DataSource remoto para control del display vía gRPC.
+///
+/// Encapsula toda la comunicación con el servicio HymnControl del display.
+/// Usa los stubs generados a partir del archivo .proto.
+class GrpcControlDataSource {
+  static final _log = Logger('GrpcControlDataSource');
+
+  HymnControlClient? _client;
+  ClientChannel? _channel;
+  String? _connectedHost;
+  int? _connectedPort;
+
+  /// Dirección IP del host actualmente conectado, o null si no hay conexión.
+  String? get connectedHost => _connectedHost;
+
+  /// Puerto del host actualmente conectado, o null si no hay conexión.
+  int? get connectedPort => _connectedPort;
+
+  /// Indica si hay una conexión activa.
+  bool get isConnected => _client != null;
+
+  /// Establece conexión gRPC con un display remoto.
+  Future<void> connect(String host, int port) async {
+    try {
+      // Cerrar conexión previa si existe
+      await disconnect();
+
+      _channel = ClientChannel(
+        host,
+        port: port,
+        options: const ChannelOptions(
+          credentials: ChannelCredentials.insecure(),
+        ),
+      );
+
+      final client = HymnControlClient(_channel!);
+
+      // Realizar handshake para verificar conexión
+      final response = await client
+          .handshake(
+            HandshakeRequest(
+              clientName: 'HimnarioID Controller',
+              clientVersion: '2.0.0',
+              protocolVersion: 1,
+            ),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (!response.accepted) {
+        await disconnect();
+        throw const NetworkException(
+          'Handshake rechazado por el display',
+          statusCode: -1,
+        );
+      }
+
+      _client = client;
+      _connectedHost = host;
+      _connectedPort = port;
+
+      _log.info(
+        'Conectado a display: ${response.displayName} '
+        '(${response.serverName} v${response.serverVersion})',
+      );
+    } on NetworkException {
+      rethrow;
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC al conectar: $e');
+      await disconnect();
+      throw NetworkException(
+        'Error de conexión gRPC: ${e.message}',
+        statusCode: e.code,
+      );
+    } on TimeoutException {
+      _log.severe('Timeout al conectar con $host:$port');
+      await disconnect();
+      throw const NetworkException(
+        'Timeout de conexión: el display no respondió',
+        statusCode: -1,
+      );
+    } catch (e) {
+      _log.severe('Error inesperado al conectar: $e');
+      await disconnect();
+      throw NetworkException('Error al conectar: $e');
+    }
+  }
+
+  /// Cierra la conexión actual.
+  Future<void> disconnect() async {
+    _client = null;
+    await _channel?.shutdown();
+    _channel = null;
+    _connectedHost = null;
+    _connectedPort = null;
+    _log.info('Desconectado del display.');
+  }
+
+  /// Envía un comando genérico al display.
+  Future<CommandResponse> _sendCommand(CommandRequest request) async {
+    _ensureConnected();
+
+    try {
+      final response = await _client!.sendCommand(request);
+      if (!response.success) {
+        _log.warning('Comando rechazado: ${response.errorMessage}');
+      }
+      return response;
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC al enviar comando: $e');
+      throw NetworkException(
+        'Error al enviar comando: ${e.message}',
+        statusCode: e.code,
+      );
+    }
+  }
+
+  /// Envía comando para mostrar un himno específico.
+  Future<bool> sendShowHimno(int himnoId) async {
+    final response = await _sendCommand(
+      CommandRequest(
+        type: CommandType.JUMP_TO_HYMN,
+        hymnId: himnoId,
+      ),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para avanzar a la siguiente estrofa.
+  Future<bool> sendNextStanza() async {
+    final response = await _sendCommand(
+      CommandRequest(type: CommandType.NEXT_STANZA),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para retroceder a la estrofa anterior.
+  Future<bool> sendPrevStanza() async {
+    final response = await _sendCommand(
+      CommandRequest(type: CommandType.PREV_STANZA),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para ir a una estrofa específica.
+  Future<bool> sendGoToStanza(int index) async {
+    final response = await _sendCommand(
+      CommandRequest(
+        type: CommandType.GO_TO_STANZA,
+        stanzaIndex: index,
+      ),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para activar/desactivar blackout.
+  Future<bool> sendBlackout(bool active) async {
+    final response = await _sendCommand(
+      CommandRequest(
+        type: active ? CommandType.BLACKOUT : CommandType.CLEAR_BLACKOUT,
+      ),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para cambiar transposición.
+  Future<bool> sendTransposition(int semitones) async {
+    final response = await _sendCommand(
+      CommandRequest(
+        type: CommandType.SET_TRANSPOSITION,
+        semitones: semitones,
+      ),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para cambiar fondo.
+  Future<bool> sendSetBackground(String backgroundId) async {
+    final response = await _sendCommand(
+      CommandRequest(
+        type: CommandType.SET_BACKGROUND,
+        backgroundId: backgroundId,
+      ),
+    );
+    return response.success;
+  }
+
+  /// Envía comando para cambiar tamaño de fuente.
+  Future<bool> sendSetFontSize(double fontSize) async {
+    final response = await _sendCommand(
+      CommandRequest(
+        type: CommandType.SET_FONT_SIZE,
+        fontSize: fontSize,
+      ),
+    );
+    return response.success;
+  }
+
+  /// Obtiene el estado actual del display.
+  Future<domain.DisplayStatus> getStatus() async {
+    _ensureConnected();
+
+    try {
+      final status = await _client!.getStatus(Empty());
+      return domain.DisplayStatus(
+        currentHymnId: status.currentHymnId,
+        currentHymnTitle: status.currentHymnTitle,
+        currentStanzaIndex: status.currentStanzaIndex,
+        totalStanzas: status.totalStanzas,
+        transpositionSemitones: status.transpositionSemitones,
+        isBlackout: status.isBlackout,
+        currentBackgroundId: status.currentBackgroundId,
+        fontSize: status.fontSize,
+        displayName: status.displayName,
+      );
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC al obtener estado: $e');
+      throw NetworkException(
+        'Error al obtener estado: ${e.message}',
+        statusCode: e.code,
+      );
+    }
+  }
+
+  /// Stream de estado del display en tiempo real.
+  Stream<domain.DisplayStatus> watchStatus() {
+    _ensureConnected();
+
+    try {
+      final stream = _client!.watchStatus(Empty());
+
+      return stream.map(
+        (status) => domain.DisplayStatus(
+          currentHymnId: status.currentHymnId,
+          currentHymnTitle: status.currentHymnTitle,
+          currentStanzaIndex: status.currentStanzaIndex,
+          totalStanzas: status.totalStanzas,
+          transpositionSemitones: status.transpositionSemitones,
+          isBlackout: status.isBlackout,
+          currentBackgroundId: status.currentBackgroundId,
+          fontSize: status.fontSize,
+          displayName: status.displayName,
+        ),
+      );
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC en watchStatus: $e');
+      throw NetworkException(
+        'Error al iniciar stream de estado: ${e.message}',
+        statusCode: e.code,
+      );
+    }
+  }
+
+  /// Verifica que el cliente esté conectado.
+  void _ensureConnected() {
+    if (_client == null) {
+      throw const NetworkException('No hay conexión activa con el display');
+    }
+  }
+}

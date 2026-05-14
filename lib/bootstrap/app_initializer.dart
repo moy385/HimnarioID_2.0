@@ -1,14 +1,32 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show TargetPlatform, kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
+
 import '../core/database/database_helper.dart';
+import '../core/network/mdns_discovery.dart';
+import '../data/datasources/remote/grpc_display_server.dart';
+import '../presentation/views_personal/providers/hymn_providers.dart';
+import '../presentation/views_projection/providers/live_control_providers.dart';
 
 /// Inicializador de la aplicación.
 /// Se encarga de configurar todos los servicios antes de que Flutter renderice.
 class AppInitializer {
   static final _log = Logger('AppInitializer');
 
+  static GrpcDisplayServer? _displayServer;
+  static MdnsDiscovery? _mdnsDiscovery;
+
+  /// El servidor gRPC en ejecución (solo en modo Display).
+  static GrpcDisplayServer? get displayServer => _displayServer;
+
+  /// El servicio de descubrimiento mDNS (solo en modo Controlador).
+  static MdnsDiscovery? get mdnsDiscovery => _mdnsDiscovery;
+
   /// Inicializa todos los servicios necesarios para la app.
   /// Debe llamarse antes de runApp().
-  static Future<void> initialize() async {
+  static Future<void> initialize([ProviderContainer? container]) async {
     _log.info('Inicializando HimnarioID 2.0...');
 
     // 1. Configurar logging
@@ -26,7 +44,7 @@ class AppInitializer {
     await _initPlatform();
 
     // 4. Inicializar servicios de red (mDNS/gRPC)
-    await _initNetworkServices();
+    await _initNetworkServices(container);
 
     _log.info('Inicialización completada.');
   }
@@ -41,13 +59,140 @@ class AppInitializer {
     }
   }
 
+  static TargetPlatform? _platform;
+
+  /// Plataforma detectada (web, android, ios, linux, macos, windows).
+  static TargetPlatform? get platform => _platform;
+
   static Future<void> _initPlatform() async {
-    // TODO: Detectar si es web, desktop o mobile
-    _log.info('Plataforma: Pendiente de detección');
+    // `dart:io` (Platform) está protegido contra web con try/catch.
+    // En web las llamadas a Platform lanzan UnsupportedError en tiempo de
+    // ejecución, pero el import compila correctamente.
+    try {
+      if (kIsWeb) {
+        _log.info('Plataforma: Web (sin equivalente en TargetPlatform)');
+        return;
+      }
+      if (Platform.isAndroid) {
+        _platform = TargetPlatform.android;
+      } else if (Platform.isIOS) {
+        _platform = TargetPlatform.iOS;
+      } else if (Platform.isLinux) {
+        _platform = TargetPlatform.linux;
+      } else if (Platform.isMacOS) {
+        _platform = TargetPlatform.macOS;
+      } else if (Platform.isWindows) {
+        _platform = TargetPlatform.windows;
+      }
+      _log.info('Plataforma: $_platform');
+    } on UnsupportedError catch (e) {
+      _log.info('Platform no disponible en este entorno: $e');
+      _platform = null;
+    }
   }
 
-  static Future<void> _initNetworkServices() async {
-    // TODO: Inicializar mDNS y servidor/cliente gRPC
-    _log.info('Servicios de red: Pendiente de implementación');
+  /// Inicializa servicios de red.
+  ///
+  /// - En plataformas desktop (Linux/macOS/Windows): inicia el servidor gRPC
+  ///   para que el display reciba comandos de control remoto.
+  /// - En otras plataformas: inicia el descubrimiento mDNS para encontrar
+  ///   displays disponibles en la LAN.
+  static Future<void> _initNetworkServices([
+    ProviderContainer? container,
+  ]) async {
+    if (_platform == TargetPlatform.linux ||
+        _platform == TargetPlatform.macOS ||
+        _platform == TargetPlatform.windows) {
+      await _initDisplayServer(container);
+    } else {
+      await _initControllerDiscovery(container);
+    }
+  }
+
+  /// Inicia el servidor gRPC para modo Display.
+  static Future<void> _initDisplayServer([ProviderContainer? container]) async {
+    try {
+      _displayServer = GrpcDisplayServer(
+        displayName: 'Display Principal',
+        port: GrpcDisplayServer.defaultPort,
+        container: container,
+      );
+
+      // Configurar callbacks si tenemos acceso al ProviderContainer
+      if (container != null) {
+        final effectiveContainer = container;
+
+        _displayServer!.onCommand = (
+          LiveControlState Function(
+            LiveControlState,
+          ) update,
+        ) {
+          final state = effectiveContainer.read(liveControlProvider);
+          final newState = update(state);
+          if (newState != state) {
+            effectiveContainer
+                .read(liveControlProvider.notifier)
+                .updateFromServer(newState);
+          }
+        };
+
+        _displayServer!.onJumpToHymn = (int hymnId) async {
+          try {
+            final hymnRepo = effectiveContainer.read(hymnRepositoryProvider);
+            final hymn = await hymnRepo.getHymnById(hymnId);
+            final versionPaisId = hymn.primaryVersionPaisId;
+            if (versionPaisId < 0) {
+              _log.warning('Himno $hymnId no tiene versiones de país.');
+              return;
+            }
+            final stanzas = await hymnRepo.getStanzas(versionPaisId);
+            effectiveContainer
+                .read(liveControlProvider.notifier)
+                .loadHymn(hymn, stanzas, versionPaisId: versionPaisId);
+            _log.info(
+              'Himno $hymnId (versión $versionPaisId) cargado en proyección.',
+            );
+          } catch (e) {
+            _log.severe('Error al cargar himno $hymnId: $e');
+          }
+        };
+      }
+
+      await _displayServer!.start();
+      _log.info(
+        'Servidor gRPC iniciado en puerto ${_displayServer!.port}',
+      );
+    } catch (e) {
+      _log.severe('Error al iniciar servidor gRPC: $e');
+      // No relanzar — la app puede funcionar sin servidor gRPC
+    }
+  }
+
+  /// Inicia el descubrimiento mDNS para modo Controlador.
+  static Future<void> _initControllerDiscovery([
+    ProviderContainer? container,
+  ]) async {
+    try {
+      _mdnsDiscovery = MdnsDiscovery();
+
+      // Escuchar dispositivos descubiertos
+      _mdnsDiscovery!.onDeviceDiscovered.listen((device) {
+        _log.info('Display descubierto: ${device.name} en ${device.ip}');
+      });
+
+      // Iniciar descubrimiento (no bloqueante)
+      _mdnsDiscovery!.startDiscovery();
+      _log.info('Descubrimiento mDNS iniciado.');
+    } catch (e) {
+      _log.severe('Error al iniciar mDNS: $e');
+    }
+  }
+
+  /// Detiene todos los servicios de red.
+  static Future<void> dispose() async {
+    await _displayServer?.stop();
+    await _mdnsDiscovery?.stopDiscovery();
+    _mdnsDiscovery?.dispose();
+    _log.info('Servicios de red detenidos.');
   }
 }
