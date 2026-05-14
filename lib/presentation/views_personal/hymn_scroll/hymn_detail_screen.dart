@@ -140,8 +140,10 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
                             ),
                           );
                         }
+                        int estrofaCounter = 0;
                         return Column(
                           children: estrofas.map((estrofa) {
+                            if (!estrofa.isChorus) estrofaCounter++;
                             return _buildStanza(
                               context,
                               estrofa,
@@ -149,6 +151,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
                               colorScheme,
                               textTheme,
                               appearance,
+                              stanzaNumber: estrofa.isChorus ? null : estrofaCounter,
                             );
                           }).toList(),
                         );
@@ -229,8 +232,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     int transposeValue,
     ColorScheme colorScheme,
     TextTheme textTheme,
-    HymnAppearanceState appearance,
-  ) {
+    HymnAppearanceState appearance, {
+    int? stanzaNumber,
+  }) {
     final isChorus = estrofa.isChorus;
 
     return Container(
@@ -259,7 +263,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              '${estrofa.tipo.value.toUpperCase()} ${estrofa.orden}',
+              estrofa.isChorus
+                  ? 'CORO'
+                  : 'ESTROFA ${stanzaNumber ?? estrofa.orden}',
               style: textTheme.labelSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
