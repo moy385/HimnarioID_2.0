@@ -187,6 +187,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         Text(
           himno.titulo,
           style: textTheme.headlineSmall?.copyWith(
+            fontFamily: appearance.fontFamily,
             color: appearance.textColor,
             fontWeight: FontWeight.bold,
           ),
@@ -312,6 +313,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             child: Text(
               plainLine,
               style: textTheme.bodyLarge?.copyWith(
+                fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
                 fontSize: baseFontSize,
                 height: 1.6,
@@ -329,6 +331,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             child: Text(
               line,
               style: textTheme.bodyLarge?.copyWith(
+                fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
                 fontSize: baseFontSize,
                 height: 1.6,
@@ -375,6 +378,36 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           TextSpan(
             text: line.substring(lastEnd, match.start),
             style: textTheme.bodyLarge?.copyWith(
+              fontFamily: appearance.fontFamily,
+              color: appearance.textColor,
+              fontSize: baseFontSize,
+            ),
+          ),
+        );
+
+        // El acorde (sin los corchetes)
+        final chord = match.group(1) ?? '';
+        segments.add(
+          TextSpan(
+            text: chord,
+            style: textTheme.bodyLarge?.copyWith(
+              color: appearance.chordColor,
+              fontWeight: FontWeight.bold,
+              fontSize: chordFontSize,
+            ),
+          ),
+        );
+
+        lastEnd = match.end;
+      }
+
+      // Texto restante después del último acorde
+      if (lastEnd < line.length) {
+        segments.add(
+          TextSpan(
+            text: line.substring(lastEnd),
+            style: textTheme.bodyLarge?.copyWith(
+              fontFamily: appearance.fontFamily,
               color: appearance.textColor,
               fontSize: baseFontSize,
             ),

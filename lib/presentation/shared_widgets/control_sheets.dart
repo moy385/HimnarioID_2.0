@@ -14,17 +14,6 @@ import 'providers/fondo_options_provider.dart';
 // 1. Brush (Brocha) — Visual configuration sheet
 // =============================================================================
 
-/// Colores rápidos predefinidos para fondo.
-const List<Color> _quickBgColors = [
-  Colors.transparent,
-  Color(0xFFF5F0E8), // crema
-  Color(0xFFE8F0F5), // azul claro
-  Color(0xFFF0F5E8), // verde claro
-  Color(0xFFF5E8F0), // rosa claro
-  Color(0xFF1C1B1F), // oscuro
-  Color(0xFFFEF7FF), // blanco
-];
-
 /// Colores predefinidos para el texto de la letra.
 const List<Color> _textColors = [
   Color(0xFF1C1B1F), // casi negro
@@ -259,40 +248,7 @@ void showBrushSheet(
                     const SizedBox(height: 20),
 
                     // ==========================================
-                    // 2. Colores rápidos (fondo)
-                    // ==========================================
-                    Text(
-                      'Colores rápidos',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: _quickBgColors.map((Color color) {
-                        final isTransparent = color == Colors.transparent;
-                        final isSelected = isTransparent
-                            ? appearance.bgColor == Colors.transparent
-                            : appearance.bgColor.toARGB32() == color.toARGB32();
-                        return _ColorCircle(
-                          color: color,
-                          isSelected: isSelected,
-                          isTransparent: isTransparent,
-                          onTap: () {
-                            ref
-                                .read(hymnAppearanceProvider.notifier)
-                                .setBgColor(color);
-                            setSheetState(() {});
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ==========================================
-                    // 3. Tamaño de letra
+                    // 2. Tamaño de letra
                     // ==========================================
                     Text(
                       'Tamaño de letra',
@@ -386,7 +342,87 @@ void showBrushSheet(
                     const SizedBox(height: 24),
 
                     // ==========================================
-                    // 6. Restablecer
+                    // 6. Tipo de letra
+                    // ==========================================
+                    Text(
+                      'Tipo de letra',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Elige la tipografía para el texto de los himnos',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // -- Para lectura (modo personal) --
+                    Text(
+                      'Para lectura',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _FontOption(
+                          family: 'Merriweather',
+                          label: 'Merriweather',
+                          previewText: 'Lectura',
+                          isSelected: appearance.fontFamily == 'Merriweather',
+                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather'),
+                        ),
+                        _FontOption(
+                          family: 'Lora',
+                          label: 'Lora',
+                          previewText: 'Lectura',
+                          isSelected: appearance.fontFamily == 'Lora',
+                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // -- Para presentación (modo proyección) --
+                    Text(
+                      'Para presentación',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _FontOption(
+                          family: 'Playfair Display',
+                          label: 'Playfair Display',
+                          previewText: 'Proyección',
+                          isSelected: appearance.presentationFontFamily == 'Playfair Display',
+                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setPresentationFontFamily('Playfair Display'),
+                        ),
+                        _FontOption(
+                          family: 'Cinzel',
+                          label: 'Cinzel',
+                          previewText: 'Proyección',
+                          isSelected: appearance.presentationFontFamily == 'Cinzel',
+                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setPresentationFontFamily('Cinzel'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ==========================================
+                    // 7. Restablecer
                     // ==========================================
                     Center(
                       child: TextButton.icon(
@@ -888,6 +924,87 @@ class HymnSearchDelegate extends SearchDelegate<int> {
           },
         );
       },
+        );
+  }
+}
+
+// =============================================================================
+// 5. _FontOption — Selector visual de fuente tipográfica
+// =============================================================================
+
+/// Widget reutilizable para seleccionar una fuente tipográfica.
+/// Muestra una tarjeta con el nombre de la fuente y un preview.
+class _FontOption extends StatelessWidget {
+  final String family;
+  final String label;
+  final String previewText;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FontOption({
+    required this.family,
+    required this.label,
+    required this.previewText,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 150,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.primaryContainer
+              : colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? colorScheme.primary
+                : colorScheme.outlineVariant,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: family,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Icon(Icons.check_circle, size: 18, color: colorScheme.primary),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              previewText,
+              style: TextStyle(
+                fontFamily: family,
+                fontSize: 22,
+                fontWeight: FontWeight.w400,
+                color: colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
+

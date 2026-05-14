@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
 import 'receptor_binding.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 
 /// Pantalla de Proyección en Vivo (Live Projection).
 ///
@@ -23,6 +24,7 @@ class LiveProjectionScreen extends ConsumerWidget {
     final liveState = ref.watch(liveControlProvider);
     final config = ref.watch(projectionConfigProvider);
     final serverInfo = ref.watch(receptorInfoProvider);
+    final appearance = ref.watch(hymnAppearanceProvider);
 
     final bgColor = liveState.isBlackout
         ? Colors.black
@@ -57,6 +59,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                   Text(
                     '#${liveState.hymn!.numero ?? liveState.hymn!.id}',
                     style: textTheme.displayLarge?.copyWith(
+                      fontFamily: appearance.presentationFontFamily,
                       color: colors.primary.withValues(alpha: 0.3),
                       fontWeight: FontWeight.bold,
                       fontSize: fontSize * 0.6,
@@ -68,6 +71,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                   Text(
                     liveState.hymn!.titulo,
                     style: textTheme.displayLarge?.copyWith(
+                      fontFamily: appearance.presentationFontFamily,
                       color: colors.primary,
                       fontSize: fontSize * 1.2,
                       fontWeight: FontWeight.bold,
@@ -101,6 +105,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                         child: Text(
                           liveState.currentStanza?.contenido ?? '',
                           style: textTheme.bodyLarge?.copyWith(
+                            fontFamily: appearance.presentationFontFamily,
                             color: colors.primary,
                             fontSize: fontSize,
                             height: 1.8,
