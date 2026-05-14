@@ -369,28 +369,40 @@ void showBrushSheet(
                           label: 'Merriweather',
                           previewText: 'Texto',
                           isSelected: appearance.fontFamily == 'Merriweather',
-                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather'),
+                          onTap: () {
+                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather');
+                            setSheetState(() {});
+                          },
                         ),
                         _FontOption(
                           family: 'Lora',
                           label: 'Lora',
                           previewText: 'Texto',
                           isSelected: appearance.fontFamily == 'Lora',
-                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora'),
+                          onTap: () {
+                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora');
+                            setSheetState(() {});
+                          },
                         ),
                         _FontOption(
                           family: 'Playfair Display',
                           label: 'Playfair Display',
                           previewText: 'Texto',
                           isSelected: appearance.fontFamily == 'Playfair Display',
-                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display'),
+                          onTap: () {
+                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display');
+                            setSheetState(() {});
+                          },
                         ),
                         _FontOption(
                           family: 'Cinzel',
                           label: 'Cinzel',
                           previewText: 'Texto',
                           isSelected: appearance.fontFamily == 'Cinzel',
-                          onTap: () => ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel'),
+                          onTap: () {
+                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel');
+                            setSheetState(() {});
+                          },
                         ),
                       ],
                     ),
