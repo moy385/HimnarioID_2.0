@@ -11,14 +11,13 @@ El sistema está diseñado pensando en alta resiliencia offline (ideal para ento
 
 ## 🎯 Requerimientos y Objetivos del Sistema
 
-1. **Control Remoto Offline (LAN):** Capacidad de controlar la app de proyección (PC/TV) desde un dispositivo móvil sin requerir conexión a Internet.
-2. **Multiplataforma:** Código base unificado capaz de ejecutarse en Windows (PC), Android (Móvil) y Android TV (Display).
-3. **Gestión Musical Avanzada:** - Soporte para visualización de acordes junto a la letra.
-   - Transposición automática de acordes (subir/bajar tonalidad en tiempo real).
-   - Soporte para versiones regionales de los himnos (letras que cambian según el país).
-   - Clasificación por categorías y soporte para himnos oficiales, inspirados y de convención.
-   - Soporte para múltiples pistas de audio donadas por usuarios.
-4. **Personalización (Forking):** Capacidad para que los músicos creen sus propios "arreglos" o versiones personalizadas de los acordes sin alterar el himno oficial.
+1. **Uso Dual (Personal y Proyección):**
+   - **Modo Personal:** Visualización fluida (scroll) de las estrofas y coros, con herramientas flotantes para músicos (transposición, acordes, reproducción de pistas).
+   - **Modo Proyección:** Paneles minimalistas de control remoto y visualización de estrofas estáticas para el público.
+2. **Roles Dinámicos (Emisor / Receptor):** Cualquier dispositivo en la red puede actuar como el control remoto (Emisor) o como la pantalla de presentación (Receptor) mediante una conexión gRPC over LAN.
+3. **Soporte Multi-Ventana (Desktop):** En PC, el sistema puede separar el panel de control (ventana principal) de la proyección visual (ventana secundaria o pantalla extendida).
+4. **Módulo Administrativo Integrado:** Un backoffice protegido por credenciales dentro de la misma app para gestionar el CRUD completo de himnos, categorías, pistas y fondos sin depender de software externo.
+5. **Resiliencia Offline:** Base de datos embebida (SQLite) y red de área local (mDNS) para funcionar sin conexión a Internet.
 
 ---
 
@@ -43,6 +42,12 @@ No se guardan acordes en campos separados. Se utiliza el estándar **ChordPro**.
 
 ### 3. Personalización de Arreglos (El patrón "Fork")
 Para evitar que un músico modifique el himno oficial de la congregación, se implementa un sistema de derivación (Fork). Los datos oficiales son inmutables. Cuando un usuario quiere alterar acordes, el sistema copia las estrofas a la tabla `Estrofa_Arreglo`, vinculándolas a su ID de `Usuario`. La app cargará esta versión personalizada únicamente para ese usuario.
+
+---
+
+## 🏗️ Novedades de Arquitectura UI (Dev Mode)
+Para facilitar el desarrollo en entornos Linux sin necesidad de compilar constantemente a un dispositivo móvil físico, la rama de desarrollo incluye un **Switch `(PC/Celular)`** en la esquina inferior izquierda del Dashboard. 
+Este switch inyecta la lógica de la plataforma correspondiente, forzando a la app a redibujarse simulando el comportamiento de escritorio (doble ventana, presentación) o de móvil (scroll, FAB dinámico). *Esta opción será reemplazada en producción por la detección nativa de `Platform.isAndroid` o `Platform.isWindows`.*
 
 ---
 
