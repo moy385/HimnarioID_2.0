@@ -23,11 +23,12 @@ CREATE TABLE Version_Pais (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   himno_id INTEGER NOT NULL,
   pais TEXT NOT NULL,
-  tonalidad_original TEXT NOT NULL,  -- ej. "G", "C#m"
+  tonalidad_original TEXT NOT NULL DEFAULT 'C',  -- ej. "G", "C#m"
   activo INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_version_himno ON Version_Pais(himno_id);
+CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais);
 
 CREATE TABLE Estrofa (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,6 +56,7 @@ CREATE TABLE Himno_Categoria (
   FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE,
   FOREIGN KEY (categoria_id) REFERENCES Categoria(id) ON DELETE CASCADE
 );
+CREATE INDEX idx_hc_categoria ON Himno_Categoria(categoria_id);
 
 -- ============================================
 -- SISTEMA DE FORKS (ARREGLOS PERSONALIZADOS)
@@ -62,6 +64,8 @@ CREATE TABLE Himno_Categoria (
 
 CREATE TABLE Usuario (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
   nombre TEXT NOT NULL,
   rol TEXT NOT NULL DEFAULT 'Musico' CHECK(rol IN ('Admin', 'Musico', 'Visualizador')),
   fecha_registro TEXT NOT NULL DEFAULT (datetime('now'))
@@ -144,6 +148,24 @@ SELECT
 FROM Himno h
 LEFT JOIN Version_Pais vp ON vp.himno_id = h.id AND vp.activo = 1
 ORDER BY h.numero_oficial;
+
+-- ============================================
+-- FONDOS DE PANTALLA
+-- ============================================
+
+CREATE TABLE Fondo_Pantalla (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'video', 'color_solido')),
+  ruta_archivo TEXT,
+  color_hex TEXT,
+  es_predeterminado INTEGER NOT NULL DEFAULT 0,
+  activo INTEGER NOT NULL DEFAULT 1
+);
+
+-- ============================================
+-- VISTAS ÚTILES
+-- ============================================
 
 -- Vista: conteo de estrofas por himno
 CREATE VIEW IF NOT EXISTS v_himno_estrofas AS
