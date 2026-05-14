@@ -1,172 +1,416 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
 import '../views_personal/providers/audio_providers.dart';
 import '../views_personal/providers/hymn_providers.dart';
 import '../views_personal/providers/transpose_providers.dart';
+import 'providers/appearance_provider.dart';
+import 'providers/fondo_options_provider.dart';
 
 // =============================================================================
 // 1. Brush (Brocha) — Visual configuration sheet
 // =============================================================================
 
-/// Muestra el sheet de configuración visual (tamaño de fuente, color de fondo).
+/// Colores rápidos predefinidos para fondo.
+const List<Color> _quickBgColors = [
+  Colors.transparent,
+  Color(0xFFF5F0E8), // crema
+  Color(0xFFE8F0F5), // azul claro
+  Color(0xFFF0F5E8), // verde claro
+  Color(0xFFF5E8F0), // rosa claro
+  Color(0xFF1C1B1F), // oscuro
+  Color(0xFFFEF7FF), // blanco
+];
+
+/// Colores predefinidos para el texto de la letra.
+const List<Color> _textColors = [
+  Color(0xFF1C1B1F), // casi negro
+  Color(0xFFFFFFFF), // blanco
+  Color(0xFFB3261E), // rojo
+  Color(0xFF1D6F42), // verde
+  Color(0xFF1A6B8A), // azul
+  Color(0xFF6750A4), // púrpura
+];
+
+/// Colores predefinidos para los acordes musicales.
+const List<Color> _chordColors = [
+  Color(0xFF6750A4), // púrpura (default)
+  Color(0xFFB3261E), // rojo
+  Color(0xFF1A6B8A), // azul
+  Color(0xFF1D6F42), // verde
+  Color(0xFFFF8F00), // naranja
+  Color(0xFF1C1B1F), // negro
+];
+
+/// Convierte un string hexadecimal (con o sin `#`) a [Color].
+/// Retorna `null` si el string no es válido.
+Color? _parseHexColor(String? hex) {
+  if (hex == null || hex.isEmpty) return null;
+  final normalized = hex.replaceFirst('#', '');
+  if (normalized.length == 6) {
+    return Color(int.parse('FF$normalized', radix: 16));
+  }
+  if (normalized.length == 8) {
+    return Color(int.parse(normalized, radix: 16));
+  }
+  return null;
+}
+
+/// Widget reutilizable para un selector de color circular.
+class _ColorCircle extends StatelessWidget {
+  final Color color;
+  final bool isSelected;
+  final bool isTransparent;
+  final String? label;
+  final VoidCallback onTap;
+
+  const _ColorCircle({
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+    this.isTransparent = false,
+    this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final circle = GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isTransparent ? colorScheme.surfaceContainerHighest : color,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
+            width: isSelected ? 2.5 : 1,
+          ),
+        ),
+        child: isTransparent
+            ? Icon(
+                Icons.block,
+                size: 20,
+                color: colorScheme.onSurfaceVariant,
+              )
+            : (isSelected
+                ? Icon(
+                    Icons.check,
+                    size: 20,
+                    color: colorScheme.primary,
+                  )
+                : null),
+      ),
+    );
+
+    if (label != null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          circle,
+          const SizedBox(height: 4),
+          Text(
+            label!,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      );
+    }
+
+    return circle;
+  }
+}
+
+/// Muestra el sheet de configuración visual (fondo, tamaño fuente,
+/// color de letra, color de acordes).
 void showBrushSheet(
   BuildContext context, {
-  required double fontScale,
-  required ValueChanged<double> onFontScaleChanged,
-  required int bgColorIndex,
-  required ValueChanged<int> onBgColorIndexChanged,
-  List<Color>? bgColors,
+  required WidgetRef ref,
 }) {
-  final effectiveBgColors = bgColors ??
-      const <Color>[
-        Colors.transparent,
-        Color(0xFFF5F0E8),
-        Color(0xFFE8F0F5),
-        Color(0xFFF0F5E8),
-        Color(0xFFF5E8F0),
-      ];
-
   showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     builder: (sheetContext) {
       return StatefulBuilder(
         builder: (context, setSheetState) {
           final colorScheme = Theme.of(context).colorScheme;
           final textTheme = Theme.of(context).textTheme;
+          final appearance = ref.watch(hymnAppearanceProvider);
+          final fondosAsync = ref.watch(fondosColorSolidoProvider);
 
-          return Container(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                // Title
-                Row(
+          return DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) {
+              return Container(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                child: ListView(
+                  controller: scrollController,
                   children: <Widget>[
-                    Icon(
-                      Icons.brush,
-                      color: colorScheme.tertiary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Configuración visual',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // Font size slider
-                Text(
-                  'Tamaño de letra',
-                  style: textTheme.labelLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: <Widget>[
-                    const Icon(Icons.text_fields, size: 18),
-                    Expanded(
-                      child: Slider(
-                        value: fontScale,
-                        min: 0.7,
-                        max: 1.8,
-                        divisions: 11,
-                        label: '${(fontScale * 100).round()}%',
-                        onChanged: (value) {
-                          setSheetState(() {
-                            onFontScaleChanged(value);
-                          });
-                        },
-                      ),
-                    ),
-                    const Icon(Icons.text_fields, size: 26),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Background color selector
-                Text(
-                  'Color de fondo',
-                  style: textTheme.labelLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  children: List<Widget>.generate(
-                    effectiveBgColors.length,
-                    (int i) {
-                      final isSelected = bgColorIndex == i;
-                      final color = effectiveBgColors[i];
-                      final isTransparent = color == Colors.transparent;
-
-                      return GestureDetector(
-                        onTap: () {
-                          setSheetState(() {
-                            onBgColorIndexChanged(i);
-                          });
-                        },
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isTransparent
-                                ? colorScheme.surfaceContainerHighest
-                                : color,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : colorScheme.outlineVariant,
-                              width: isSelected ? 2.5 : 1,
-                            ),
-                          ),
-                          child: isTransparent
-                              ? Icon(
-                                  Icons.block,
-                                  size: 20,
-                                  color: colorScheme.onSurfaceVariant,
-                                )
-                              : (isSelected
-                                  ? Icon(
-                                      Icons.check,
-                                      size: 20,
-                                      color: colorScheme.primary,
-                                    )
-                                  : null),
+                    // ---- Handle ----
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    // ---- Title ----
+                    Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.brush,
+                          color: colorScheme.tertiary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Configuración visual',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ==========================================
+                    // 1. Fondos guardados (desde BD)
+                    // ==========================================
+                    Text(
+                      'Fondos guardados',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    fondosAsync.when(
+                      loading: () => const SizedBox(
+                        height: 60,
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                      error: (_, __) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          'Error al cargar fondos',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.error,
+                          ),
+                        ),
+                      ),
+                      data: (fondos) {
+                        if (fondos.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No hay fondos guardados',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          );
+                        }
+                        return Wrap(
+                          spacing: 16,
+                          runSpacing: 12,
+                          children: fondos.map((FondoPantalla fondo) {
+                            final color = _parseHexColor(fondo.colorHex) ??
+                                colorScheme.surfaceContainerHighest;
+                            final isSelected =
+                                appearance.bgColor.toARGB32() == color.toARGB32();
+                            return _ColorCircle(
+                              color: color,
+                              isSelected: isSelected,
+                              isTransparent: false,
+                              label: fondo.nombre,
+                              onTap: () {
+                                ref
+                                    .read(hymnAppearanceProvider.notifier)
+                                    .setBgColor(color);
+                                setSheetState(() {});
+                              },
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ==========================================
+                    // 2. Colores rápidos (fondo)
+                    // ==========================================
+                    Text(
+                      'Colores rápidos',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: _quickBgColors.map((Color color) {
+                        final isTransparent = color == Colors.transparent;
+                        final isSelected = isTransparent
+                            ? appearance.bgColor == Colors.transparent
+                            : appearance.bgColor.toARGB32() == color.toARGB32();
+                        return _ColorCircle(
+                          color: color,
+                          isSelected: isSelected,
+                          isTransparent: isTransparent,
+                          onTap: () {
+                            ref
+                                .read(hymnAppearanceProvider.notifier)
+                                .setBgColor(color);
+                            setSheetState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ==========================================
+                    // 3. Tamaño de letra
+                    // ==========================================
+                    Text(
+                      'Tamaño de letra',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: <Widget>[
+                        const Icon(Icons.text_fields, size: 18),
+                        Expanded(
+                          child: Slider(
+                            value: appearance.fontScale,
+                            min: 0.7,
+                            max: 1.8,
+                            divisions: 11,
+                            label:
+                                '${(appearance.fontScale * 100).round()}%',
+                            onChanged: (value) {
+                              ref
+                                  .read(hymnAppearanceProvider.notifier)
+                                  .setFontScale(value);
+                              setSheetState(() {});
+                            },
+                          ),
+                        ),
+                        const Icon(Icons.text_fields, size: 26),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ==========================================
+                    // 4. Color de letra
+                    // ==========================================
+                    Text(
+                      'Color de letra',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: _textColors.map((Color color) {
+                        final isSelected =
+                            appearance.textColor.toARGB32() == color.toARGB32();
+                        return _ColorCircle(
+                          color: color,
+                          isSelected: isSelected,
+                          onTap: () {
+                            ref
+                                .read(hymnAppearanceProvider.notifier)
+                                .setTextColor(color);
+                            setSheetState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ==========================================
+                    // 5. Color de acordes
+                    // ==========================================
+                    Text(
+                      'Color de acordes',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: _chordColors.map((Color color) {
+                        final isSelected =
+                            appearance.chordColor.toARGB32() == color.toARGB32();
+                        return _ColorCircle(
+                          color: color,
+                          isSelected: isSelected,
+                          onTap: () {
+                            ref
+                                .read(hymnAppearanceProvider.notifier)
+                                .setChordColor(color);
+                            setSheetState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ==========================================
+                    // 6. Restablecer
+                    // ==========================================
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          ref
+                              .read(hymnAppearanceProvider.notifier)
+                              .reset();
+                          setSheetState(() {});
+                        },
+                        icon: const Icon(Icons.restart_alt),
+                        label: const Text('Restablecer valores'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       );
     },
   );
 }
+
 
 // =============================================================================
 // 2. Note (Nota) — Audio tracks sheet

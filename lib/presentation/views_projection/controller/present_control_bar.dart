@@ -219,10 +219,7 @@ class PresentControlBar extends ConsumerWidget {
           label: 'Brocha',
           onPressed: () => showBrushSheet(
             context,
-            fontScale: 1.0,
-            onFontScaleChanged: (_) {},
-            bgColorIndex: 0,
-            onBgColorIndexChanged: (_) {},
+            ref: ref,
           ),
         ),
         _FuncButton(

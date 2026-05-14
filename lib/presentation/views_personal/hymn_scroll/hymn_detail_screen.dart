@@ -6,8 +6,8 @@ import '../../../core/utils/chord_transposer.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/control_sheets.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/audio_providers.dart';
-import '../../views_projection/providers/connection_providers.dart';
 import '../providers/hymn_providers.dart';
 import '../providers/transpose_providers.dart';
 import 'arrangement_editor_screen.dart';
@@ -32,17 +32,7 @@ class HymnDetailScreen extends ConsumerStatefulWidget {
 
 class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   bool _isPlaying = false;
-  double _fontScale = 1.0;
-  int _bgColorIndex = 0;
   bool _showChords = true;
-
-  static const List<Color> _bgColors = [
-    Colors.transparent,
-    Color(0xFFF5F0E8),
-    Color(0xFFE8F0F5),
-    Color(0xFFF0F5E8),
-    Color(0xFFF5E8F0),
-  ];
 
   void _togglePlayback() {
     setState(() {
@@ -59,6 +49,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final appearance = ref.watch(hymnAppearanceProvider);
     final transposeValue = ref.watch(transposeValueProvider);
     final transposedKey = ref.watch(transposedKeyProvider);
     final stanzasAsync = ref.watch(stanzasProvider(widget.himno.primaryVersionPaisId));
@@ -99,14 +90,14 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           // Contenido scrollable
           Expanded(
             child: Container(
-              color: _bgColors[_bgColorIndex],
+              color: appearance.bgColor,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Cabecera del himno
-                    _buildHeader(context, widget.himno, colorScheme, textTheme),
+                    _buildHeader(context, widget.himno, colorScheme, textTheme, appearance),
                     const SizedBox(height: 24),
 
                     // Renderizado de letra desde provider
@@ -157,6 +148,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
                               transposeValue,
                               colorScheme,
                               textTheme,
+                              appearance,
                             );
                           }).toList(),
                         );
@@ -186,6 +178,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     Himno himno,
     ColorScheme colorScheme,
     TextTheme textTheme,
+    HymnAppearanceState appearance,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +187,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         Text(
           himno.titulo,
           style: textTheme.headlineSmall?.copyWith(
-            color: colorScheme.onSurface,
+            color: appearance.textColor,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -232,6 +225,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     int transposeValue,
     ColorScheme colorScheme,
     TextTheme textTheme,
+    HymnAppearanceState appearance,
   ) {
     final isChorus = estrofa.isChorus;
 
@@ -240,12 +234,12 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isChorus
-            ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-            : colorScheme.surfaceContainerLow,
+            ? appearance.bgColor.withValues(alpha: 0.3)
+            : appearance.bgColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: isChorus
             ? Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.3),
+                color: appearance.chordColor.withValues(alpha: 0.3),
                 width: 1,
               )
             : null,
@@ -258,7 +252,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: isChorus
-                  ? colorScheme.primary
+                  ? appearance.chordColor
                   : colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(4),
             ),
@@ -280,6 +274,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             transposeValue,
             colorScheme,
             textTheme,
+            appearance,
           ),
         ],
       ),
@@ -292,6 +287,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     int transposeValue,
     ColorScheme colorScheme,
     TextTheme textTheme,
+    HymnAppearanceState appearance,
   ) {
     final chordRegex =
         RegExp(r'\[([A-G][#b]?m?\d*(?:sus|dim|aug|Maj|maj)?[0-9]*)\]');
@@ -302,8 +298,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
 
     // Escala base para el texto de la letra
     final double baseFontSize =
-        (textTheme.bodyLarge?.fontSize ?? 16) * _fontScale;
-    final double chordFontSize = 14 * _fontScale;
+        (textTheme.bodyLarge?.fontSize ?? 16) * appearance.fontScale;
+    final double chordFontSize = 14 * appearance.fontScale;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +312,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             child: Text(
               plainLine,
               style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface,
+                color: appearance.textColor,
                 fontSize: baseFontSize,
                 height: 1.6,
               ),
@@ -333,7 +329,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
             child: Text(
               line,
               style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface,
+                color: appearance.textColor,
                 fontSize: baseFontSize,
                 height: 1.6,
               ),
@@ -349,7 +345,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               children: _parseChordsInLine(
                 line,
                 chordRegex,
-                colorScheme,
+                appearance,
                 textTheme,
                 baseFontSize,
                 chordFontSize,
@@ -364,7 +360,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   List<TextSpan> _parseChordsInLine(
     String line,
     RegExp chordRegex,
-    ColorScheme colorScheme,
+    HymnAppearanceState appearance,
     TextTheme textTheme, [
     double baseFontSize = 16,
     double chordFontSize = 14,
@@ -379,7 +375,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           TextSpan(
             text: line.substring(lastEnd, match.start),
             style: textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurface,
+              color: appearance.textColor,
               fontSize: baseFontSize,
             ),
           ),
@@ -392,7 +388,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         TextSpan(
           text: chord,
           style: textTheme.bodyLarge?.copyWith(
-            color: colorScheme.tertiary,
+            color: appearance.chordColor,
             fontWeight: FontWeight.bold,
             fontSize: chordFontSize,
           ),
@@ -408,7 +404,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         TextSpan(
           text: line.substring(lastEnd),
           style: textTheme.bodyLarge?.copyWith(
-            color: colorScheme.onSurface,
+            color: appearance.textColor,
             fontSize: baseFontSize,
           ),
         ),
@@ -512,49 +508,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               ),
               tooltip: _isPlaying ? 'Detener audio' : 'Reproducir audio',
             ),
-            const Spacer(),
-            // Botón PROYECTAR con icono cast consistente
-            FilledButton.icon(
-              onPressed: () {
-                _projectHymn(context);
-              },
-              icon: const Icon(Icons.cast_rounded),
-              label: const Text('PROYECTAR'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-              ),
-            ),
           ],
         ),
       ),
-    );
-  }
-
-  /// Envía el himno al display remoto (si hay conexión) y navega
-  /// a la pantalla de control en vivo.
-  Future<void> _projectHymn(BuildContext context) async {
-    final isConnected = ref.read(isConnectedProvider);
-    if (isConnected) {
-      try {
-        await ref
-            .read(controlRepositoryProvider)
-            .sendShowHimno(widget.himno.id);
-      } catch (e) {
-        HymnDetailScreen._log.warning('Error al enviar himno al display: $e');
-        // Fallback offline: continuar con navegación local
-      }
-    } else {
-      HymnDetailScreen._log.info('Sin conexión al display — modo local');
-    }
-
-    if (!context.mounted) return;
-    await Navigator.pushNamed(
-      context,
-      '/live-control',
-      arguments: widget.himno,
     );
   }
 
@@ -613,19 +569,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   void _showBrochaSheet() {
     showBrushSheet(
       context,
-      fontScale: _fontScale,
-      onFontScaleChanged: (double value) {
-        setState(() {
-          _fontScale = value;
-        });
-      },
-      bgColorIndex: _bgColorIndex,
-      onBgColorIndexChanged: (int value) {
-        setState(() {
-          _bgColorIndex = value;
-        });
-      },
-      bgColors: _bgColors,
+      ref: ref,
     );
   }
 
