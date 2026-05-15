@@ -1,7 +1,8 @@
-# HimnarioID_2.0
-El desarrollo de esta aplicación se enfoca en brindar un mejor servicio a sus usuarios, haciendo que la experiencia de usuario sea única e impresionante
+# HimnarioID 2.0
 
-markdown_content = """# 📖 Proyecto: Himnario Multiplataforma & Sistema de Proyección Inteligente
+Aplicación Flutter multiplataforma para himnos religiosos con modo personal, proyección, administración y descarga de pistas de audio.
+
+---
 
 Este repositorio contiene el código fuente y la arquitectura para la nueva generación del Himnario Web, evolucionado hacia un sistema de proyección controlable remotamente y gestión musical avanzada. 
 
@@ -215,3 +216,38 @@ lib/
     │
     ├── shared_widgets/     # Widgets comunes (renderizador de ChordPro, botones)
     └── state_management/   # Gestores de estado (Riverpod/Provider)
+
+---
+
+## 🔧 Configuración del Proyecto
+
+### Dependencias principales
+| Paquete | Uso |
+|---|---|
+| `flutter_riverpod` | Manejo de estado |
+| `sqflite` / `sqflite_common_ffi` | Base de datos SQLite multiplataforma |
+| `audioplayers` | Reproducción de audio |
+| `file_picker` | Selector de archivos |
+| `path_provider` | Rutas del sistema de archivos |
+| `country_flags` | Banderas de países (no implementado aún) |
+
+### Build Android
+```bash
+export JAVA_HOME=/home/melquisedec/jdk17
+export PATH=$JAVA_HOME/bin:$PATH
+export ANDROID_HOME=/home/melquisedec/android-sdk
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+flutter build apk --debug
+```
+APK: `build/app/outputs/flutter-apk/app-debug.apk`
+
+### Pistas de Audio
+- Alojadas en GitHub Releases: `v1.0-audio`
+- URL base: `https://github.com/moy385/HimnarioID_2.0/releases/download/v1.0-audio/`
+- La app descarga bajo demanda y almacena localmente
+
+### Documentación adicional
+- `doc/CONTEXTO_PROYECTO.md` — Contexto completo del proyecto
+- `doc/ANDROID_BUILD.md` — Guía de build para Android
+- `doc/PLAN_DE_DELEGACION.md` — Plan de trabajo con agentes
+- `doc/TAREAS_DIFERIDAS.md` — Tareas pendientes
