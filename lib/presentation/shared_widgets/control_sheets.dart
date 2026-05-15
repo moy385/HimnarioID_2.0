@@ -466,7 +466,6 @@ void showNoteSheet(
   BuildContext context, {
   required WidgetRef ref,
   required int himnoId,
-  required bool isPlaying,
   int? currentPistaId,
   required ValueChanged<int> onPlayPista,
   required VoidCallback onStop,
@@ -476,6 +475,8 @@ void showNoteSheet(
     builder: (sheetContext) {
       final colorScheme = Theme.of(sheetContext).colorScheme;
       final textTheme = Theme.of(sheetContext).textTheme;
+      // Escuchar estado reactivo en lugar de usar parámetro fijo
+      final isPlaying = ref.watch(isAudioPlayingProvider);
 
       return Container(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),

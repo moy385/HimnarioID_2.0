@@ -632,7 +632,6 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       context,
       ref: ref,
       himnoId: widget.himno.id,
-      isPlaying: _isPlaying,
       currentPistaId: _currentPistaId,
       onPlayPista: (pistaId) {
         _currentPistaId = pistaId;
