@@ -123,8 +123,87 @@ class StanzaBlockEditor extends StatelessWidget {
               ),
               style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
             ),
+            const SizedBox(height: 4),
+            // ── Ayuda ChordPro ───────────────────────────────
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 14, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showChordProHelp(context),
+                    child: Text(
+                      '¿Cómo escribir acordes? Toca para ver la guía',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showChordProHelp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.music_note, size: 24),
+            SizedBox(width: 8),
+            Text('Cómo escribir acordes'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Usa el formato ChordPro: el acorde entre corchetes [ ] justo antes de la sílaba donde se toca.',
+                style: TextStyle(fontSize: 13),
+              ),
+              SizedBox(height: 16),
+              Text('Ejemplos:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              SizedBox(height: 8),
+              Text(
+                '[G]Dios es [C]amor\n[Am]Grande es [G]Él\n[D]Santo, [G]Santo',
+                style: TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.5),
+              ),
+              SizedBox(height: 16),
+              Text('Acordes soportados:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              SizedBox(height: 8),
+              Text(
+                'Mayores: C D E F G A B\n'
+                'Menores: Cm Dm Em Fm Gm Am Bm\n'
+                'Sostenidos: C# D# F# G# A#\n'
+                'Bemoles: Db Eb Gb Ab Bb\n'
+                'Suspendidos: Csus4 Gsus Dsus\n'
+                'Séptimas: C7 G7 D7 A7 E7',
+                style: TextStyle(fontFamily: 'monospace', fontSize: 12, height: 1.5),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Cada verso en una línea separada.\n'
+                'Usa \\n para saltos de línea.',
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido'),
+          ),
+        ],
       ),
     );
   }
