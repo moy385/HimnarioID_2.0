@@ -283,12 +283,20 @@ class HymnLocalDataSource {
       params.add(tipo.value);
     }
 
-    // Build REPLACE chain for accent-insensitive search
-    // SQLite LOWER() no maneja caracteres Unicode, así que reemplazamos
-    // tanto mayúsculas como minúsculas con acentos.
+    /// Normaliza texto en SQL para búsqueda insensible a acentos,
+    /// saltos de línea (\\n literales y CHAR(10)), puntuación y espacios múltiples.
+    /// Normaliza texto en SQL para búsqueda insensible a acentos,
+    /// saltos de línea, puntuación y espacios múltiples.
     String normalizeSql(String col) {
       var result = 'LOWER($col)';
-      final replacements = {
+      // 1. Reemplazar \n literal (backslash+n = CHAR(92)+CHAR(110)) por espacio
+      result = "REPLACE($result, CHAR(92)||CHAR(110), ' ')";
+      // 2. Reemplazar saltos de línea reales (CHAR(10)) por espacio
+      result = "REPLACE($result, CHAR(10), ' ')";
+      // 3. Reemplazar retornos de carro (CHAR(13)) por espacio
+      result = "REPLACE($result, CHAR(13), ' ')";
+      // 4. Reemplazar acentos (mayúsculas y minúsculas)
+      final accents = {
         'á': 'a', 'Á': 'a', 'à': 'a', 'À': 'a', 'â': 'a', 'Â': 'a', 'ä': 'a', 'Ä': 'a',
         'é': 'e', 'É': 'e', 'è': 'e', 'È': 'e', 'ê': 'e', 'Ê': 'e', 'ë': 'e', 'Ë': 'e',
         'í': 'i', 'Í': 'i', 'ì': 'i', 'Ì': 'i', 'î': 'i', 'Î': 'i', 'ï': 'i', 'Ï': 'i',
@@ -296,8 +304,17 @@ class HymnLocalDataSource {
         'ú': 'u', 'Ú': 'u', 'ù': 'u', 'Ù': 'u', 'û': 'u', 'Û': 'u', 'ü': 'u', 'Ü': 'u',
         'ñ': 'n', 'Ñ': 'N',
       };
-      for (final e in replacements.entries) {
+      for (final e in accents.entries) {
         result = "REPLACE($result, '${e.key}', '${e.value}')";
+      }
+      // 5. Eliminar puntuación básica (coma, punto y coma, punto, dos puntos)
+      result = "REPLACE($result, ',', ' ')";
+      result = "REPLACE($result, ';', ' ')";
+      result = "REPLACE($result, '.', ' ')";
+      result = "REPLACE($result, ':', ' ')";
+      // 6. Colapsar espacios múltiples
+      for (int i = 0; i < 5; i++) {
+        result = "REPLACE($result, '  ', ' ')";
       }
       return result;
     }
