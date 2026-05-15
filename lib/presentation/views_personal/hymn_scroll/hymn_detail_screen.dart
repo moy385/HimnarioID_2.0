@@ -47,9 +47,23 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
 
   void _initializeKeyFromHymn() {
     if (!mounted) return;
-    final tonalidad = widget.himno.versiones
+    // 1. Usar tonalidad de la BD si está disponible y no es 'C' (default)
+    var tonalidad = widget.himno.versiones
         .firstOrNull
-        ?.tonalidadOriginal ?? 'C';
+        ?.tonalidadOriginal ?? '';
+    if (tonalidad.isEmpty || tonalidad == 'C') {
+      // 2. Si no hay tonalidad explícita, detectar del primer acorde del himno
+      final primeraEstrofa = widget.himno.versiones
+          .firstOrNull?.estrofas.firstOrNull?.contenido ?? '';
+      if (primeraEstrofa.isNotEmpty) {
+        final chordRegex = RegExp(r'\[([A-G][#b]?m?)\]');
+        final match = chordRegex.firstMatch(primeraEstrofa);
+        if (match != null) {
+          tonalidad = match.group(1) ?? 'C';
+        }
+      }
+      if (tonalidad.isEmpty) tonalidad = 'C';
+    }
     ref.read(transposeValueProvider.notifier).state = 0;
     ref.read(currentKeyProvider.notifier).state = tonalidad;
   }
@@ -340,7 +354,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     final parts = processedLyric.split('\n');
 
     // Escala base para texto y acordes (ambos escalan proporcionalmente con fontScale)
-    final double chordFontSize = baseFontSize - 3;
+    final double chordFontSize = baseFontSize * 0.7;
 
     // Estilo de línea base para medición y renderizado
     final TextStyle? lyricStyle = textTheme.bodyLarge?.copyWith(
