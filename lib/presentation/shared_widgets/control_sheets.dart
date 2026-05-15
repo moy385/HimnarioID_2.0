@@ -837,7 +837,7 @@ class HymnSearchDelegate extends SearchDelegate<int> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    if (query.length < 2) {
+    if (query.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -849,7 +849,7 @@ class HymnSearchDelegate extends SearchDelegate<int> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Escribe al menos 2 caracteres para buscar',
+              'Escribe para buscar himnos',
               style: textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
