@@ -6,6 +6,8 @@ import '../../../core/network/connection_state.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../../domain/entities/himno.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
+import '../../../core/utils/string_utils.dart';
+import '../../shared_widgets/alphabet_index_bar.dart';
 import '../../shared_widgets/search_bar.dart';
 import '../../shared_widgets/hymn_card.dart';
 import '../../views_projection/controller/widgets/discover_display_sheet.dart'
@@ -60,10 +62,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int? _selectedCategoriaId;
   String? _selectedCategoriaNombre;
   String _searchQuery = '';
+  final ScrollController _scrollController = ScrollController();
+  List<Himno>? _cachedHimnos;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -285,104 +290,148 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           // Lista de himnos con manejo de estados async
           Expanded(
-            child: hymnsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 64,
-                      color: colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error al cargar himnos',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton.icon(
-                      onPressed: () {
-                        // Forzar recarga invalidando el provider
-                        ref.invalidate(hymnListProvider(hymnQuery));
-                      },
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
-              data: (himnos) {
-                if (himnos.isEmpty) {
-                  return Center(
+            child: Stack(
+              children: [
+                hymnsAsync.when(
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (error, stack) => Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.search_off_rounded,
+                          Icons.error_outline_rounded,
                           size: 64,
-                          color: colorScheme.outline,
+                          color: colorScheme.error,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _searchQuery.isNotEmpty
-                              ? 'No se encontraron himnos para "$_searchQuery"'
-                              : 'No hay himnos disponibles',
-                          style: textTheme.bodyLarge?.copyWith(
+                          'Error al cargar himnos',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: () {
+                            // Forzar recarga invalidando el provider
+                            ref.invalidate(hymnListProvider(hymnQuery));
+                          },
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Reintentar'),
+                        ),
                       ],
                     ),
-                  );
-                }
+                  ),
+                  data: (himnos) {
+                    _cachedHimnos = himnos;
+                    if (himnos.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 64,
+                              color: colorScheme.outline,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'No se encontraron himnos para "$_searchQuery"'
+                                  : 'No hay himnos disponibles',
+                              style: textTheme.bodyLarge?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: himnos.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final himno = himnos[index];
-                    return HymnCard(
-                      himno: himno,
-                      onTap: () {
-                        if (isPresenting && isDesktop) {
-                          _selectHymnForProjection(
-                            context,
-                            ref,
-                            himno,
-                          );
-                        } else {
-                          Navigator.pushNamed(
-                            context,
-                            '/hymn-detail',
-                            arguments: himno,
-                          );
-                        }
+                    return ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.only(left: 16, right: 40, top: 0, bottom: 0),
+                      itemCount: himnos.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final himno = himnos[index];
+                        return HymnCard(
+                          himno: himno,
+                          onTap: () {
+                            if (isPresenting && isDesktop) {
+                              _selectHymnForProjection(
+                                context,
+                                ref,
+                                himno,
+                              );
+                            } else {
+                              Navigator.pushNamed(
+                                context,
+                                '/hymn-detail',
+                                arguments: himno,
+                              );
+                            }
+                          },
+                        );
                       },
                     );
                   },
-                );
-              },
+                ),
+                _buildAlphabetScrollbar(),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAlphabetScrollbar() {
+    if (_sortOrder == HymnSortOrder.numeroAsc) return const SizedBox.shrink();
+
+    return Positioned(
+      right: 2,
+      top: 0,
+      bottom: 0,
+      child: AlphabetIndexBar(
+        onLetterSelected: _scrollToLetter,
+      ),
+    );
+  }
+
+  void _scrollToLetter(String letter) {
+    final himnos = _cachedHimnos;
+    if (himnos == null || himnos.isEmpty || !_scrollController.hasClients) return;
+
+    final targetLetter = letter.toUpperCase();
+    final index = himnos.indexWhere((h) {
+      final normalized = StringUtils.normalizeForSort(h.titulo);
+      return normalized.isNotEmpty &&
+          normalized[0].toUpperCase() == targetLetter;
+    });
+
+    if (index == -1) return;
+
+    const double itemHeight = 88.0;
+    final targetOffset = index * itemHeight;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+
+    _scrollController.animateTo(
+      targetOffset.clamp(0.0, maxScroll),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
     );
   }
 
