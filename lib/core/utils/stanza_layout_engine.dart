@@ -38,7 +38,7 @@ class StanzaLayoutEngine {
         final textPainter = TextPainter(
           text: TextSpan(text: line, style: effectiveStyle),
           textDirection: TextDirection.ltr,
-        )..layout();
+        )..layout(maxWidth: maxWidth);
 
         if (textPainter.width <= maxWidth + _tolerance) {
           buffer.write('\n'); // Cabe → mantener salto original

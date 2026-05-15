@@ -404,6 +404,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           chordFontSize: chordFontSize,
           chordColor: appearance.chordColor,
           fontFamily: appearance.fontFamily,
+          availableWidth: availableWidth,
         );
       }).toList(),
     );
@@ -424,6 +425,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     required double chordFontSize,
     required Color chordColor,
     required String fontFamily,
+    required double availableWidth,
   }) {
     // Texto plano (sin marcadores [Acorde])
     final String plainText = line.replaceAll(chordRegex, '');
@@ -446,7 +448,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       final TextPainter tp = TextPainter(
         text: TextSpan(text: textBeforePlain, style: lyricStyle),
         textDirection: TextDirection.ltr,
-      )..layout();
+        maxLines: 1,
+      )..layout(maxWidth: availableWidth);
 
       final String chord = match.group(1) ?? '';
       double left = tp.width;
@@ -462,7 +465,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout();
+        maxLines: 1,
+      )..layout(maxWidth: availableWidth);
 
       // Si este acorde caería muy cerca del anterior → desplazar a la derecha
       if (left < lastChordRight + minChordGap) {
