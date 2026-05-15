@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:logging/logging.dart';
 
@@ -44,8 +46,21 @@ class AudioLocalDataSource {
   /// [filePath] debe ser una ruta absoluta al archivo.
   Future<void> playFromFile(String filePath) async {
     try {
-      _log.info('Reproduciendo desde archivo: $filePath');
-      await _player.play(DeviceFileSource(filePath));
+      String resolvedPath = filePath;
+      // Si el archivo no existe, intentar con nombre sanitizado
+      if (!File(resolvedPath).existsSync()) {
+        final dir = Directory(resolvedPath).parent;
+        final fileName = resolvedPath.split('/').last;
+        final sanitized = fileName.replaceAll(RegExp(r'[^\w\.\-]'), '_');
+        final altPath = '${dir.path}/$sanitized';
+        if (File(altPath).existsSync()) {
+          resolvedPath = altPath;
+          _log.info('Usando ruta sanitizada: $resolvedPath');
+        }
+      }
+
+      _log.info('Reproduciendo desde archivo: $resolvedPath');
+      await _player.play(DeviceFileSource(resolvedPath));
     } catch (e) {
       _log.severe('Error al reproducir archivo $filePath: $e');
       throw AudioException(
