@@ -284,14 +284,17 @@ class HymnLocalDataSource {
     }
 
     // Build REPLACE chain for accent-insensitive search
+    // SQLite LOWER() no maneja caracteres Unicode, así que reemplazamos
+    // tanto mayúsculas como minúsculas con acentos.
     String normalizeSql(String col) {
       var result = 'LOWER($col)';
       final replacements = {
-        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
-        'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
-        'â': 'a', 'ê': 'e', 'î': 'i', 'ô': 'o', 'û': 'u',
-        'ä': 'a', 'ë': 'e', 'ï': 'i', 'ö': 'o', 'ü': 'u',
-        'ñ': 'n',
+        'á': 'a', 'Á': 'a', 'à': 'a', 'À': 'a', 'â': 'a', 'Â': 'a', 'ä': 'a', 'Ä': 'a',
+        'é': 'e', 'É': 'e', 'è': 'e', 'È': 'e', 'ê': 'e', 'Ê': 'e', 'ë': 'e', 'Ë': 'e',
+        'í': 'i', 'Í': 'i', 'ì': 'i', 'Ì': 'i', 'î': 'i', 'Î': 'i', 'ï': 'i', 'Ï': 'i',
+        'ó': 'o', 'Ó': 'o', 'ò': 'o', 'Ò': 'o', 'ô': 'o', 'Ô': 'o', 'ö': 'o', 'Ö': 'o',
+        'ú': 'u', 'Ú': 'u', 'ù': 'u', 'Ù': 'u', 'û': 'u', 'Û': 'u', 'ü': 'u', 'Ü': 'u',
+        'ñ': 'n', 'Ñ': 'N',
       };
       for (final e in replacements.entries) {
         result = "REPLACE($result, '${e.key}', '${e.value}')";
