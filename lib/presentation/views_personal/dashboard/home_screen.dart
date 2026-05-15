@@ -64,6 +64,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _searchQuery = '';
   final ScrollController _scrollController = ScrollController();
   List<Himno>? _cachedHimnos;
+  List<GlobalKey> _itemKeys = [];
 
   @override
   void dispose() {
@@ -334,6 +335,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   data: (himnos) {
                     _cachedHimnos = himnos;
+                    if (_itemKeys.length != himnos.length) {
+                      _itemKeys = List.generate(himnos.length, (_) => GlobalKey());
+                    }
                     if (himnos.isEmpty) {
                       return Center(
                         child: Column(
@@ -368,6 +372,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       itemBuilder: (context, index) {
                         final himno = himnos[index];
                         return HymnCard(
+                          key: _itemKeys[index],
                           himno: himno,
                           onTap: () {
                             if (isPresenting && isDesktop) {
@@ -411,6 +416,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  double get _averageItemHeight {
+    if (_itemKeys.isEmpty) return 120.0;
+    double total = 0;
+    int count = 0;
+    for (final key in _itemKeys) {
+      final ctx = key.currentContext;
+      if (ctx != null) {
+        final box = ctx.findRenderObject() as RenderBox?;
+        if (box != null && box.hasSize) {
+          total += box.size.height;
+          count++;
+        }
+      }
+    }
+    if (count > 0) return total / count;
+    return 120.0;
+  }
+
   void _scrollToLetter(String letter) {
     final himnos = _cachedHimnos;
     if (himnos == null || himnos.isEmpty || !_scrollController.hasClients) return;
@@ -422,17 +445,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           normalized[0].toUpperCase() == targetLetter;
     });
 
-    if (index == -1) return;
+    if (index == -1 || index >= _itemKeys.length) return;
 
-    const double itemHeight = 88.0;
-    final targetOffset = index * itemHeight;
+    final key = _itemKeys[index];
+
+    // Paso 1: scroll estimado para renderizar el item
+    final avgHeight = _averageItemHeight;
+    final targetOffset = index * avgHeight;
     final maxScroll = _scrollController.position.maxScrollExtent;
+    _scrollController.jumpTo(targetOffset.clamp(0.0, maxScroll));
 
-    _scrollController.animateTo(
-      targetOffset.clamp(0.0, maxScroll),
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-    );
+    // Paso 2: post-frame callback con ensureVisible para precisión exacta
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (key.currentContext != null && key.currentContext!.mounted) {
+        Scrollable.ensureVisible(
+          key.currentContext!,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: 0.0,
+        );
+      }
+    });
   }
 
   /// Abre el BottomSheet de descubrimiento y conexión de displays.
