@@ -8,6 +8,12 @@ import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/hymn_repository.dart';
 
+/// Provider que actúa como versión para invalidar caché de himnos
+/// cuando se modifican categorías, países u otros catálogos.
+/// Incrementar este contador fuerza a hymnListProvider y hymnDetailProvider
+/// a refetchear los datos.
+final catalogVersionProvider = StateProvider<int>((ref) => 0);
+
 /// Provider del repositorio de himnos (singleton).
 final hymnRepositoryProvider = Provider<HymnRepository>((ref) {
   return HymnRepositoryImpl(
@@ -36,12 +42,14 @@ class HymnQueryParam {
 /// Provider que retorna la lista filtrada de himnos.
 final hymnListProvider =
     FutureProvider.family<List<Himno>, HymnQueryParam>((ref, query) async {
+  ref.watch(catalogVersionProvider); // Re-fetch when catalogs change
   final repo = ref.read(hymnRepositoryProvider);
   return repo.searchHymns(query.text, tipo: query.tipo);
 });
 
 /// Provider que retorna el detalle de un himno por ID.
 final hymnDetailProvider = FutureProvider.family<Himno, int>((ref, id) async {
+  ref.watch(catalogVersionProvider); // Re-fetch when catalogs change
   final repo = ref.read(hymnRepositoryProvider);
   return repo.getHymnById(id);
 });

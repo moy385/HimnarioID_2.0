@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../views_personal/providers/hymn_providers.dart' show catalogVersionProvider;
 import '../../../domain/entities/categoria.dart';
 import '../../views_admin/providers/admin_providers.dart'
     show
@@ -92,6 +93,7 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
       }
       _resetForm();
       ref.invalidate(_categoriaListProvider);
+      ref.read(catalogVersionProvider.notifier).state++;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,6 +134,7 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
             admin: admin,
           );
       ref.invalidate(_categoriaListProvider);
+      ref.read(catalogVersionProvider.notifier).state++;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Categoría "${cat.nombre}" eliminada')),
