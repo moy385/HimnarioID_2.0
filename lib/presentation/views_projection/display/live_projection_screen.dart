@@ -5,6 +5,7 @@ import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
 import 'receptor_binding.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
+import '../../../core/utils/stanza_layout_engine.dart';
 
 /// Pantalla de Proyección en Vivo (Live Projection).
 ///
@@ -39,6 +40,20 @@ class LiveProjectionScreen extends ConsumerWidget {
         body: const SizedBox.expand(),
       );
     }
+
+    // Procesar contenido con StanzaLayoutEngine
+    final double projectionWidth =
+        MediaQuery.of(context).size.width - 160; // 80px padding each side
+    final processedContent = StanzaLayoutEngine.processStanza(
+      liveState.currentStanza?.contenido ?? '',
+      maxWidth: projectionWidth,
+      style: textTheme.bodyLarge?.copyWith(
+        fontFamily: appearance.fontFamily,
+        fontSize: fontSize,
+        height: 1.8,
+        fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -103,7 +118,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                           '${liveState.currentIndex}_${liveState.currentStanza?.contenido ?? ''}',
                         ),
                         child: Text(
-                          liveState.currentStanza?.contenido ?? '',
+                          processedContent,
                           style: textTheme.bodyLarge?.copyWith(
                             fontFamily: appearance.fontFamily,
                             color: colors.primary,

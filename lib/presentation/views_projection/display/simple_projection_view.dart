@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../views_personal/providers/hymn_providers.dart';
+import '../../../core/utils/stanza_layout_engine.dart';
 
 /// Vista simplificada para modo Desktop sin Present activo.
 ///
@@ -187,6 +188,18 @@ class _SimpleProjectionViewState extends ConsumerState<SimpleProjectionView> {
     }
     final estrofa = estrofas[_currentIndex];
 
+    // Procesar contenido con StanzaLayoutEngine
+    final double contentWidth =
+        MediaQuery.of(context).size.width - 48; // 24px padding each side
+    final processedContent = StanzaLayoutEngine.processStanza(
+      estrofa.contenido,
+      maxWidth: contentWidth,
+      style: textTheme.bodyLarge?.copyWith(
+        fontFamily: 'monospace',
+        height: 1.8,
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.himno.titulo),
@@ -225,7 +238,7 @@ class _SimpleProjectionViewState extends ConsumerState<SimpleProjectionView> {
             ),
             const SizedBox(height: 16),
             SelectableText(
-              estrofa.contenido,
+              processedContent,
               style: textTheme.bodyLarge?.copyWith(
                 fontFamily: 'monospace',
                 height: 1.8,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/utils/chord_transposer.dart';
+import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/control_sheets.dart';
@@ -300,11 +301,26 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
 
     // Transponer usando el utility ChordTransposer
     final transposedLyric = transposeChordPro(lyric, transposeValue);
-    final parts = transposedLyric.split('\n');
 
-    // Escala base para el texto de la letra
+    // Medir y refluir líneas largas
+    final double availableWidth =
+        MediaQuery.of(context).size.width - 32; // 16px padding each side
     final double baseFontSize =
         (textTheme.bodyLarge?.fontSize ?? 16) * appearance.fontScale;
+
+    final processedLyric = StanzaLayoutEngine.processStanza(
+      transposedLyric,
+      maxWidth: availableWidth,
+      style: textTheme.bodyLarge?.copyWith(
+        fontFamily: appearance.fontFamily,
+        fontSize: baseFontSize,
+        fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+
+    final parts = processedLyric.split('\n');
+
+    // Escala base para el texto de la letra
     final double chordFontSize = 14 * appearance.fontScale;
 
     return Column(
@@ -382,7 +398,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     int lastEnd = 0;
 
     for (final match in chordRegex.allMatches(line)) {
-      // Texto antes del acorde
+      // 1. Texto antes del acorde (solo si hay)
       if (match.start > lastEnd) {
         segments.add(
           TextSpan(
@@ -391,43 +407,14 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               fontFamily: appearance.fontFamily,
               color: appearance.textColor,
               fontSize: baseFontSize,
-              fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        );
-
-        // El acorde (sin los corchetes)
-        final chord = match.group(1) ?? '';
-        segments.add(
-          TextSpan(
-            text: chord,
-            style: textTheme.bodyLarge?.copyWith(
-              color: appearance.chordColor,
-              fontWeight: FontWeight.bold,
-              fontSize: chordFontSize,
-            ),
-          ),
-        );
-
-        lastEnd = match.end;
-      }
-
-      // Texto restante después del último acorde
-      if (lastEnd < line.length) {
-        segments.add(
-          TextSpan(
-            text: line.substring(lastEnd),
-            style: textTheme.bodyLarge?.copyWith(
-              fontFamily: appearance.fontFamily,
-              color: appearance.textColor,
-              fontSize: baseFontSize,
-              fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight:
+                  appearance.isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         );
       }
 
-      // El acorde (sin los corchetes)
+      // 2. El acorde (SIEMPRE, esté donde esté)
       final chord = match.group(1) ?? '';
       segments.add(
         TextSpan(
@@ -443,14 +430,17 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       lastEnd = match.end;
     }
 
-    // Texto restante después del último acorde
+    // 3. Texto restante después del último acorde
     if (lastEnd < line.length) {
       segments.add(
         TextSpan(
           text: line.substring(lastEnd),
           style: textTheme.bodyLarge?.copyWith(
+            fontFamily: appearance.fontFamily,
             color: appearance.textColor,
             fontSize: baseFontSize,
+            fontWeight:
+                appearance.isBold ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       );
