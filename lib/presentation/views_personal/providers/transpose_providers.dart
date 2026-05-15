@@ -18,7 +18,7 @@ final transposedChordsProvider =
 });
 
 /// Provider para la tonalidad actual (nota base).
-final currentKeyProvider = StateProvider<String>((ref) => 'G');
+final currentKeyProvider = StateProvider<String>((ref) => 'C');
 
 /// Provider que retorna la tonalidad transpuesta según el valor actual.
 final transposedKeyProvider = Provider<String>((ref) {
