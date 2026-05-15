@@ -34,6 +34,7 @@ class HymnDetailScreen extends ConsumerStatefulWidget {
 class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   bool _isPlaying = false;
   bool _showChords = true;
+  int? _currentPistaId;
 
   void _togglePlayback() {
     setState(() {
@@ -559,14 +560,30 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     super.dispose();
   }
 
-  void _playAudio() {
+  Future<void> _playAudio([int? pistaId]) async {
     final audioRepo = ref.read(audioRepositoryProvider);
-    audioRepo.play(widget.himno.id).then((_) {
+    final himnoId = widget.himno.id;
+
+    // Si no se especificó pista, buscar la primera disponible
+    int targetPistaId = pistaId ?? _currentPistaId ?? himnoId;
+    if (pistaId == null && _currentPistaId == null) {
+      try {
+        final pistas = await audioRepo.getByHimno(himnoId);
+        if (pistas.isNotEmpty) {
+          targetPistaId = pistas.first.id;
+          _currentPistaId = targetPistaId;
+        }
+      } catch (_) {
+        // Si no hay pistas, usar himnoId como fallback (puede fallar)
+      }
+    }
+
+    audioRepo.play(targetPistaId).then((_) {
       if (!mounted) return;
       setState(() => _isPlaying = true);
       ref.read(isAudioPlayingProvider.notifier).state = true;
       HymnDetailScreen._log.info(
-        'Reproduciendo audio para himno ${widget.himno.id}',
+        'Reproduciendo pista $targetPistaId para himno $himnoId',
       );
     }).catchError((error) {
       if (!mounted) return;
@@ -617,7 +634,10 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       ref: ref,
       himnoId: widget.himno.id,
       isPlaying: _isPlaying,
-      onPlay: _playAudio,
+      onPlayPista: (pistaId) {
+        _currentPistaId = pistaId;
+        _playAudio(pistaId);
+      },
       onStop: _stopAudio,
     );
   }

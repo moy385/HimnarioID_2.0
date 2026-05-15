@@ -157,7 +157,8 @@ class MinimalControlScreen extends ConsumerWidget {
                   ref: ref,
                   himnoId: hymnId,
                   isPlaying: ref.read(isAudioPlayingProvider),
-                  onPlay: () => ref.read(audioRepositoryProvider).play(hymnId),
+                  onPlayPista: (pistaId) =>
+                      ref.read(audioRepositoryProvider).play(pistaId),
                   onStop: () => ref.read(audioRepositoryProvider).stop(),
                 ),
               ),

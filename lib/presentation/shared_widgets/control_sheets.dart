@@ -467,7 +467,7 @@ void showNoteSheet(
   required WidgetRef ref,
   required int himnoId,
   required bool isPlaying,
-  required VoidCallback onPlay,
+  required ValueChanged<int> onPlayPista,
   required VoidCallback onStop,
 }) {
   showModalBottomSheet<void>(
@@ -574,30 +574,31 @@ void showNoteSheet(
                   );
                 }
 
-                return Column(
-                  children: pistas.map((PistaAudio pista) {
-                    return ListTile(
-                      leading: IconButton(
-                        icon: Icon(
-                          isPlaying
-                              ? Icons.stop_rounded
-                              : Icons.play_arrow_rounded,
-                          color: isPlaying
-                              ? colorScheme.error
-                              : colorScheme.secondary,
-                        ),
-                        onPressed: () {
-                          if (isPlaying) {
-                            onStop();
-                          } else {
-                            onPlay();
-                          }
-                        },
-                      ),
-                      title: Text(
-                        pista.descripcion ?? 'Pista ${pista.id}',
-                        style: textTheme.bodyLarge,
-                      ),
+                    return Column(
+                      children: pistas.map((PistaAudio pista) {
+                        final fileName = pista.rutaArchivo.split('/').last;
+                        return ListTile(
+                          leading: IconButton(
+                            icon: Icon(
+                              isPlaying
+                                  ? Icons.stop_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: isPlaying
+                                  ? colorScheme.error
+                                  : colorScheme.secondary,
+                            ),
+                            onPressed: () {
+                              if (isPlaying) {
+                                onStop();
+                              } else {
+                                onPlayPista(pista.id);
+                              }
+                            },
+                          ),
+                          title: Text(
+                            pista.descripcion ?? fileName,
+                            style: textTheme.bodyLarge,
+                          ),
                       subtitle: pista.duracionSegundos != null
                           ? Text(
                               _formatDuration(pista.duracionSegundos!),

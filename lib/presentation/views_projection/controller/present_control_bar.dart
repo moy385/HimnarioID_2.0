@@ -241,8 +241,8 @@ class PresentControlBar extends ConsumerWidget {
                     ref: ref,
                     himnoId: hymn!.id,
                     isPlaying: ref.read(isAudioPlayingProvider),
-                    onPlay: () =>
-                        ref.read(audioRepositoryProvider).play(hymn.id),
+                    onPlayPista: (pistaId) =>
+                        ref.read(audioRepositoryProvider).play(pistaId),
                     onStop: () =>
                         ref.read(audioRepositoryProvider).stop(),
                   )
