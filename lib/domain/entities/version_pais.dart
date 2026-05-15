@@ -11,6 +11,7 @@ class VersionPais with _$VersionPais {
     required int himnoId,
     required int paisId,
     String? paisNombre,
+    String? paisCodigo,
     required String tonalidadOriginal,
     @Default(true) bool activo,
     @Default([]) List<Estrofa> estrofas,

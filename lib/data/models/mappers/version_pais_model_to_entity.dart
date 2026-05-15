@@ -9,6 +9,7 @@ extension VersionPaisModelX on VersionPaisModel {
       himnoId: himnoId,
       paisId: paisId,
       paisNombre: paisNombre,
+      paisCodigo: paisCodigo,
       tonalidadOriginal: tonalidadOriginal,
       activo: activo,
       estrofas: estrofas?.map((e) => e.toEntity()).toList() ?? [],

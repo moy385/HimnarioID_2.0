@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/flag_utils.dart';
 import '../../domain/entities/himno.dart';
 
 /// Widget de tarjeta de himno para listas.
@@ -81,6 +82,18 @@ class HymnCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
+                        // Bandera del país
+                        if (himno.paisCodigo != null &&
+                            himno.paisCodigo!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FlagUtils.codeToFlag(himno.paisCodigo).isNotEmpty
+                                ? Text(
+                                    FlagUtils.codeToFlag(himno.paisCodigo),
+                                    style: const TextStyle(fontSize: 20),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
                         _buildChip(
                           context,
                           himno.categoria,

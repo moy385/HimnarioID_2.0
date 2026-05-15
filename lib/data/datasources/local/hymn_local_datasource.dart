@@ -67,7 +67,7 @@ class HymnLocalDataSource {
       // Cargar versiones para cada himno (con JOIN a Pais)
       for (final himno in himnos) {
         final versionMaps = await db.rawQuery(
-          'SELECT vp.*, p.nombre AS pais_nombre '
+          'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
           'FROM Version_Pais vp '
           'LEFT JOIN Pais p ON p.id = vp.pais_id '
           'WHERE vp.himno_id = ? AND vp.activo = 1',
@@ -110,7 +110,7 @@ class HymnLocalDataSource {
 
       // Cargar versiones de país (con JOIN a Pais)
       final versionMaps = await db.rawQuery(
-        'SELECT vp.*, p.nombre AS pais_nombre '
+        'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
         'FROM Version_Pais vp '
         'LEFT JOIN Pais p ON p.id = vp.pais_id '
         'WHERE vp.himno_id = ? AND vp.activo = 1',
@@ -221,7 +221,7 @@ class HymnLocalDataSource {
 
       for (final himno in himnos) {
         final versionMaps = await db.rawQuery(
-          'SELECT vp.*, p.nombre AS pais_nombre '
+          'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
           'FROM Version_Pais vp '
           'LEFT JOIN Pais p ON p.id = vp.pais_id '
           'WHERE vp.himno_id = ? AND vp.activo = 1',

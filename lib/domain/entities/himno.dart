@@ -30,6 +30,9 @@ class Himno with _$Himno {
   /// o `-1` si el himno no tiene versiones.
   int get primaryVersionPaisId => versiones.firstOrNull?.id ?? -1;
 
+  /// Código ISO del país de la primera versión disponible (ej. "SV").
+  String? get paisCodigo => versiones.firstOrNull?.paisCodigo;
+
   /// Primera línea de la primera estrofa de la primera versión
   /// (sin marcadores ChordPro).
   String? get primeraLinea =>
