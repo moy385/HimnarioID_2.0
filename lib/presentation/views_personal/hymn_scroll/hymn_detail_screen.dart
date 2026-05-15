@@ -6,6 +6,7 @@ import '../../../core/utils/chord_transposer.dart';
 import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
+import '../../../domain/repositories/audio_repository.dart';
 import '../../shared_widgets/control_sheets.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/audio_providers.dart';
@@ -459,7 +460,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 8),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -477,80 +478,66 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            // Controles de transposición
-            Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      ref.read(transposeValueProvider.notifier).state =
-                          (transposeValue - 1).clamp(-6, 6);
-                    },
-                    icon: const Icon(Icons.remove),
-                    tooltip: 'Bajar tono',
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Tono',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        Text(
-                          transposedKey,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      ref.read(transposeValueProvider.notifier).state =
-                          (transposeValue + 1).clamp(-6, 6);
-                    },
-                    icon: const Icon(Icons.add),
-                    tooltip: 'Subir tono',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Botón de reproducir audio — cambia visualmente entre estados
-            IconButton.filled(
-              onPressed: _togglePlayback,
-              icon: Icon(
-                _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-              ),
-              style: IconButton.styleFrom(
-                backgroundColor: _isPlaying
-                    ? colorScheme.errorContainer
-                    : colorScheme.secondaryContainer,
-                foregroundColor: _isPlaying
-                    ? colorScheme.onErrorContainer
-                    : colorScheme.onSecondaryContainer,
-              ),
-              tooltip: _isPlaying ? 'Detener audio' : 'Reproducir audio',
-            ),
-          ],
-        ),
+        child: _isPlaying ? _buildPlayerBar(context, colorScheme, textTheme) : _buildTransposeBar(context, transposeValue, transposedKey, colorScheme, textTheme),
       ),
     );
   }
 
-  @override
+  Widget _buildTransposeBar(BuildContext context, int transposeValue, String transposedKey, ColorScheme colorScheme, TextTheme textTheme) {
+    return Row(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue - 1).clamp(-6, 6),
+                icon: const Icon(Icons.remove),
+                tooltip: 'Bajar tono',
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Tono', style: textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                    Text(transposedKey, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue + 1).clamp(-6, 6),
+                icon: const Icon(Icons.add),
+                tooltip: 'Subir tono',
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        IconButton.filled(
+          onPressed: _togglePlayback,
+          icon: const Icon(Icons.play_arrow_rounded),
+          style: IconButton.styleFrom(
+            backgroundColor: colorScheme.secondaryContainer,
+            foregroundColor: colorScheme.onSecondaryContainer,
+          ),
+          tooltip: 'Reproducir audio',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlayerBar(BuildContext context, ColorScheme colorScheme, TextTheme textTheme) {
+    return _AudioPlayerBar(
+      key: const ValueKey('player_bar'),
+      repo: ref.read(audioRepositoryProvider),
+      onStop: _togglePlayback,
+    );
+  }
+
   void dispose() {
     if (_isPlaying) {
       // Disparar stop sin await — el widget se está destruyendo
@@ -697,5 +684,99 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         }
       }
     }
+  }
+}
+
+/// Barra de reproducción reactiva: progreso, tiempo y controles.
+class _AudioPlayerBar extends StatefulWidget {
+  final AudioRepository repo;
+  final VoidCallback onStop;
+
+  const _AudioPlayerBar({super.key, required this.repo, required this.onStop});
+
+  @override
+  State<_AudioPlayerBar> createState() => _AudioPlayerBarState();
+}
+
+class _AudioPlayerBarState extends State<_AudioPlayerBar> {
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _isSliding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.repo.onDurationChanged.listen((d) {
+      if (d != null && mounted) setState(() => _duration = d);
+    });
+    widget.repo.onPositionChanged.listen((p) {
+      if (!_isSliding && mounted) setState(() => _position = p);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final durationSec = _duration.inSeconds.toDouble();
+    final positionSec = _position.inSeconds.toDouble();
+    final progress = durationSec > 0 ? positionSec / durationSec : 0.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Text(_fmt(positionSec),
+                style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant, fontSize: 11)),
+            Expanded(
+              child: SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 3,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 5),
+                  overlayShape:
+                      const RoundSliderOverlayShape(overlayRadius: 10),
+                ),
+                child: Slider(
+                  value: progress.clamp(0.0, 1.0),
+                  onChanged: (v) {
+                    setState(() {
+                      _isSliding = true;
+                    });
+                  },
+                  onChangeEnd: (v) {
+                    widget.repo.seek(
+                        Duration(milliseconds: (v * durationSec * 1000).round()));
+                    setState(() => _isSliding = false);
+                  },
+                ),
+              ),
+            ),
+            Text(_fmt(durationSec),
+                style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant, fontSize: 11)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.stop_rounded, size: 28),
+              color: colorScheme.error,
+              onPressed: widget.onStop,
+              tooltip: 'Detener',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _fmt(double sec) {
+    final t = sec.round();
+    return '${(t ~/ 60).toString().padLeft(2, '0')}:${(t % 60).toString().padLeft(2, '0')}';
   }
 }
