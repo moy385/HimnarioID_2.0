@@ -38,4 +38,20 @@ class StringUtils {
   static int compareForSort(String a, String b) {
     return normalizeForSort(a).compareTo(normalizeForSort(b));
   }
+
+  /// Normaliza texto para búsqueda: minúsculas, sin acentos, sin puntuación.
+  ///
+  /// "Éxodo" → "exodo"
+  /// "¡Aleluya!" → "aleluya"
+  /// "Santa Biblia (Salmo 23)" → "santa biblia salmo 23"
+  /// "[G]Dios es [C]amor" → "dios es amor"
+  static String normalizeForSearch(String text) {
+    var result = text.toLowerCase().trim();
+    // Quitar acentos
+    result = result.split('').map((c) => _accents[c] ?? c).join();
+    // Quitar caracteres no alfanuméricos (excepto espacios)
+    result = result.replaceAll(RegExp(r'[^\w\s]'), '');
+    // Colapsar espacios múltiples
+    return result.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
 }

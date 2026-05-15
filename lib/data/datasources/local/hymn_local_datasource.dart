@@ -24,8 +24,12 @@ class HymnLocalDataSource {
   /// Obtiene la instancia de BD.
   Future<Database> get _db => _dbHelper.database;
 
-  /// Busca himnos por texto (título o número) con filtros opcionales.
+  /// Busca himnos por texto (título, número o contenido de estrofas)
+  /// con filtros opcionales. Implementa búsqueda inteligente con
+  /// normalización de acentos y puntuación, scoring por relevancia,
+  /// y ordenamiento alfabético insensible a acentos.
   ///
+  /// [query] texto de búsqueda. Si está vacío, aplica solo filtros.
   /// [orderBy] permite ordenar: 'titulo_principal ASC' (A-Z),
   ///   'titulo_principal DESC' (Z-A), o 'h.numero_oficial ASC' (default).
   /// [categoriaId] filtra himnos que pertenecen a la categoría indicada.
@@ -37,65 +41,119 @@ class HymnLocalDataSource {
     try {
       final db = await _db;
 
-      final conditions = <String>[];
+      // Si no hay query de búsqueda, usar flujo existente (solo filtros)
+      if (query.isEmpty) {
+        return _searchWithFilters(db, tipo: tipo, orderBy: orderBy, categoriaId: categoriaId);
+      }
+
+      final normalizedQuery = StringUtils.normalizeForSearch(query);
+
+      // Paso 1: Buscar en títulos y números (SQL LIKE raw para pre-filtrado)
+      final conditions = <String>['h.activo = 1'];
       final params = <dynamic>[];
 
-      if (query.isNotEmpty) {
-        conditions.add(
-          '(h.titulo_principal LIKE ? OR CAST(h.numero_oficial AS TEXT) LIKE ?)',
-        );
-        final searchTerm = '%$query%';
-        params.addAll([searchTerm, searchTerm]);
-      }
+      conditions.add(
+        '(h.titulo_principal LIKE ? OR CAST(h.numero_oficial AS TEXT) LIKE ?)',
+      );
+      final searchParam = '%$query%';
+      params.addAll([searchParam, searchParam]);
 
       if (tipo != null) {
         conditions.add('h.tipo = ?');
         params.add(tipo.value);
       }
 
-      conditions.add('h.activo = 1');
-
-      List<Map<String, dynamic>> maps;
-      // Si ordena por título, no usar ORDER BY en SQL (se ordena en Dart)
-      final effectiveOrderBy = (orderBy != null && orderBy.contains('titulo_principal'))
-          ? null
-          : (orderBy ?? 'h.numero_oficial ASC');
-
+      String sql;
       if (categoriaId != null) {
-        // Con filtro por categoría: usar rawQuery con JOIN a Himno_Categoria
         conditions.add('hc.categoria_id = ?');
         params.add(categoriaId);
-
-        final sql = '''
+        sql = '''
           SELECT DISTINCT h.id, h.titulo_principal, h.numero_oficial, h.tipo, h.activo
           FROM Himno h
           INNER JOIN Himno_Categoria hc ON hc.himno_id = h.id
           WHERE ${conditions.join(' AND ')}
-          ORDER BY $effectiveOrderBy
         ''';
-        maps = await db.rawQuery(sql, params);
       } else {
-        // Sin filtro por categoría: mantener db.query()
-        final where = conditions.join(' AND ');
-        maps = await db.query(
-          'Himno h',
-          columns: [
-            'h.id',
-            'h.titulo_principal',
-            'h.numero_oficial',
-            'h.tipo',
-            'h.activo',
-          ],
-          where: where,
-          whereArgs: params,
-          orderBy: effectiveOrderBy,
-        );
+        sql = '''
+          SELECT h.id, h.titulo_principal, h.numero_oficial, h.tipo, h.activo
+          FROM Himno h
+          WHERE ${conditions.join(' AND ')}
+        ''';
       }
 
-      var himnos = maps.map((map) => HimnoModel.fromMap(map)).toList();
+      final rawMaps = await db.rawQuery(sql, params);
+      var allHimnos = rawMaps.map((m) => HimnoModel.fromMap(m)).toList();
 
-      // Cargar versiones para cada himno (con JOIN a Pais)
-      for (final himno in himnos) {
+      // Paso 2: Filtrar en Dart con normalizeForSearch (acentos insensibles)
+      // y calcular puntajes de relevancia
+      final scored = <_ScoredHymn>[];
+
+      for (final h in allHimnos) {
+        final nTitle = StringUtils.normalizeForSearch(h.tituloPrincipal);
+        final nNumber = h.numeroOficial?.toString() ?? '';
+        double score = 0;
+
+        if (nTitle == normalizedQuery) {
+          score = 100;
+        } else if (nTitle.startsWith(normalizedQuery)) {
+          score = 80;
+        } else if (nTitle.contains(normalizedQuery)) {
+          score = 60;
+        }
+
+        if (nNumber == normalizedQuery) {
+          score = 90;
+        } else if (nNumber.contains(normalizedQuery)) {
+          score = 40;
+        }
+
+        if (score > 0) {
+          scored.add(_ScoredHymn(h, score));
+        }
+      }
+
+      // Paso 3: Buscar en estrofas si el query tiene al menos 3 caracteres
+      if (normalizedQuery.length >= 3) {
+        try {
+          final stanzaHymnIds = await _searchStanzas(db, normalizedQuery, tipo: tipo, categoriaId: categoriaId);
+          for (final entry in stanzaHymnIds.entries) {
+            final hymnId = entry.key;
+            // Solo agregar si no está ya en scored
+            if (!scored.any((s) => s.himno.id == hymnId)) {
+              // Cargar himno básico
+              final hymnMaps = await db.query('Himno',
+                where: 'id = ? AND activo = 1',
+                whereArgs: [hymnId],
+              );
+              if (hymnMaps.isNotEmpty) {
+                final h = HimnoModel.fromMap(hymnMaps.first);
+                scored.add(_ScoredHymn(h, 35.0));
+              }
+            } else {
+              // Ya existe, dar bonus por match en estrofa
+              final idx = scored.indexWhere((s) => s.himno.id == hymnId);
+              if (idx >= 0) {
+                scored[idx] = _ScoredHymn(scored[idx].himno, scored[idx].score + 35);
+              }
+            }
+          }
+        } catch (e) {
+          _log.warning('Error en búsqueda de estrofas: $e');
+        }
+      }
+
+      // Paso 4: Ordenar por relevancia si es búsqueda, o por orderBy si no
+      if (orderBy != null && orderBy.contains('titulo_principal')) {
+        // Orden alfabético (ya implementado después)
+      } else {
+        // Ordenar por puntaje descendente
+        scored.sort((a, b) => b.score.compareTo(a.score));
+      }
+
+      allHimnos = scored.map((s) => s.himno).toList();
+
+      // Paso 5: Cargar versiones y categorías (solo para resultados)
+      for (final himno in allHimnos) {
         final versionMaps = await db.rawQuery(
           'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
           'FROM Version_Pais vp '
@@ -103,10 +161,8 @@ class HymnLocalDataSource {
           'WHERE vp.himno_id = ? AND vp.activo = 1',
           [himno.id],
         );
-        himno.versiones =
-            versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
+        himno.versiones = versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
 
-        // Cargar categorías para cada himno
         final catMaps = await db.rawQuery(
           'SELECT c.id, c.nombre FROM Himno_Categoria hc '
           'JOIN Categoria c ON c.id = hc.categoria_id '
@@ -114,26 +170,23 @@ class HymnLocalDataSource {
           [himno.id],
         );
         himno.categorias = catMaps
-            .map((cm) => CategoriaModel(
-                  id: cm['id'] as int,
-                  nombre: cm['nombre'] as String,
-                ))
+            .map((cm) => CategoriaModel(id: cm['id'] as int, nombre: cm['nombre'] as String))
             .toList();
       }
 
-      // Ordenar en Dart cuando es por título (sort inteligente con acentos)
+      // Paso 6: Orden alfabético en Dart (si aplica)
       if (orderBy != null && orderBy.contains('titulo_principal')) {
-        himnos.sort((a, b) => StringUtils.compareForSort(
+        allHimnos.sort((a, b) => StringUtils.compareForSort(
           a.tituloPrincipal,
           b.tituloPrincipal,
-        ));
+        ),);
         if (orderBy.contains('DESC')) {
-          himnos = himnos.reversed.toList();
+          allHimnos = allHimnos.reversed.toList();
         }
       }
 
-      _log.info('Búsqueda "$query" encontró ${himnos.length} resultados.');
-      return himnos;
+      _log.info('Búsqueda "$query" encontró ${allHimnos.length} resultados.');
+      return allHimnos;
     } catch (e) {
       _log.severe('Error en searchHymns: $e');
       throw exc.DatabaseException(
@@ -141,6 +194,146 @@ class HymnLocalDataSource {
         query: 'searchHymns',
       );
     }
+  }
+
+  /// Helper para búsqueda con filtros sin texto (flujo existente optimizado).
+  Future<List<HimnoModel>> _searchWithFilters(Database db, {
+    HimnoTipo? tipo,
+    String? orderBy,
+    int? categoriaId,
+  }) async {
+    final conditions = <String>[];
+    final params = <dynamic>[];
+
+    if (tipo != null) {
+      conditions.add('h.tipo = ?');
+      params.add(tipo.value);
+    }
+    conditions.add('h.activo = 1');
+
+    List<Map<String, dynamic>> maps;
+    final effectiveOrderBy = (orderBy != null && orderBy.contains('titulo_principal'))
+        ? null
+        : (orderBy ?? 'h.numero_oficial ASC');
+
+    if (categoriaId != null) {
+      conditions.add('hc.categoria_id = ?');
+      params.add(categoriaId);
+      maps = await db.rawQuery('''
+        SELECT DISTINCT h.id, h.titulo_principal, h.numero_oficial, h.tipo, h.activo
+        FROM Himno h
+        INNER JOIN Himno_Categoria hc ON hc.himno_id = h.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY ${effectiveOrderBy ?? 'h.numero_oficial ASC'}
+      ''', params,);
+    } else {
+      final where = conditions.join(' AND ');
+      maps = await db.query('Himno h',
+        columns: ['h.id', 'h.titulo_principal', 'h.numero_oficial', 'h.tipo', 'h.activo'],
+        where: where,
+        whereArgs: params,
+        orderBy: effectiveOrderBy,
+      );
+    }
+
+    var himnos = maps.map((m) => HimnoModel.fromMap(m)).toList();
+
+    // Cargar versiones y categorías
+    for (final himno in himnos) {
+      final versionMaps = await db.rawQuery(
+        'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
+        'FROM Version_Pais vp LEFT JOIN Pais p ON p.id = vp.pais_id '
+        'WHERE vp.himno_id = ? AND vp.activo = 1',
+        [himno.id],
+      );
+      himno.versiones = versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
+
+      final catMaps = await db.rawQuery(
+        'SELECT c.id, c.nombre FROM Himno_Categoria hc '
+        'JOIN Categoria c ON c.id = hc.categoria_id WHERE hc.himno_id = ?',
+        [himno.id],
+      );
+      himno.categorias = catMaps
+          .map((cm) => CategoriaModel(id: cm['id'] as int, nombre: cm['nombre'] as String))
+          .toList();
+    }
+
+    // Orden alfabético en Dart (si aplica)
+    if (effectiveOrderBy == null && orderBy != null && orderBy.contains('titulo_principal')) {
+      himnos.sort((a, b) => StringUtils.compareForSort(a.tituloPrincipal, b.tituloPrincipal));
+      if (orderBy.contains('DESC')) {
+        himnos = himnos.reversed.toList();
+      }
+    }
+
+    return himnos;
+  }
+
+  /// Busca himnos cuyo contenido de estrofas contenga el query normalizado.
+  /// Retorna un mapa: hymnId → conjunto de version_pais_id que matchean.
+  Future<Map<int, Set<int>>> _searchStanzas(Database db, String normalizedQuery, {
+    HimnoTipo? tipo,
+    int? categoriaId,
+  }) async {
+    final params = <dynamic>[];
+    final conditions = <String>['h.activo = 1'];
+
+    if (tipo != null) {
+      conditions.add('h.tipo = ?');
+      params.add(tipo.value);
+    }
+
+    // Build REPLACE chain for accent-insensitive search
+    String normalizeSql(String col) {
+      var result = 'LOWER($col)';
+      final replacements = {
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
+        'â': 'a', 'ê': 'e', 'î': 'i', 'ô': 'o', 'û': 'u',
+        'ä': 'a', 'ë': 'e', 'ï': 'i', 'ö': 'o', 'ü': 'u',
+        'ñ': 'n',
+      };
+      for (final e in replacements.entries) {
+        result = "REPLACE($result, '${e.key}', '${e.value}')";
+      }
+      return result;
+    }
+
+    final contentNormalized = normalizeSql('e.contenido');
+    params.add('%$normalizedQuery%');
+
+    String sql;
+    if (categoriaId != null) {
+      conditions.add('hc.categoria_id = ?');
+      params.add(categoriaId);
+      sql = '''
+        SELECT DISTINCT h.id, vp.id AS vp_id
+        FROM Estrofa e
+        JOIN Version_Pais vp ON vp.id = e.version_pais_id
+        JOIN Himno h ON h.id = vp.himno_id
+        LEFT JOIN Himno_Categoria hc ON hc.himno_id = h.id
+        WHERE ${conditions.join(' AND ')} AND $contentNormalized LIKE ?
+      ''';
+    } else {
+      sql = '''
+        SELECT DISTINCT h.id, vp.id AS vp_id
+        FROM Estrofa e
+        JOIN Version_Pais vp ON vp.id = e.version_pais_id
+        JOIN Himno h ON h.id = vp.himno_id
+        WHERE ${conditions.join(' AND ')} AND $contentNormalized LIKE ?
+      ''';
+    }
+
+    final results = await db.rawQuery(sql, params);
+    final hymnVersions = <int, Set<int>>{};
+    for (final row in results) {
+      final hymnId = row['id'] as int;
+      final vpId = row['vp_id'] as int;
+      hymnVersions.putIfAbsent(hymnId, () => <int>{});
+      hymnVersions[hymnId]!.add(vpId);
+    }
+
+    return hymnVersions;
   }
 
   /// Obtiene un himno completo por su ID incluyendo versiones, estrofas y categorías.
@@ -564,4 +757,11 @@ class HymnLocalDataSource {
       );
     }
   }
+}
+
+/// Helper para almacenar un himno con su puntaje de relevancia.
+class _ScoredHymn {
+  final HimnoModel himno;
+  final double score;
+  const _ScoredHymn(this.himno, this.score);
 }
