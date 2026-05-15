@@ -930,12 +930,14 @@ class HymnSearchDelegate extends SearchDelegate<int> {
                     ),
                 ],
               ),
-              subtitle: himno.categoria.isNotEmpty
+              subtitle: (himno.categorias?.isNotEmpty ?? false)
                   ? Text(
-                      himno.categoria,
+                      himno.categorias!.take(4).map((c) => c.nombre).join(', '),
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     )
                   : null,
               trailing: isCurrent

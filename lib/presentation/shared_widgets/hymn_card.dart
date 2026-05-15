@@ -94,12 +94,18 @@ class HymnCard extends StatelessWidget {
                                   )
                                 : const SizedBox.shrink(),
                           ),
-                        _buildChip(
-                          context,
-                          himno.categoria,
-                          colorScheme.tertiaryContainer,
-                          colorScheme.onTertiaryContainer,
-                        ),
+                        // Categorías (hasta 4)
+                        ...(himno.categorias?.take(4).map((cat) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _buildChip(
+                              context,
+                              cat.nombre,
+                              colorScheme.tertiaryContainer,
+                              colorScheme.onTertiaryContainer,
+                            ),
+                          );
+                        }).toList() ?? []),
                         if (!himno.esOficial) ...[
                           const SizedBox(width: 8),
                           _buildChip(
