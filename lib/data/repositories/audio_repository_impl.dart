@@ -1,8 +1,6 @@
-import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:logging/logging.dart';
 
 import '../../core/errors/failures.dart';
-import '../../core/services/audio_download_service.dart' hide DownloadProgressCallback;
 import '../../domain/entities/pista_audio.dart';
 import '../../domain/repositories/audio_repository.dart';
 import '../datasources/local/audio_local_datasource.dart';
@@ -17,7 +15,6 @@ class AudioRepositoryImpl implements AudioRepository {
 
   final AudioLocalDataSource _audioDataSource;
   final CatalogLocalDataSource _catalogDataSource;
-  final AudioDownloadService _downloadService;
 
   /// Cache de pistas de audio por ID de pista.
   final Map<int, PistaAudio> _pistaCache = {};
@@ -25,10 +22,8 @@ class AudioRepositoryImpl implements AudioRepository {
   AudioRepositoryImpl({
     AudioLocalDataSource? audioDataSource,
     CatalogLocalDataSource? catalogDataSource,
-    AudioDownloadService? downloadService,
   })  : _audioDataSource = audioDataSource ?? AudioLocalDataSource(),
-        _catalogDataSource = catalogDataSource ?? CatalogLocalDataSource(),
-        _downloadService = downloadService ?? AudioDownloadService();
+        _catalogDataSource = catalogDataSource ?? CatalogLocalDataSource();
 
   @override
   Future<List<PistaAudio>> getByHimno(int himnoId) async {
@@ -118,74 +113,5 @@ class AudioRepositoryImpl implements AudioRepository {
     } catch (e) {
       _log.severe('Error al seek: $e');
     }
-  }
-
-  // ─── Descarga de pistas ────────────────────────────────────
-
-  @override
-  Future<String> downloadPista(
-    int pistaId, {
-    DownloadProgressCallback? onProgress,
-  }) async {
-    final pista = _pistaCache[pistaId];
-    if (pista == null) {
-      // Intentar cargar desde BD
-      throw AudioFailure('Pista no encontrada en caché (id: $pistaId)');
-    }
-    if (pista.urlRemota == null || pista.urlRemota!.isEmpty) {
-      throw AudioFailure('La pista $pistaId no tiene URL remota');
-    }
-
-    final extension = pista.formato != null ? '.${pista.formato}' : '.mp3';
-    final fileName = 'pista_${pistaId}_${pista.himnoId}$extension';
-
-    try {
-      final localPath = await _downloadService.downloadPista(
-        pistaId: pistaId,
-        url: pista.urlRemota!,
-        himnoId: pista.himnoId,
-        fileName: fileName,
-        onProgress: onProgress,
-      );
-      return localPath;
-    } catch (e) {
-      _log.severe('Error descargando pista $pistaId: $e');
-      throw AudioFailure('Error al descargar pista: $e');
-    }
-  }
-
-  @override
-  Future<bool> isDownloaded(int pistaId) async {
-    final localPath = await getLocalPath(pistaId);
-    if (localPath == null) return false;
-    return _downloadService.isDownloaded(localPath);
-  }
-
-  @override
-  Future<String?> getLocalPath(int pistaId) async {
-    final pista = _pistaCache[pistaId];
-    if (pista == null) return null;
-
-    // Si la ruta ya es local (empieza con /), retornarla directamente
-    if (pista.rutaArchivo.startsWith('/')) {
-      return pista.rutaArchivo;
-    }
-
-    // Si tiene urlRemota, construir la ruta de descarga esperada
-    if (pista.urlRemota != null && pista.urlRemota!.isNotEmpty) {
-      final appDir =
-          await path_provider.getApplicationDocumentsDirectory();
-      final extension = pista.formato != null ? '.${pista.formato}' : '.mp3';
-      final fileName = 'pista_${pistaId}_${pista.himnoId}$extension';
-      final localPath = '${appDir.path}/audio/${pista.himnoId}/$fileName';
-      return localPath;
-    }
-
-    return null;
-  }
-
-  @override
-  void cancelDownload(int pistaId) {
-    _downloadService.cancelDownload(pistaId);
   }
 }

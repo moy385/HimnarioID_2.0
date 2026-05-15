@@ -16,8 +16,6 @@ class PistaAudioModel {
   @JsonKey(name: 'duracion_segundos')
   final double? duracionSegundos;
   final String? formato;
-  @JsonKey(name: 'url_remota')
-  final String? urlRemota;
   final String origen;
 
   const PistaAudioModel({
@@ -27,7 +25,6 @@ class PistaAudioModel {
     this.descripcion,
     this.duracionSegundos,
     this.formato,
-    this.urlRemota,
     this.origen = 'local',
   });
 
@@ -44,7 +41,6 @@ class PistaAudioModel {
       descripcion: descripcion,
       duracionSegundos: duracionSegundos,
       formato: formato,
-      urlRemota: urlRemota,
     );
   }
 
@@ -56,7 +52,6 @@ class PistaAudioModel {
       descripcion: map['descripcion'] as String?,
       duracionSegundos: (map['duracion_segundos'] as num?)?.toDouble(),
       formato: map['formato'] as String?,
-      urlRemota: map['url_remota'] as String?,
       origen: map['origen'] as String? ?? 'local',
     );
   }

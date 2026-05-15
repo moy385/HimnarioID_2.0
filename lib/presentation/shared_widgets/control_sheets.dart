@@ -580,8 +580,6 @@ void showNoteSheet(
                       children: pistas.map((PistaAudio pista) {
                         final fileName = pista.rutaArchivo.split('/').last;
                         final isThisPistaPlaying = isPlaying && currentPistaId == pista.id;
-                        final isDownloaded = ref.watch(isPistaDownloadedProvider(pista.id)).valueOrNull ?? false;
-                        final downloadState = ref.watch(downloadPistaStateProvider(pista.id));
                         return ListTile(
                           leading: IconButton(
                             icon: Icon(
@@ -592,15 +590,13 @@ void showNoteSheet(
                                   ? colorScheme.error
                                   : colorScheme.secondary,
                             ),
-                            onPressed: isDownloaded
-                                ? () {
-                                    if (isThisPistaPlaying) {
-                                      onStop();
-                                    } else {
-                                      onPlayPista(pista.id);
-                                    }
-                                  }
-                                : null,
+                            onPressed: () {
+                              if (isThisPistaPlaying) {
+                                onStop();
+                              } else {
+                                onPlayPista(pista.id);
+                              }
+                            },
                           ),
                           title: Text(
                             pista.descripcion ?? fileName,
@@ -614,7 +610,7 @@ void showNoteSheet(
                               ),
                             )
                           : null,
-                      trailing: _buildPistaTrailing(pista, isDownloaded, downloadState, colorScheme, ref),
+                      trailing: const Icon(Icons.music_note),
                     );
                   }).toList(),
                 );
@@ -626,34 +622,6 @@ void showNoteSheet(
       );
     },
   );
-}
-
-Widget _buildPistaTrailing(PistaAudio pista, bool isDownloaded, DownloadState downloadState, ColorScheme colorScheme, WidgetRef ref) {
-  if (pista.urlRemota != null && !isDownloaded) {
-    if (downloadState.status == DownloadStatus.downloading) {
-      return SizedBox(
-        width: 24, height: 24,
-        child: CircularProgressIndicator(value: downloadState.progress > 0 ? downloadState.progress : null, strokeWidth: 2),
-      );
-    }
-    if (downloadState.status == DownloadStatus.error) {
-      return Tooltip(
-        message: downloadState.errorMessage ?? 'Error',
-        child: IconButton(
-          icon: Icon(Icons.error_outline, color: colorScheme.error, size: 20),
-          onPressed: () => ref.read(downloadPistaStateProvider(pista.id).notifier).download(),
-        ),
-      );
-    }
-    return Tooltip(
-      message: 'Descargar',
-      child: IconButton(
-        icon: Icon(Icons.download_rounded, color: colorScheme.primary, size: 20),
-        onPressed: () => ref.read(downloadPistaStateProvider(pista.id).notifier).download(),
-      ),
-    );
-  }
-  return const Icon(Icons.music_note, size: 20);
 }
 
 String _formatDuration(double seconds) {

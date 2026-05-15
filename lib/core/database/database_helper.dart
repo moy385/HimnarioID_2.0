@@ -51,7 +51,7 @@ class DatabaseHelper {
       // Usar sqflite (plugin nativo) en móvil
       return await mobile.openDatabase(
         path,
-        version: 4,
+        version: 3,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -61,7 +61,7 @@ class DatabaseHelper {
       return await desktop.databaseFactoryFfi.openDatabase(
         path,
         options: OpenDatabaseOptions(
-          version: 4,
+          version: 3,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
         ),
@@ -286,12 +286,6 @@ class DatabaseHelper {
           activo INTEGER NOT NULL DEFAULT 1
         );
       ''');
-    }
-
-    if (oldVersion < 4) {
-      // Migración de versión 3 a 4:
-      // Agregar columna url_remota a Pista_Audio para descarga remota
-      await db.execute('ALTER TABLE Pista_Audio ADD COLUMN url_remota TEXT');
     }
 
     if (oldVersion < 3) {

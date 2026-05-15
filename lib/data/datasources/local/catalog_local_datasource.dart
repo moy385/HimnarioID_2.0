@@ -224,7 +224,6 @@ class CatalogLocalDataSource {
         'duracion_segundos': pista.duracionSegundos,
         'formato': pista.formato,
         'origen': pista.origen,
-        'url_remota': pista.urlRemota,
       });
       _log.info('Pista #$id insertada para himno #${pista.himnoId}.');
       return id;

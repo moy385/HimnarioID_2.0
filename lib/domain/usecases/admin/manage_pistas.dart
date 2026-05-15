@@ -54,7 +54,6 @@ class CreatePistaUseCase {
     String? descripcion,
     double? duracionSegundos,
     String? formato,
-    String? urlRemota,
     String origen = 'local',
     required Usuario admin,
   }) async {
@@ -74,7 +73,6 @@ class CreatePistaUseCase {
       descripcion: descripcion?.trim(),
       duracionSegundos: duracionSegundos,
       formato: formato?.trim(),
-      urlRemota: urlRemota?.trim(),
       origen: origen,
     );
 

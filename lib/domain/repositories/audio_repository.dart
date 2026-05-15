@@ -2,9 +2,6 @@ import 'dart:async';
 
 import '../entities/pista_audio.dart';
 
-/// Callback para reportar progreso de descarga (0.0 a 1.0).
-typedef DownloadProgressCallback = void Function(double progress);
-
 /// Repositorio de audio.
 /// Define el contrato para la reproducción de pistas de audio asociadas a himnos.
 abstract class AudioRepository {
@@ -34,21 +31,4 @@ abstract class AudioRepository {
 
   /// Indica si hay reproducción en curso.
   bool get isPlaying;
-
-  // ─── Descarga de pistas ────────────────────────────────────
-
-  /// Descarga una pista remota. Retorna la ruta local del archivo.
-  Future<String> downloadPista(
-    int pistaId, {
-    DownloadProgressCallback? onProgress,
-  });
-
-  /// Verifica si la pista [pistaId] ya está descargada localmente.
-  Future<bool> isDownloaded(int pistaId);
-
-  /// Retorna la ruta local de la pista [pistaId], o `null` si no existe.
-  Future<String?> getLocalPath(int pistaId);
-
-  /// Cancela una descarga en curso para la pista [pistaId].
-  void cancelDownload(int pistaId);
 }
