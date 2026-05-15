@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/flag_utils.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
@@ -891,6 +892,7 @@ class HymnSearchDelegate extends SearchDelegate<int> {
             final himno = himnos[index];
             final isCurrent = himno.id == currentHimnoId;
 
+            final paisCodigo = himno.paisCodigo;
             return ListTile(
               leading: CircleAvatar(
                 backgroundColor: isCurrent
@@ -906,11 +908,27 @@ class HymnSearchDelegate extends SearchDelegate<int> {
                   ),
                 ),
               ),
-              title: Text(
-                himno.titulo,
-                style: textTheme.bodyLarge?.copyWith(
-                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      himno.titulo,
+                      style: textTheme.bodyLarge?.copyWith(
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  if (paisCodigo != null && paisCodigo.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: FlagUtils.codeToFlag(paisCodigo).isNotEmpty
+                          ? Text(
+                              FlagUtils.codeToFlag(paisCodigo),
+                              style: const TextStyle(fontSize: 24),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                ],
               ),
               subtitle: himno.categoria.isNotEmpty
                   ? Text(
