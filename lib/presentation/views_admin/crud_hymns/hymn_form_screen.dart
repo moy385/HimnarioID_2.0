@@ -36,6 +36,8 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _tituloController = TextEditingController();
   final _numeroController = TextEditingController();
+  final _paisController = TextEditingController(text: 'El Salvador');
+  final _tonalidadController = TextEditingController(text: 'C');
 
   HimnoTipo _tipo = HimnoTipo.oficial;
   List<int> _selectedCategoriaIds = [];
@@ -74,9 +76,13 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
       _selectedCategoriaIds =
           himno.categorias?.map((c) => c.id).toList() ?? [];
 
-      // Cargar estrofas de la primera versión
+      // Cargar país y tonalidad de la primera versión
       if (himno.versiones.isNotEmpty) {
         final version = himno.versiones.first;
+        _paisController.text = version.pais;
+        _tonalidadController.text = version.tonalidadOriginal;
+
+        // Cargar estrofas
         final stanzas = await repo.getStanzas(version.id);
         _estrofas = stanzas
             .map((s) => _StanzaDraft(tipo: s.tipo, contenido: s.contenido))
@@ -105,6 +111,8 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
   void dispose() {
     _tituloController.dispose();
     _numeroController.dispose();
+    _paisController.dispose();
+    _tonalidadController.dispose();
     super.dispose();
   }
 
@@ -164,9 +172,16 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
         activo: true,
       );
 
-      // Versión: usamos una versión "Universal" simplificada
+      // Versión: usamos el país y tonalidad del formulario
       final versiones = <Map<String, dynamic>>[
-        {'pais': 'Universal', 'tonalidad_original': 'C'},
+        {
+          'pais': _paisController.text.trim().isEmpty
+              ? 'Universal'
+              : _paisController.text.trim(),
+          'tonalidad_original': _tonalidadController.text.trim().isEmpty
+              ? 'C'
+              : _tonalidadController.text.trim(),
+        },
       ];
 
       // Estrofas con version_idx apuntando a la única versión (índice 0)
@@ -306,6 +321,29 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
                     if (v != null) setState(() => _tipo = v);
                   },
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── País ─────────────────────────────────────────
+            TextFormField(
+              controller: _paisController,
+              decoration: const InputDecoration(
+                labelText: 'País',
+                prefixIcon: Icon(Icons.public),
+                hintText: 'Ej: El Salvador',
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
+
+            // ── Tonalidad original ───────────────────────────
+            TextFormField(
+              controller: _tonalidadController,
+              decoration: const InputDecoration(
+                labelText: 'Tonalidad original',
+                prefixIcon: Icon(Icons.music_note),
+                hintText: 'Ej: C, G, D, Am',
               ),
             ),
             const SizedBox(height: 24),
