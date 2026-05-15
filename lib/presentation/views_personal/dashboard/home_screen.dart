@@ -365,7 +365,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     return ListView.separated(
                       controller: _scrollController,
-                      padding: const EdgeInsets.only(left: 16, right: 40, top: 0, bottom: 0),
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: _sortOrder == HymnSortOrder.numeroAsc ? 16 : 40,
+                        top: 0,
+                        bottom: 0,
+                      ),
                       itemCount: himnos.length,
                       separatorBuilder: (context, index) =>
                           const SizedBox(height: 12),
