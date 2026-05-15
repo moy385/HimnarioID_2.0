@@ -416,24 +416,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  double get _averageItemHeight {
-    if (_itemKeys.isEmpty) return 120.0;
-    double total = 0;
-    int count = 0;
-    for (final key in _itemKeys) {
-      final ctx = key.currentContext;
-      if (ctx != null) {
-        final box = ctx.findRenderObject() as RenderBox?;
-        if (box != null && box.hasSize) {
-          total += box.size.height;
-          count++;
-        }
-      }
-    }
-    if (count > 0) return total / count;
-    return 120.0;
-  }
-
   void _scrollToLetter(String letter) {
     final himnos = _cachedHimnos;
     if (himnos == null || himnos.isEmpty || !_scrollController.hasClients) return;
@@ -449,18 +431,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final key = _itemKeys[index];
 
-    // Paso 1: scroll estimado para renderizar el item
-    final avgHeight = _averageItemHeight;
-    final targetOffset = index * avgHeight;
+    // Calcular offset usando maxScrollExtent como referencia precisa
     final maxScroll = _scrollController.position.maxScrollExtent;
-    _scrollController.jumpTo(targetOffset.clamp(0.0, maxScroll));
+    final itemCount = himnos.length;
+    // Estimación basada en el scroll total real (más precisa que un height fijo)
+    final estimatedOffset = (maxScroll / itemCount) * index;
+    _scrollController.jumpTo(estimatedOffset.clamp(0.0, maxScroll));
 
-    // Paso 2: post-frame callback con ensureVisible para precisión exacta
+    // ensureVisible para precisión exacta post-frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (key.currentContext != null && key.currentContext!.mounted) {
         Scrollable.ensureVisible(
           key.currentContext!,
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 150),
           curve: Curves.easeInOut,
           alignment: 0.0,
         );
