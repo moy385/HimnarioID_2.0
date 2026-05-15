@@ -650,9 +650,19 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       HymnDetailScreen._log.warning('Error al reproducir audio: $error');
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo reproducir el audio'),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: Text(
+            '$error'.contains('Archivo no encontrado')
+                ? 'Archivo no encontrado. Agregue la pista desde Admin > Catálogos > Pistas.'
+                : 'No se pudo reproducir el audio',
+          ),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Cerrar',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
     });

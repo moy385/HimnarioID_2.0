@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:logging/logging.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// DataSource local para reproducción de audio.
 ///
@@ -68,8 +69,10 @@ class AudioLocalDataSource {
   Future<void> playFromFile(String filePath) async {
     try {
       String resolvedPath = filePath;
-      // Si el archivo no existe, intentar con nombre sanitizado
+
+      // 1. Verificar si el archivo existe en la ruta original
       if (!File(resolvedPath).existsSync()) {
+        // 2. Intentar con nombre sanitizado (reemplazar caracteres especiales)
         final dir = Directory(resolvedPath).parent;
         final fileName = resolvedPath.split('/').last;
         final sanitized = fileName.replaceAll(RegExp(r'[^\w\.\-]'), '_');
@@ -77,15 +80,31 @@ class AudioLocalDataSource {
         if (File(altPath).existsSync()) {
           resolvedPath = altPath;
           _log.info('Usando ruta sanitizada: $resolvedPath');
+        } else {
+          // 3. Intentar resolver contra appDocsDir/audio/ (para Android)
+          final appDir = await getApplicationDocumentsDirectory();
+          final relativePath = 'audio/${filePath.split('/audio/').last}';
+          final appPath = '${appDir.path}/$relativePath';
+          if (File(appPath).existsSync()) {
+            resolvedPath = appPath;
+            _log.info('Usando ruta relativa a appDocs: $resolvedPath');
+          } else {
+            throw AudioException(
+              'Archivo no encontrado. Agregue la pista desde el panel de administración en este dispositivo.\n'
+              'Ruta buscada: $filePath',
+            );
+          }
         }
       }
 
       _log.info('Reproduciendo desde archivo: $resolvedPath');
       await _player.play(DeviceFileSource(resolvedPath));
+    } on AudioException {
+      rethrow;
     } catch (e) {
       _log.severe('Error al reproducir archivo $filePath: $e');
       throw AudioException(
-        'Error al reproducir audio desde archivo: $filePath',
+        'Error al reproducir el audio. Verifique que el archivo exista.',
       );
     }
   }
