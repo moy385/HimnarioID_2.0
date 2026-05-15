@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../admin_panel_screen.dart';
 import '../providers/auth_providers.dart';
 
 /// Pantalla de inicio de sesión para el backoffice de HimnarioID.
@@ -38,6 +39,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    ref.listen(authProvider, (prev, next) {
+      if (next is AuthAuthenticated && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+        );
+      }
+    });
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 

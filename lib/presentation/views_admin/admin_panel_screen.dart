@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../views_personal/dashboard/home_screen.dart';
 import 'providers/auth_providers.dart';
 import 'crud_hymns/hymn_list_screen.dart';
 import 'crud_catalogs/catalog_panel_screen.dart';
@@ -48,7 +49,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             tooltip: 'Cerrar sesión',
             onPressed: () {
               ref.read(authProvider.notifier).logout();
-              Navigator.of(context).pushReplacementNamed('/login');
+              Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
             },
           ),
         ],
@@ -102,7 +106,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             title: const Text('Cerrar sesión'),
             onTap: () {
               ref.read(authProvider.notifier).logout();
-              Navigator.of(context).pushReplacementNamed('/login');
+              Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
             },
           ),
         ],
