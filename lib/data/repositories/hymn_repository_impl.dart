@@ -22,9 +22,19 @@ class HymnRepositoryImpl implements HymnRepository {
       : _localDataSource = localDataSource ?? HymnLocalDataSource();
 
   @override
-  Future<List<Himno>> searchHymns(String query, {HimnoTipo? tipo}) async {
+  Future<List<Himno>> searchHymns(
+    String query, {
+    HimnoTipo? tipo,
+    String? orderBy,
+    int? categoriaId,
+  }) async {
     try {
-      final models = await _localDataSource.searchHymns(query, tipo: tipo);
+      final models = await _localDataSource.searchHymns(
+        query,
+        tipo: tipo,
+        orderBy: orderBy,
+        categoriaId: categoriaId,
+      );
       return models.map((m) => m.toEntity()).toList();
     } on DatabaseException catch (e) {
       _log.severe('DatabaseFailure en searchHymns: $e');

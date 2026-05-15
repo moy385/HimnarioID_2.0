@@ -23,8 +23,16 @@ class HymnLocalDataSource {
   /// Obtiene la instancia de BD.
   Future<Database> get _db => _dbHelper.database;
 
-  /// Busca himnos por texto (título o número) con filtro opcional por tipo.
-  Future<List<HimnoModel>> searchHymns(String query, {HimnoTipo? tipo}) async {
+  /// Busca himnos por texto (título o número) con filtros opcionales.
+  ///
+  /// [orderBy] permite ordenar: 'titulo_principal ASC' (A-Z),
+  ///   'titulo_principal DESC' (Z-A), o 'h.numero_oficial ASC' (default).
+  /// [categoriaId] filtra himnos que pertenecen a la categoría indicada.
+  Future<List<HimnoModel>> searchHymns(String query, {
+    HimnoTipo? tipo,
+    String? orderBy,
+    int? categoriaId,
+  }) async {
     try {
       final db = await _db;
 
@@ -46,21 +54,39 @@ class HymnLocalDataSource {
 
       conditions.add('h.activo = 1');
 
-      final where = conditions.join(' AND ');
+      List<Map<String, dynamic>> maps;
+      final effectiveOrderBy = orderBy ?? 'h.numero_oficial ASC';
 
-      final maps = await db.query(
-        'Himno h',
-        columns: [
-          'h.id',
-          'h.titulo_principal',
-          'h.numero_oficial',
-          'h.tipo',
-          'h.activo',
-        ],
-        where: where,
-        whereArgs: params,
-        orderBy: 'h.numero_oficial ASC',
-      );
+      if (categoriaId != null) {
+        // Con filtro por categoría: usar rawQuery con JOIN a Himno_Categoria
+        conditions.add('hc.categoria_id = ?');
+        params.add(categoriaId);
+
+        final sql = '''
+          SELECT DISTINCT h.id, h.titulo_principal, h.numero_oficial, h.tipo, h.activo
+          FROM Himno h
+          INNER JOIN Himno_Categoria hc ON hc.himno_id = h.id
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY $effectiveOrderBy
+        ''';
+        maps = await db.rawQuery(sql, params);
+      } else {
+        // Sin filtro por categoría: mantener db.query()
+        final where = conditions.join(' AND ');
+        maps = await db.query(
+          'Himno h',
+          columns: [
+            'h.id',
+            'h.titulo_principal',
+            'h.numero_oficial',
+            'h.tipo',
+            'h.activo',
+          ],
+          where: where,
+          whereArgs: params,
+          orderBy: effectiveOrderBy,
+        );
+      }
 
       final himnos = maps.map((map) => HimnoModel.fromMap(map)).toList();
 

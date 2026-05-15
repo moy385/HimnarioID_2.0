@@ -29,6 +29,13 @@ enum HymnFilter {
   inspiradas,
 }
 
+/// Orden de clasificación para la lista de himnos.
+enum HymnSortOrder {
+  numeroAsc,
+  tituloAsc,
+  tituloDesc,
+}
+
 /// Pantalla de inicio / Dashboard del Controlador.
 ///
 /// Según el rol de conexión ([connectionRoleProvider]):
@@ -49,6 +56,9 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   HymnFilter _selectedFilter = HymnFilter.todos;
+  HymnSortOrder _sortOrder = HymnSortOrder.numeroAsc;
+  int? _selectedCategoriaId;
+  String? _selectedCategoriaNombre;
   String _searchQuery = '';
 
   @override
@@ -122,6 +132,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  /// Convierte [HymnSortOrder] a la cláusula SQL usada por el repositorio.
+  String? _orderByToSql() {
+    switch (_sortOrder) {
+      case HymnSortOrder.tituloAsc:
+        return 'titulo_principal ASC';
+      case HymnSortOrder.tituloDesc:
+        return 'titulo_principal DESC';
+      case HymnSortOrder.numeroAsc:
+        return null; // usa el default del repositorio: h.numero_oficial ASC
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -147,6 +169,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final hymnQuery = HymnQueryParam(
       text: _searchQuery,
       tipo: _filterToTipo(),
+      orderBy: _orderByToSql(),
+      categoriaId: _selectedCategoriaId,
     );
     final hymnsAsync = ref.watch(hymnListProvider(hymnQuery));
 
@@ -248,6 +272,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   'Inspiradas',
                   HymnFilter.inspiradas,
                 ),
+                const SizedBox(width: 8),
+                _buildSortChip(context, 'A-Z', HymnSortOrder.tituloAsc),
+                const SizedBox(width: 8),
+                _buildSortChip(context, 'Z-A', HymnSortOrder.tituloDesc),
+                const SizedBox(width: 8),
+                _buildCategoryChip(context),
               ],
             ),
           ),
@@ -395,6 +425,137 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             : colorScheme.onSurfaceVariant,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
+    );
+  }
+
+  Widget _buildSortChip(BuildContext context, String label, HymnSortOrder order) {
+    final isSelected = _sortOrder == order;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _sortOrder = selected ? order : HymnSortOrder.numeroAsc;
+        });
+      },
+      selectedColor: colorScheme.tertiaryContainer,
+      checkmarkColor: colorScheme.onTertiaryContainer,
+      labelStyle: textTheme.labelMedium?.copyWith(
+        color: isSelected
+            ? colorScheme.onTertiaryContainer
+            : colorScheme.onSurfaceVariant,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return FilterChip(
+      label: Text(_selectedCategoriaNombre ?? 'Categoría'),
+      selected: _selectedCategoriaId != null,
+      onSelected: (_) {
+        _showCategoryPicker(context);
+      },
+      selectedColor: colorScheme.secondaryContainer,
+      checkmarkColor: colorScheme.onSecondaryContainer,
+      avatar: _selectedCategoriaId != null
+          ? Icon(Icons.close, size: 16, color: colorScheme.onSecondaryContainer)
+          : Icon(Icons.arrow_drop_down, size: 20, color: colorScheme.onSurfaceVariant),
+    );
+  }
+
+  void _showCategoryPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        final categoriasAsync = ref.watch(categoriasProvider);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Filtrar por categoría',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.clear_all),
+              title: const Text('Todas las categorías'),
+              selected: _selectedCategoriaId == null,
+              onTap: () {
+                setState(() {
+                  _selectedCategoriaId = null;
+                  _selectedCategoriaNombre = null;
+                });
+                Navigator.pop(ctx);
+              },
+            ),
+            const Divider(),
+            categoriasAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Error: $e'),
+              ),
+              data: (categorias) => LimitedBox(
+                maxHeight: 300,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: categorias.map((cat) {
+                    return ListTile(
+                      leading: Icon(
+                        Icons.label_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(cat.nombre),
+                      selected: _selectedCategoriaId == cat.id,
+                      trailing: _selectedCategoriaId == cat.id
+                          ? const Icon(Icons.check)
+                          : null,
+                      onTap: () {
+                        setState(() {
+                          _selectedCategoriaId = cat.id;
+                          _selectedCategoriaNombre = cat.nombre;
+                        });
+                        Navigator.pop(ctx);
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
     );
   }
 }

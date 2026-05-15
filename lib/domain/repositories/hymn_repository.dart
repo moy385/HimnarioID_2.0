@@ -28,10 +28,16 @@ class HymnQuery {
 
 /// Repositorio de himnos.
 abstract class HymnRepository {
-  /// Busca himnos por texto (título o número) y tipo opcional.
+  /// Busca himnos por texto (título o número) con filtros opcionales.
+  ///
+  /// [orderBy] permite ordenar alfabéticamente: 'titulo_principal ASC' (A-Z),
+  ///   'titulo_principal DESC' (Z-A), o 'h.numero_oficial ASC' (default).
+  /// [categoriaId] filtra himnos que pertenecen a la categoría indicada.
   Future<List<Himno>> searchHymns(
     String query, {
     HimnoTipo? tipo,
+    String? orderBy,
+    int? categoriaId,
   });
 
   /// Obtiene un himno por su ID.
