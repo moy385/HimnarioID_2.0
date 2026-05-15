@@ -58,6 +58,9 @@ class _PistaTabState extends ConsumerState<PistaTab> {
   String? _selectedFileExtension;
   bool _isLoading = false;
 
+  // Controlador para URL remota
+  final _urlRemotaController = TextEditingController();
+
   // Controlador para la búsqueda
   final _searchController = TextEditingController();
   bool _showSearchResults = false;
@@ -65,6 +68,7 @@ class _PistaTabState extends ConsumerState<PistaTab> {
   @override
   void dispose() {
     _descripcionController.dispose();
+    _urlRemotaController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -100,9 +104,13 @@ class _PistaTabState extends ConsumerState<PistaTab> {
                 : _descripcionController.text.trim(),
             formato: _selectedFileExtension,
             origen: _origen,
+            urlRemota: _urlRemotaController.text.trim().isEmpty
+                ? null
+                : _urlRemotaController.text.trim(),
             admin: admin,
           );
       _descripcionController.clear();
+      _urlRemotaController.clear();
       setState(() {
         _selectedFilePath = null;
         _selectedFileName = null;
@@ -375,6 +383,7 @@ class _PistaTabState extends ConsumerState<PistaTab> {
               subtitle: Text(
                 [
                   if (pista.descripcion != null) pista.descripcion!,
+                  if (pista.urlRemota != null) '🌐 Remota',
                   if (pista.formato != null) 'Formato: ${pista.formato}',
                   if (pista.duracionSegundos != null)
                     '${pista.duracionSegundos!.toStringAsFixed(1)}s',
@@ -444,6 +453,16 @@ class _PistaTabState extends ConsumerState<PistaTab> {
               hintText: 'Descripción (opcional)…',
               isDense: true,
             ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _urlRemotaController,
+            decoration: const InputDecoration(
+              hintText: 'URL remota (GitHub)…',
+              isDense: true,
+              prefixIcon: Icon(Icons.link, size: 18),
+            ),
+            keyboardType: TextInputType.url,
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(

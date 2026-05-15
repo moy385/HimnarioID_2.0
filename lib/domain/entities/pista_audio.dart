@@ -12,5 +12,6 @@ class PistaAudio with _$PistaAudio {
     String? descripcion,
     double? duracionSegundos,
     String? formato,
+    String? urlRemota,
   }) = _PistaAudio;
 }
