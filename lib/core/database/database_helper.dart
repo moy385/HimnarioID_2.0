@@ -1,4 +1,5 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, File;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:sqflite/sqflite.dart' as mobile;
 import 'package:sqflite_common/sqlite_api.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as desktop;
@@ -31,6 +32,20 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, 'himnario_id.db');
+
+    // Si la BD no existe en el sistema de archivos, copiarla desde assets
+    // (así el APK incluye los ~400 himnos pre-cargados)
+    if (!File(path).existsSync()) {
+      try {
+        final byteData = await rootBundle.load('assets/db/himnario_id.db');
+        final buffer = byteData.buffer;
+        await File(path).writeAsBytes(
+          buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+        );
+      } catch (_) {
+        // Si no hay asset (ej: desktop development), se creará vacía con _onCreate
+      }
+    }
 
     if (Platform.isAndroid || Platform.isIOS) {
       // Usar sqflite (plugin nativo) en móvil

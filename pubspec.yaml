@@ -67,6 +67,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  assets:
+    - assets/db/himnario_id.db
+    - assets/database/
+    - assets/audio/
+    - assets/images/backgrounds/
+
   fonts:
     - family: Merriweather
       fonts:
@@ -80,8 +86,3 @@ flutter:
     - family: Cinzel
       fonts:
         - asset: assets/fonts/Cinzel-Variable.ttf
-
-  assets:
-    - assets/database/
-    - assets/audio/
-    - assets/images/backgrounds/
