@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 /// Si una línea NO cabe → se reemplaza su `\n` por espacio para que fluya
 /// como párrafo natural, evitando word-wraps forzados que se ven desordenados.
 class StanzaLayoutEngine {
-  static const double _tolerance = 0.5;
 
   /// Procesa [contenido] midiendo cada línea contra [maxWidth].
   ///
