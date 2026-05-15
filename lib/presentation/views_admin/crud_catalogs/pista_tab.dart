@@ -1,5 +1,8 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/utils/audio_file_service.dart';
 
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
@@ -46,9 +49,14 @@ class _PistaTabState extends ConsumerState<PistaTab> {
   int? _himnoIdSeleccionado;
 
   // Controladores para el formulario de agregar pista
-  final _rutaController = TextEditingController();
   final _descripcionController = TextEditingController();
   String _origen = 'local';
+
+  // Estado del archivo seleccionado
+  String? _selectedFilePath;
+  String? _selectedFileName;
+  String? _selectedFileExtension;
+  bool _isLoading = false;
 
   // Controlador para la búsqueda
   final _searchController = TextEditingController();
@@ -56,7 +64,6 @@ class _PistaTabState extends ConsumerState<PistaTab> {
 
   @override
   void dispose() {
-    _rutaController.dispose();
     _descripcionController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -66,30 +73,42 @@ class _PistaTabState extends ConsumerState<PistaTab> {
     final admin = ref.read(currentUserProvider);
     if (admin == null) return;
     if (_himnoIdSeleccionado == null) return;
-    final ruta = _rutaController.text.trim();
-    if (ruta.isEmpty) {
+    if (_selectedFilePath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('La ruta del archivo es requerida'),
+          content: Text('Debe seleccionar un archivo de audio'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
+    setState(() => _isLoading = true);
     try {
+      // 1. Copiar archivo al directorio de la app
+      final rutaDestino = await AudioFileService.copyAudioFile(
+        _selectedFilePath!,
+        _himnoIdSeleccionado!,
+      );
+
+      // 2. Guardar en BD con la ruta copiada
       await ref.read(createPistaUseCaseProvider).execute(
             himnoId: _himnoIdSeleccionado!,
-            rutaArchivo: ruta,
+            rutaArchivo: rutaDestino,
             descripcion: _descripcionController.text.trim().isEmpty
                 ? null
                 : _descripcionController.text.trim(),
+            formato: _selectedFileExtension,
             origen: _origen,
             admin: admin,
           );
-      _rutaController.clear();
       _descripcionController.clear();
-      setState(() => _origen = 'local');
+      setState(() {
+        _selectedFilePath = null;
+        _selectedFileName = null;
+        _selectedFileExtension = null;
+        _origen = 'local';
+      });
       ref.invalidate(_pistasByHimnoProvider(_himnoIdSeleccionado!));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,6 +121,8 @@ class _PistaTabState extends ConsumerState<PistaTab> {
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -114,7 +135,7 @@ class _PistaTabState extends ConsumerState<PistaTab> {
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar pista'),
         content: Text(
-          '¿Eliminar la pista "${pista.descripcion ?? pista.rutaArchivo}"?',
+          '¿Eliminar la pista "${pista.descripcion ?? pista.rutaArchivo.split('/').last}"?',
         ),
         actions: [
           TextButton(
@@ -135,6 +156,10 @@ class _PistaTabState extends ConsumerState<PistaTab> {
             pista.id,
             admin: admin,
           );
+      // Eliminar archivo físico después de borrar de BD
+      try {
+        await AudioFileService.deleteAudioFile(pista.rutaArchivo);
+      } catch (_) {}
       if (_himnoIdSeleccionado != null) {
         ref.invalidate(_pistasByHimnoProvider(_himnoIdSeleccionado!));
       }
@@ -160,6 +185,32 @@ class _PistaTabState extends ConsumerState<PistaTab> {
       _searchController.text = '${himno.numero ?? ""} - ${himno.titulo}';
     });
     ref.invalidate(_pistasByHimnoProvider(himno.id));
+  }
+
+  Future<void> _seleccionarArchivo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'wav', 'ogg', 'aac', 'flac', 'wma', 'm4a'],
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        setState(() {
+          _selectedFilePath = file.path;
+          _selectedFileName = file.name;
+          _selectedFileExtension = file.extension;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al seleccionar archivo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -317,7 +368,7 @@ class _PistaTabState extends ConsumerState<PistaTab> {
                 ),
               ),
               title: Text(
-                pista.rutaArchivo,
+                pista.rutaArchivo.split('/').last,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -364,12 +415,27 @@ class _PistaTabState extends ConsumerState<PistaTab> {
             style: theme.textTheme.labelLarge,
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _rutaController,
-            decoration: const InputDecoration(
-              hintText: 'Ruta del archivo…',
-              isDense: true,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: AbsorbPointer(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Seleccionar archivo…',
+                      isDense: true,
+                    ),
+                    controller: TextEditingController.fromValue(
+                      TextEditingValue(text: _selectedFileName ?? ''),
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.folder_open),
+                onPressed: _seleccionarArchivo,
+                tooltip: 'Seleccionar archivo de audio',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           TextField(
@@ -400,9 +466,15 @@ class _PistaTabState extends ConsumerState<PistaTab> {
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
-              onPressed: _agregarPista,
-              icon: const Icon(Icons.add, size: 20),
-              label: const Text('Agregar pista'),
+              onPressed: _isLoading ? null : _agregarPista,
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add, size: 20),
+              label: Text(_isLoading ? 'Agregando…' : 'Agregar pista'),
             ),
           ),
         ],
