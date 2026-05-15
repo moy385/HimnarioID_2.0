@@ -37,7 +37,7 @@ class DatabaseHelper {
     return await factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       ),
@@ -59,10 +59,18 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
+      CREATE TABLE Pais (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE,
+        codigo TEXT
+      );
+    ''');
+
+    await db.execute('''
       CREATE TABLE Version_Pais (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         himno_id INTEGER NOT NULL,
-        pais TEXT NOT NULL,
+        pais_id INTEGER NOT NULL REFERENCES Pais(id),
         tonalidad_original TEXT NOT NULL DEFAULT 'C',
         activo INTEGER NOT NULL DEFAULT 1,
         FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
@@ -183,7 +191,7 @@ class DatabaseHelper {
     await db
         .execute('CREATE INDEX idx_version_himno ON Version_Pais(himno_id);');
     await db.execute(
-      'CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais);',
+      'CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais_id);',
     );
     await db.execute(
       'CREATE INDEX idx_estrofa_version ON Estrofa(version_pais_id, orden);',
@@ -212,10 +220,11 @@ class DatabaseHelper {
         h.numero_oficial,
         h.tipo,
         h.activo,
-        vp.pais,
+        p.nombre AS pais,
         vp.tonalidad_original
       FROM Himno h
       LEFT JOIN Version_Pais vp ON vp.himno_id = h.id AND vp.activo = 1
+      LEFT JOIN Pais p ON p.id = vp.pais_id
       ORDER BY h.numero_oficial;
     ''');
 
@@ -251,6 +260,70 @@ class DatabaseHelper {
           es_predeterminado INTEGER NOT NULL DEFAULT 0,
           activo INTEGER NOT NULL DEFAULT 1
         );
+      ''');
+    }
+
+    if (oldVersion < 3) {
+      // Migración de versión 2 a 3:
+      // 1. Crear tabla Pais y poblar con países existentes
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS Pais (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nombre TEXT NOT NULL UNIQUE,
+          codigo TEXT
+        );
+      ''');
+
+      await db.execute('''
+        INSERT OR IGNORE INTO Pais (nombre)
+        SELECT DISTINCT pais FROM Version_Pais;
+      ''');
+
+      // 2. Agregar columna pais_id a Version_Pais
+      await db.execute('ALTER TABLE Version_Pais ADD COLUMN pais_id INTEGER');
+
+      // 3. Migrar datos: asociar cada fila al país correspondiente
+      await db.execute('''
+        UPDATE Version_Pais
+        SET pais_id = (SELECT id FROM Pais WHERE Pais.nombre = Version_Pais.pais)
+        WHERE pais_id IS NULL;
+      ''');
+
+      // 4. Reemplazar índice único (pasa de pais TEXT a pais_id INTEGER)
+      await db.execute('DROP INDEX IF EXISTS idx_version_pais_unica');
+      await db.execute('''
+        CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais_id);
+      ''');
+
+      // 5. Recrear vistas afectadas
+      await db.execute('DROP VIEW IF EXISTS v_himno_resumen');
+      await db.execute('''
+        CREATE VIEW IF NOT EXISTS v_himno_resumen AS
+        SELECT
+          h.id,
+          h.titulo_principal,
+          h.numero_oficial,
+          h.tipo,
+          h.activo,
+          p.nombre AS pais,
+          vp.tonalidad_original
+        FROM Himno h
+        LEFT JOIN Version_Pais vp ON vp.himno_id = h.id AND vp.activo = 1
+        LEFT JOIN Pais p ON p.id = vp.pais_id
+        ORDER BY h.numero_oficial;
+      ''');
+
+      await db.execute('DROP VIEW IF EXISTS v_himno_estrofas');
+      await db.execute('''
+        CREATE VIEW IF NOT EXISTS v_himno_estrofas AS
+        SELECT
+          vp.himno_id,
+          vp.id AS version_pais_id,
+          COUNT(e.id) AS total_estrofas,
+          SUM(CASE WHEN e.tipo = 'Coro' THEN 1 ELSE 0 END) AS total_coros
+        FROM Version_Pais vp
+        LEFT JOIN Estrofa e ON e.version_pais_id = vp.id
+        GROUP BY vp.himno_id, vp.id;
       ''');
     }
   }

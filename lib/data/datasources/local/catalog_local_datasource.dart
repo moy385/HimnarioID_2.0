@@ -4,12 +4,12 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../../core/database/database_helper.dart';
 import '../../../core/errors/exceptions.dart' as exc;
 import '../../models/categoria_model.dart';
+import '../../models/pais_model.dart';
 import '../../models/pista_audio_model.dart';
 import '../../models/fondo_pantalla_model.dart';
 
 /// DataSource local para operaciones CRUD sobre tablas de catálogo
-/// (Categoria, Pista_Audio, Fondo_Pantalla) y consulta de países
-/// desde Version_Pais.
+/// (Categoria, Pais, Pista_Audio, Fondo_Pantalla).
 class CatalogLocalDataSource {
   static final _log = Logger('CatalogLocalDataSource');
 
@@ -79,22 +79,89 @@ class CatalogLocalDataSource {
     }
   }
 
-  // ─── PAÍSES (desde Version_Pais) ────────────────────────────
+  // ─── PAÍSES ─────────────────────────────────────────────────
 
-  /// Obtiene la lista de países únicos registrados en la tabla
-  /// Version_Pais, ordenados alfabéticamente.
-  Future<List<String>> getAllPaises() async {
+  /// Obtiene todos los países ordenados alfabéticamente por nombre.
+  Future<List<PaisModel>> getAllPaises() async {
     try {
       final db = await _db;
-      final result = await db.rawQuery(
-        'SELECT DISTINCT pais FROM Version_Pais ORDER BY pais ASC',
-      );
-      return result.map((m) => m['pais'] as String).toList();
+      final result = await db.query('Pais', orderBy: 'nombre ASC');
+      return result.map((m) => PaisModel.fromMap(m)).toList();
     } catch (e) {
       _log.severe('Error en getAllPaises: $e');
       throw exc.DatabaseException(
         'Error al obtener países: $e',
         query: 'getAllPaises',
+      );
+    }
+  }
+
+  /// Inserta un nuevo país con [nombre] y opcional [codigo].
+  /// Retorna el ID autogenerado.
+  Future<int> insertPais(String nombre, {String? codigo}) async {
+    try {
+      final db = await _db;
+      final id = await db.insert('Pais', {
+        'nombre': nombre,
+        'codigo': codigo,
+      });
+      _log.info('País "$nombre" creado con ID: $id');
+      return id;
+    } catch (e) {
+      _log.severe('Error en insertPais: $e');
+      throw exc.DatabaseException(
+        'Error al insertar país: $e',
+        query: 'insertPais',
+      );
+    }
+  }
+
+  /// Actualiza los datos de un país existente.
+  Future<void> updatePais(PaisModel pais) async {
+    try {
+      final db = await _db;
+      final rows = await db.update(
+        'Pais',
+        {
+          'nombre': pais.nombre,
+          'codigo': pais.codigo,
+        },
+        where: 'id = ?',
+        whereArgs: [pais.id],
+      );
+      if (rows > 0) {
+        _log.info('País #${pais.id} actualizado.');
+      } else {
+        _log.warning('País #${pais.id} no encontrado para actualizar.');
+      }
+    } catch (e) {
+      _log.severe('Error en updatePais: $e');
+      throw exc.DatabaseException(
+        'Error al actualizar país: $e',
+        query: 'updatePais',
+      );
+    }
+  }
+
+  /// Elimina un país por su [id].
+  Future<void> deletePais(int id) async {
+    try {
+      final db = await _db;
+      final rows = await db.delete(
+        'Pais',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (rows > 0) {
+        _log.info('País #$id eliminado.');
+      } else {
+        _log.warning('País #$id no encontrado para eliminar.');
+      }
+    } catch (e) {
+      _log.severe('Error en deletePais: $e');
+      throw exc.DatabaseException(
+        'Error al eliminar país: $e',
+        query: 'deletePais',
       );
     }
   }

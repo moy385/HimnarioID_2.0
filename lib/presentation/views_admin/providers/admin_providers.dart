@@ -17,7 +17,13 @@ export '../../../../domain/usecases/admin/manage_categorias.dart'
 export '../../../../domain/usecases/admin/manage_paises.dart'
     show
         GetAllPaisesUseCase,
-        getAllPaisesUseCaseProvider;
+        getAllPaisesUseCaseProvider,
+        CreatePaisUseCase,
+        createPaisUseCaseProvider,
+        UpdatePaisUseCase,
+        updatePaisUseCaseProvider,
+        DeletePaisUseCase,
+        deletePaisUseCaseProvider;
 
 export '../../../../domain/usecases/admin/manage_pistas.dart'
     show

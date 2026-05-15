@@ -9,7 +9,8 @@ class VersionPais with _$VersionPais {
   const factory VersionPais({
     required int id,
     required int himnoId,
-    required String pais,
+    required int paisId,
+    String? paisNombre,
     required String tonalidadOriginal,
     @Default(true) bool activo,
     @Default([]) List<Estrofa> estrofas,

@@ -11,7 +11,10 @@ class VersionPaisModel {
   final int id;
   @JsonKey(name: 'himno_id')
   final int himnoId;
-  final String pais;
+  @JsonKey(name: 'pais_id')
+  final int paisId;
+  @JsonKey(name: 'pais_nombre')
+  final String? paisNombre;
   @JsonKey(name: 'tonalidad_original')
   final String tonalidadOriginal;
   final bool activo;
@@ -20,7 +23,8 @@ class VersionPaisModel {
   VersionPaisModel({
     required this.id,
     required this.himnoId,
-    required this.pais,
+    required this.paisId,
+    this.paisNombre,
     required this.tonalidadOriginal,
     this.activo = true,
     this.estrofas,
@@ -35,7 +39,8 @@ class VersionPaisModel {
     return VersionPais(
       id: id,
       himnoId: himnoId,
-      pais: pais,
+      paisId: paisId,
+      paisNombre: paisNombre,
       tonalidadOriginal: tonalidadOriginal,
       activo: activo,
       estrofas: estrofas?.map((e) => e.toEntity()).toList() ?? [],
@@ -46,7 +51,8 @@ class VersionPaisModel {
     return VersionPaisModel(
       id: map['id'] as int,
       himnoId: map['himno_id'] as int,
-      pais: map['pais'] as String,
+      paisId: map['pais_id'] as int,
+      paisNombre: map['pais_nombre'] as String?,
       tonalidadOriginal: map['tonalidad_original'] as String,
       activo: (map['activo'] as int?) == 1,
     );

@@ -19,16 +19,22 @@ CREATE TABLE Himno (
 CREATE INDEX idx_himno_numero ON Himno(numero_oficial);
 CREATE INDEX idx_himno_activo ON Himno(activo);
 
+CREATE TABLE Pais (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL UNIQUE,
+  codigo TEXT
+);
+
 CREATE TABLE Version_Pais (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   himno_id INTEGER NOT NULL,
-  pais TEXT NOT NULL,
+  pais_id INTEGER NOT NULL REFERENCES Pais(id),
   tonalidad_original TEXT NOT NULL DEFAULT 'C',  -- ej. "G", "C#m"
   activo INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_version_himno ON Version_Pais(himno_id);
-CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais);
+CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais_id);
 
 CREATE TABLE Estrofa (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,10 +149,11 @@ SELECT
   h.numero_oficial,
   h.tipo,
   h.activo,
-  vp.pais,
+  p.nombre AS pais,
   vp.tonalidad_original
 FROM Himno h
 LEFT JOIN Version_Pais vp ON vp.himno_id = h.id AND vp.activo = 1
+LEFT JOIN Pais p ON p.id = vp.pais_id
 ORDER BY h.numero_oficial;
 
 -- ============================================

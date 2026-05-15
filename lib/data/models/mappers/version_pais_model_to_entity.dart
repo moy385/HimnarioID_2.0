@@ -7,7 +7,8 @@ extension VersionPaisModelX on VersionPaisModel {
     return VersionPais(
       id: id,
       himnoId: himnoId,
-      pais: pais,
+      paisId: paisId,
+      paisNombre: paisNombre,
       tonalidadOriginal: tonalidadOriginal,
       activo: activo,
       estrofas: estrofas?.map((e) => e.toEntity()).toList() ?? [],

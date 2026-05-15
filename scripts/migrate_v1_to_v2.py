@@ -226,11 +226,15 @@ def main():
     # ── 5. Insertar datos ───────────────────────────────────────────────────
     print("\n[5] Insertando datos...")
 
-    # 5a. Categoría
+    # 5a. País por defecto
+    cursor.execute("INSERT INTO Pais (id, nombre, codigo) VALUES (1, 'El Salvador', 'SV');")
+    print("  ✓ País "El Salvador" insertado con ID 1.")
+
+    # 5b. Categoría
     cursor.execute("INSERT INTO Categoria (id, nombre) VALUES (1, 'Himnario Oficial El Salvador');")
     print("  ✓ Categoría insertada.")
 
-    # 5b. Usuario administrador por defecto
+    # 5c. Usuario administrador por defecto
     import hashlib
     admin_hash = hashlib.sha256('admin123'.encode('utf-8')).hexdigest()
     cursor.execute(
@@ -243,26 +247,26 @@ def main():
     total_errores = 0
     total_estrofas_insertadas = 0
 
-    # 5b-5e. Por cada himno
+    # 5d-5g. Por cada himno
     for idx, himno in enumerate(himnos):
         himno_id = himno['id']
         try:
-            # b) Insertar Himno
+            # d) Insertar Himno
             cursor.execute(
                 "INSERT INTO Himno (id, titulo_principal, numero_oficial, tipo, activo, fecha_creacion) "
                 "VALUES (?, ?, ?, 1, 1, ?)",
                 (himno_id, himno['titulo'], himno['numero'], himno['creado_at'])
             )
 
-            # c) Insertar Version_Pais (una por himno, 'El Salvador')
+            # e) Insertar Version_Pais (una por himno, 'El Salvador' con pais_id=1)
             cursor.execute(
-                "INSERT INTO Version_Pais (himno_id, pais, tonalidad_original, activo) "
-                "VALUES (?, 'El Salvador', 'C', 1)",
+                "INSERT INTO Version_Pais (himno_id, pais_id, tonalidad_original, activo) "
+                "VALUES (?, 1, 'C', 1)",
                 (himno_id,)
             )
             version_pais_id = cursor.lastrowid
 
-            # d) Insertar Estrofas (si existen para este himno)
+            # f) Insertar Estrofas (si existen para este himno)
             estrofas_himno = [e for e in estrofas if e['himno_id'] == himno_id]
             estrofas_himno.sort(key=lambda e: e['orden'])
             for est in estrofas_himno:
@@ -275,7 +279,7 @@ def main():
                 )
                 total_estrofas_insertadas += 1
 
-            # e) Insertar Himno_Categoria
+            # g) Insertar Himno_Categoria
             cursor.execute(
                 "INSERT INTO Himno_Categoria (himno_id, categoria_id) VALUES (?, 1)",
                 (himno_id,)
@@ -326,10 +330,10 @@ def main():
                 SELECT 1 FROM Version_Pais vp WHERE vp.himno_id = h.id
             )
         """),
-        ("VP con pais != 'El Salvador'", """
+        ("VP con pais_id != 1", """
             SELECT COUNT(*) FROM Himno h
             JOIN Version_Pais vp ON vp.himno_id = h.id
-            WHERE vp.pais != 'El Salvador'
+            WHERE vp.pais_id != 1
         """),
         ("Himnos sin VP", """
             SELECT COUNT(*) FROM Himno h

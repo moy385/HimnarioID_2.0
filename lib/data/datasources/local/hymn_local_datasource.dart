@@ -64,12 +64,14 @@ class HymnLocalDataSource {
 
       final himnos = maps.map((map) => HimnoModel.fromMap(map)).toList();
 
-      // Cargar versiones para cada himno
+      // Cargar versiones para cada himno (con JOIN a Pais)
       for (final himno in himnos) {
-        final versionMaps = await db.query(
-          'Version_Pais',
-          where: 'himno_id = ? AND activo = 1',
-          whereArgs: [himno.id],
+        final versionMaps = await db.rawQuery(
+          'SELECT vp.*, p.nombre AS pais_nombre '
+          'FROM Version_Pais vp '
+          'LEFT JOIN Pais p ON p.id = vp.pais_id '
+          'WHERE vp.himno_id = ? AND vp.activo = 1',
+          [himno.id],
         );
         himno.versiones =
             versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
@@ -106,11 +108,13 @@ class HymnLocalDataSource {
 
       final himno = HimnoModel.fromMap(maps.first);
 
-      // Cargar versiones de país
-      final versionMaps = await db.query(
-        'Version_Pais',
-        where: 'himno_id = ? AND activo = 1',
-        whereArgs: [id],
+      // Cargar versiones de país (con JOIN a Pais)
+      final versionMaps = await db.rawQuery(
+        'SELECT vp.*, p.nombre AS pais_nombre '
+        'FROM Version_Pais vp '
+        'LEFT JOIN Pais p ON p.id = vp.pais_id '
+        'WHERE vp.himno_id = ? AND vp.activo = 1',
+        [id],
       );
       final versiones =
           versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
@@ -216,10 +220,12 @@ class HymnLocalDataSource {
       final himnos = maps.map((m) => HimnoModel.fromMap(m)).toList();
 
       for (final himno in himnos) {
-        final versionMaps = await db.query(
-          'Version_Pais',
-          where: 'himno_id = ? AND activo = 1',
-          whereArgs: [himno.id],
+        final versionMaps = await db.rawQuery(
+          'SELECT vp.*, p.nombre AS pais_nombre '
+          'FROM Version_Pais vp '
+          'LEFT JOIN Pais p ON p.id = vp.pais_id '
+          'WHERE vp.himno_id = ? AND vp.activo = 1',
+          [himno.id],
         );
         himno.versiones =
             versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();

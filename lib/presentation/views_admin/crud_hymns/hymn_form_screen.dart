@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/enums/estrofa_tipo.dart';
 import '../../../../core/enums/himno_tipo.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../data/models/pais_model.dart';
 import '../../../../domain/entities/himno.dart';
 import '../../../../domain/usecases/himno/create_hymn_usecase.dart';
 import '../../../../domain/usecases/himno/update_hymn_usecase.dart';
+import '../../views_admin/providers/admin_providers.dart' show getAllPaisesUseCaseProvider;
 import '../../views_personal/providers/hymn_providers.dart';
 import 'categoria_selector.dart';
 import 'stanza_block_editor.dart';
@@ -36,26 +38,45 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _tituloController = TextEditingController();
   final _numeroController = TextEditingController();
-  final _paisController = TextEditingController(text: 'El Salvador');
   final _tonalidadController = TextEditingController(text: 'C');
 
   HimnoTipo _tipo = HimnoTipo.oficial;
+  int? _selectedPaisId;
+  List<PaisModel> _paises = [];
   List<int> _selectedCategoriaIds = [];
   List<_StanzaDraft> _estrofas = [];
   bool _saving = false;
   bool _loading = true;
+  bool _paisesLoading = true;
 
   bool get _isEditing => widget.himnoId != null;
 
   @override
   void initState() {
     super.initState();
+    _loadPaises();
     if (_isEditing) {
       _loadHymn();
     } else {
       // Empezar con una estrofa vacía
       _estrofas.add(_StanzaDraft(tipo: EstrofaTipo.estrofa));
       _loading = false;
+    }
+  }
+
+  Future<void> _loadPaises() async {
+    try {
+      final paises = await ref.read(getAllPaisesUseCaseProvider).execute();
+      if (mounted) {
+        setState(() {
+          _paises = paises;
+          _paisesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _paisesLoading = false);
+      }
     }
   }
 
@@ -79,7 +100,7 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
       // Cargar país y tonalidad de la primera versión
       if (himno.versiones.isNotEmpty) {
         final version = himno.versiones.first;
-        _paisController.text = version.pais;
+        _selectedPaisId = version.paisId;
         _tonalidadController.text = version.tonalidadOriginal;
 
         // Cargar estrofas
@@ -111,7 +132,6 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
   void dispose() {
     _tituloController.dispose();
     _numeroController.dispose();
-    _paisController.dispose();
     _tonalidadController.dispose();
     super.dispose();
   }
@@ -172,12 +192,10 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
         activo: true,
       );
 
-      // Versión: usamos el país y tonalidad del formulario
+      // Versión: usamos pais_id y tonalidad del formulario
       final versiones = <Map<String, dynamic>>[
         {
-          'pais': _paisController.text.trim().isEmpty
-              ? 'Universal'
-              : _paisController.text.trim(),
+          'pais_id': _selectedPaisId,
           'tonalidad_original': _tonalidadController.text.trim().isEmpty
               ? 'C'
               : _tonalidadController.text.trim(),
@@ -326,15 +344,34 @@ class _HymnFormScreenState extends ConsumerState<HymnFormScreen> {
             const SizedBox(height: 16),
 
             // ── País ─────────────────────────────────────────
-            TextFormField(
-              controller: _paisController,
-              decoration: const InputDecoration(
-                labelText: 'País',
-                prefixIcon: Icon(Icons.public),
-                hintText: 'Ej: El Salvador',
+            if (_paisesLoading)
+              const SizedBox(
+                height: 48,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else
+              DropdownButtonFormField<int>(
+                value: _selectedPaisId,
+                decoration: const InputDecoration(
+                  labelText: 'País',
+                  prefixIcon: Icon(Icons.public),
+                ),
+                isExpanded: true,
+                hint: const Text('Seleccionar país'),
+                items: [
+                  const DropdownMenuItem<int>(
+                    value: null,
+                    child: Text('(Sin país)'),
+                  ),
+                  ..._paises.map((p) => DropdownMenuItem<int>(
+                        value: p.id,
+                        child: Text(p.nombre),
+                      )),
+                ],
+                onChanged: (v) {
+                  setState(() => _selectedPaisId = v);
+                },
               ),
-              textCapitalization: TextCapitalization.words,
-            ),
             const SizedBox(height: 16),
 
             // ── Tonalidad original ───────────────────────────
