@@ -11,6 +11,8 @@ export '../../../../domain/usecases/admin/manage_categorias.dart'
         getAllCategoriasUseCaseProvider,
         CreateCategoriaUseCase,
         createCategoriaUseCaseProvider,
+        UpdateCategoriaUseCase,
+        updateCategoriaUseCaseProvider,
         DeleteCategoriaUseCase,
         deleteCategoriaUseCaseProvider;
 

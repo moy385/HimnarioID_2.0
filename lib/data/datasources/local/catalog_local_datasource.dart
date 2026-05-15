@@ -55,6 +55,30 @@ class CatalogLocalDataSource {
     }
   }
 
+  /// Actualiza el nombre de una categoría existente.
+  Future<void> updateCategoria(int id, String nombre) async {
+    try {
+      final db = await _db;
+      final rows = await db.update(
+        'Categoria',
+        {'nombre': nombre},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (rows > 0) {
+        _log.info('Categoría #$id renombrada a "$nombre".');
+      } else {
+        _log.warning('Categoría #$id no encontrada para actualizar.');
+      }
+    } catch (e) {
+      _log.severe('Error en updateCategoria: $e');
+      throw exc.DatabaseException(
+        'Error al actualizar categoría: $e',
+        query: 'updateCategoria',
+      );
+    }
+  }
+
   /// Elimina una categoría por su [id].
   /// Las relaciones en Himno_Categoria se eliminan en cascada por la FK.
   Future<void> deleteCategoria(int id) async {

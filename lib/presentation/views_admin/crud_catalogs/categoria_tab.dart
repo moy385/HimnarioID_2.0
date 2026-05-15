@@ -6,6 +6,7 @@ import '../../views_admin/providers/admin_providers.dart'
     show
         getAllCategoriasUseCaseProvider,
         createCategoriaUseCaseProvider,
+        updateCategoriaUseCaseProvider,
         deleteCategoriaUseCaseProvider;
 import '../../views_admin/providers/auth_providers.dart' show currentUserProvider;
 
@@ -34,6 +35,7 @@ class CategoriaTab extends ConsumerStatefulWidget {
 class _CategoriaTabState extends ConsumerState<CategoriaTab> {
   final _nombreController = TextEditingController();
   bool _loading = false;
+  Categoria? _editando;
 
   @override
   void dispose() {
@@ -41,7 +43,21 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
     super.dispose();
   }
 
-  Future<void> _agregarCategoria() async {
+  void _resetForm() {
+    setState(() {
+      _nombreController.clear();
+      _editando = null;
+    });
+  }
+
+  void _editarCategoria(Categoria cat) {
+    setState(() {
+      _editando = cat;
+      _nombreController.text = cat.nombre;
+    });
+  }
+
+  Future<void> _guardarCategoria() async {
     final nombre = _nombreController.text.trim();
     if (nombre.isEmpty) return;
 
@@ -50,17 +66,32 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
 
     setState(() => _loading = true);
     try {
-      await ref.read(createCategoriaUseCaseProvider).execute(
-            nombre,
-            admin: admin,
+      if (_editando != null) {
+        // Modo edición
+        await ref.read(updateCategoriaUseCaseProvider).execute(
+              _editando!.id,
+              nombre,
+              admin: admin,
+            );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Categoría renombrada a "$nombre"')),
           );
-      _nombreController.clear();
-      ref.invalidate(_categoriaListProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Categoría "$nombre" creada')),
-        );
+        }
+      } else {
+        // Modo creación
+        await ref.read(createCategoriaUseCaseProvider).execute(
+              nombre,
+              admin: admin,
+            );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Categoría "$nombre" creada')),
+          );
+        }
       }
+      _resetForm();
+      ref.invalidate(_categoriaListProvider);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,13 +162,24 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
               bottom: BorderSide(color: theme.dividerColor),
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _nombreController,
-                  decoration: const InputDecoration(
-                    hintText: 'Nueva categoría…',
+              Text(
+                _editando != null
+                    ? 'Editar categoría'
+                    : 'Nueva categoría',
+                style: theme.textTheme.labelLarge,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _nombreController,
+                      decoration: const InputDecoration(
+                        hintText: 'Nombre de la categoría',
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 12,
@@ -145,23 +187,35 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
                     ),
                   ),
                   textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _agregarCategoria(),
+                  onSubmitted: (_) => _guardarCategoria(),
                 ),
               ),
               const SizedBox(width: 12),
               FilledButton.icon(
-                onPressed: _loading ? null : _agregarCategoria,
+                onPressed: _loading ? null : _guardarCategoria,
                 icon: _loading
                     ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.add, size: 20),
-                label: const Text('Agregar'),
+                    : Icon(
+                        _editando != null ? Icons.save : Icons.add,
+                        size: 20,
+                      ),
+                label: Text(_editando != null ? 'Guardar' : 'Agregar'),
               ),
-            ],
-          ),
+              if (_editando != null) ...[
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _resetForm,
+                  child: const Text('Cancelar'),
+                ),
+              ],
+              ],
+            ),
+          ],
+        ),
         ),
         // ── Lista de categorías ──────────────────────────────────
         Expanded(
@@ -187,14 +241,25 @@ class _CategoriaTabState extends ConsumerState<CategoriaTab> {
                   final cat = categorias[index];
                   return ListTile(
                     title: Text(cat.nombre),
-                    trailing: IconButton(
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: theme.colorScheme.error,
-                      ),
-                      tooltip: 'Eliminar',
-                      onPressed: () => _eliminarCategoria(cat),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Editar',
+                          onPressed: () => _editarCategoria(cat),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: theme.colorScheme.error,
+                          ),
+                          tooltip: 'Eliminar',
+                          onPressed: () => _eliminarCategoria(cat),
+                        ),
+                      ],
                     ),
+                    onTap: () => _editarCategoria(cat),
                   );
                 },
               );

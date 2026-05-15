@@ -98,3 +98,41 @@ final deleteCategoriaUseCaseProvider =
   final dataSource = CatalogLocalDataSource();
   return DeleteCategoriaUseCase(dataSource);
 });
+
+// ─────────────────────────────────────────────────────────────
+// UpdateCategoriaUseCase
+// ─────────────────────────────────────────────────────────────
+
+/// Caso de uso para actualizar el nombre de una categoría.
+///
+/// Requiere permisos de administrador.
+class UpdateCategoriaUseCase {
+  final CatalogLocalDataSource _dataSource;
+
+  UpdateCategoriaUseCase(this._dataSource);
+
+  /// Actualiza el nombre de la categoría con [id].
+  ///
+  /// [admin] es el usuario que ejecuta la operación; debe tener rol [UsuarioRol.admin].
+  ///
+  /// Lanza [AuthException] si [admin] no es administrador.
+  Future<void> execute(int id, String nombre, {required Usuario admin}) async {
+    if (admin.rol != UsuarioRol.admin) {
+      throw const AuthException(
+        'Solo administradores pueden actualizar categorías',
+      );
+    }
+    if (nombre.trim().isEmpty) {
+      throw const AuthException(
+        'El nombre de la categoría no puede estar vacío',
+      );
+    }
+    await _dataSource.updateCategoria(id, nombre.trim());
+  }
+}
+
+final updateCategoriaUseCaseProvider =
+    Provider<UpdateCategoriaUseCase>((ref) {
+  final dataSource = CatalogLocalDataSource();
+  return UpdateCategoriaUseCase(dataSource);
+});
