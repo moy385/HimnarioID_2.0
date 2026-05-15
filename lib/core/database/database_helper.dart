@@ -295,7 +295,18 @@ class DatabaseHelper {
         CREATE UNIQUE INDEX idx_version_pais_unica ON Version_Pais(himno_id, pais_id);
       ''');
 
-      // 5. Recrear vistas afectadas
+      // 5. Eliminar la columna vieja pais (TEXT NOT NULL) que ya no se usa
+      //    SQLite 3.35.0+ soporta DROP COLUMN
+      await db.execute('DROP INDEX IF EXISTS idx_version_himno');
+      try {
+        await db.execute('ALTER TABLE Version_Pais DROP COLUMN pais');
+      } catch (_) {
+        // Si la versión de SQLite no soporta DROP COLUMN, se ignora
+        // La columna obsoleta se mantendrá pero no se usará en el código nuevo
+      }
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_version_himno ON Version_Pais(himno_id)');
+
+      // 6. Recrear vistas afectadas
       await db.execute('DROP VIEW IF EXISTS v_himno_resumen');
       await db.execute('''
         CREATE VIEW IF NOT EXISTS v_himno_resumen AS
