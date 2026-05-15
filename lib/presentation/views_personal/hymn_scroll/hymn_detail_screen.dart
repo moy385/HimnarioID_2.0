@@ -571,17 +571,16 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         final pistas = await audioRepo.getByHimno(himnoId);
         if (pistas.isNotEmpty) {
           targetPistaId = pistas.first.id;
-          _currentPistaId = targetPistaId;
         }
-      } catch (_) {
-        // Si no hay pistas, usar himnoId como fallback (puede fallar)
-      }
+      } catch (_) {}
     }
 
+    _currentPistaId = targetPistaId;
+    // Activar estado ANTES de reproducir para feedback instantáneo
+    if (mounted) setState(() => _isPlaying = true);
+    ref.read(isAudioPlayingProvider.notifier).state = true;
+
     audioRepo.play(targetPistaId).then((_) {
-      if (!mounted) return;
-      setState(() => _isPlaying = true);
-      ref.read(isAudioPlayingProvider.notifier).state = true;
       HymnDetailScreen._log.info(
         'Reproduciendo pista $targetPistaId para himno $himnoId',
       );
@@ -634,6 +633,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       ref: ref,
       himnoId: widget.himno.id,
       isPlaying: _isPlaying,
+      currentPistaId: _currentPistaId,
       onPlayPista: (pistaId) {
         _currentPistaId = pistaId;
         _playAudio(pistaId);

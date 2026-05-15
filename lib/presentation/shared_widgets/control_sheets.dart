@@ -467,6 +467,7 @@ void showNoteSheet(
   required WidgetRef ref,
   required int himnoId,
   required bool isPlaying,
+  int? currentPistaId,
   required ValueChanged<int> onPlayPista,
   required VoidCallback onStop,
 }) {
@@ -577,18 +578,19 @@ void showNoteSheet(
                     return Column(
                       children: pistas.map((PistaAudio pista) {
                         final fileName = pista.rutaArchivo.split('/').last;
+                        final isThisPistaPlaying = isPlaying && currentPistaId == pista.id;
                         return ListTile(
                           leading: IconButton(
                             icon: Icon(
-                              isPlaying
+                              isThisPistaPlaying
                                   ? Icons.stop_rounded
                                   : Icons.play_arrow_rounded,
-                              color: isPlaying
+                              color: isThisPistaPlaying
                                   ? colorScheme.error
                                   : colorScheme.secondary,
                             ),
                             onPressed: () {
-                              if (isPlaying) {
+                              if (isThisPistaPlaying) {
                                 onStop();
                               } else {
                                 onPlayPista(pista.id);
