@@ -38,10 +38,11 @@ class StanzaLayoutEngine {
         final textPainter = TextPainter(
           text: TextSpan(text: line, style: effectiveStyle),
           textDirection: TextDirection.ltr,
+          maxLines: 1,
         )..layout(maxWidth: maxWidth);
 
-        if (textPainter.width <= maxWidth + _tolerance) {
-          buffer.write('\n'); // Cabe → mantener salto original
+        if (!textPainter.didExceedMaxLines) {
+          buffer.write('\n'); // Cabe en 1 línea → mantener salto original
         } else {
           buffer.write(' '); // NO cabe → fluir como párrafo
         }
