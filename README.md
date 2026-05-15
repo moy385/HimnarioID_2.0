@@ -57,19 +57,28 @@ Este documento detalla la estructura relacional de la base de datos, optimizada 
 
 ## 📖 Tablas Maestras
 
+### `Pais`
+Catálogo de países normalizado para evitar duplicados ("El Salvador", "el salvador", "SV").
+* `id` (PK, Integer)
+* `nombre` (Text, UNIQUE): Ej. "El Salvador", "México", "Guatemala".
+* `codigo` (Text, Nullable): Código ISO de 2 letras (Ej. "SV", "MX").
+
 ### `Himno`
 El registro principal de cada alabanza.
 * `id` (PK, Integer)
 * `titulo_principal` (Text)
-* `numero_oficial` (Integer, Nullable): Número en el himnario oficial (si aplica).
+* `numero_oficial` (Integer, Nullable): Número en el himnario oficial (no es UNIQUE para permitir himnos con mismo número en distintos países).
 * `tipo` (Integer): 1 = Oficial, 2 = Inspirada, 3 = Convención.
+* `activo` (Integer, Default 1): Soft-delete.
+* `fecha_creacion` (Text, Default datetime('now')).
 
 ### `Version_Pais`
 Permite manejar variaciones de letra y tonalidad base según la región.
 * `id` (PK, Integer)
 * `himno_id` (FK -> Himno.id)
-* `pais` (Text): Ej. "El Salvador", "México", "General".
-* `tonalidad_original` (Text): Ej. "G", "Am".
+* `pais_id` (FK -> Pais.id): Referencia al país normalizado.
+* `tonalidad_original` (Text, Default 'C'): Ej. "G", "Am".
+* `activo` (Integer, Default 1).
 
 ### `Estrofa` (Oficial)
 Contiene la letra original e inmutable.
@@ -137,7 +146,25 @@ Gestión de fondos dinámicos utilizables durante el Modo Proyección.
 * `nombre` (Text): Ej. "Cielo Estrellado".
 * `tipo` (Text): 'imagen', 'video', 'color_solido'.
 * `ruta_archivo` (Text): Ruta local del asset multimedia.
-* `es_predeterminado` (Boolean/Integer): Indica si es el fondo a cargar por defecto (1 = Sí, 0 = No).
+* `color_hex` (Text, Nullable): Color en formato #RRGGBB (para tipo color_solido).
+* `es_predeterminado` (Integer, Default 0): Indica si es el fondo a cargar por defecto (1 = Sí, 0 = No).
+* `activo` (Integer, Default 1).
+
+---
+
+## ⚙️ Configuración e Historial
+
+### `Configuracion`
+Tabla clave-valor para persistir preferencias de usuario (fuente, colores, tamaño de letra, etc.).
+* `clave` (PK, Text)
+* `valor` (Text, NOT NULL)
+
+### `Historial_Reproduccion`
+Registro de himnos reproducidos para mantener un historial reciente.
+* `id` (PK, Integer)
+* `himno_id` (FK -> Himno.id)
+* `version_pais_id` (Integer, Nullable)
+* `timestamp` (Text, Default datetime('now'))
 
 ---
 
