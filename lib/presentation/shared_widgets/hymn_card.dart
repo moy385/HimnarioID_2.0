@@ -80,41 +80,38 @@ class HymnCard extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
                       children: [
                         // Bandera del país
                         if (himno.paisCodigo != null &&
                             himno.paisCodigo!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FlagUtils.codeToFlag(himno.paisCodigo).isNotEmpty
-                                ? Text(
+                          FlagUtils.codeToFlag(himno.paisCodigo).isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Text(
                                     FlagUtils.codeToFlag(himno.paisCodigo),
                                     style: const TextStyle(fontSize: 20),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        // Categorías (hasta 4)
-                        ...(himno.categorias?.take(4).map((cat) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildChip(
-                              context,
-                              cat.nombre,
-                              colorScheme.tertiaryContainer,
-                              colorScheme.onTertiaryContainer,
-                            ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        // Categorías (sin límite, Wrap maneja el overflow)
+                        ...(himno.categorias?.map((cat) {
+                          return _buildChip(
+                            context,
+                            cat.nombre,
+                            colorScheme.tertiaryContainer,
+                            colorScheme.onTertiaryContainer,
                           );
                         }).toList() ?? []),
-                        if (!himno.esOficial) ...[
-                          const SizedBox(width: 8),
+                        if (!himno.esOficial)
                           _buildChip(
                             context,
                             'Personal',
                             colorScheme.secondaryContainer,
                             colorScheme.onSecondaryContainer,
                           ),
-                        ],
                       ],
                     ),
                   ],
