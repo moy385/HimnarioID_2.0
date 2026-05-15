@@ -4,37 +4,40 @@ import '../../core/errors/failures.dart';
 import '../../domain/entities/pista_audio.dart';
 import '../../domain/repositories/audio_repository.dart';
 import '../datasources/local/audio_local_datasource.dart';
+import '../datasources/local/catalog_local_datasource.dart';
 
 /// Implementación del repositorio de audio.
 ///
-/// Usa [AudioLocalDataSource] para la reproducción real.
-/// Los himnos se buscan en assets/audio/{himnoId}.mp3 de forma sintética.
+/// Usa [AudioLocalDataSource] para la reproducción y
+/// [CatalogLocalDataSource] para consultar pistas desde la BD.
 class AudioRepositoryImpl implements AudioRepository {
   static final _log = Logger('AudioRepositoryImpl');
 
-  final AudioLocalDataSource _dataSource;
+  final AudioLocalDataSource _audioDataSource;
+  final CatalogLocalDataSource _catalogDataSource;
 
-  /// Cache de pistas de audio para acceso rápido.
+  /// Cache de pistas de audio por ID de pista.
   final Map<int, PistaAudio> _pistaCache = {};
 
-  AudioRepositoryImpl({AudioLocalDataSource? dataSource})
-      : _dataSource = dataSource ?? AudioLocalDataSource();
+  AudioRepositoryImpl({
+    AudioLocalDataSource? audioDataSource,
+    CatalogLocalDataSource? catalogDataSource,
+  })  : _audioDataSource = audioDataSource ?? AudioLocalDataSource(),
+        _catalogDataSource = catalogDataSource ?? CatalogLocalDataSource();
 
   @override
   Future<List<PistaAudio>> getByHimno(int himnoId) async {
     try {
-      // Búsqueda sintética: asume assets/audio/{himnoId}.mp3
-      final pista = PistaAudio(
-        id: himnoId,
-        himnoId: himnoId,
-        rutaArchivo: 'audio/$himnoId.mp3',
-        descripcion: 'Pista principal',
-        formato: 'mp3',
-      );
+      final models = await _catalogDataSource.getPistasByHimno(himnoId);
+      final pistas = models.map((m) => m.toEntity()).toList();
 
-      _pistaCache[himnoId] = pista;
-      _log.fine('Pista encontrada para himno $himnoId: $pista');
-      return [pista];
+      // Poblar caché por ID de pista
+      for (final pista in pistas) {
+        _pistaCache[pista.id] = pista;
+      }
+
+      _log.fine('${pistas.length} pista(s) encontrada(s) para himno $himnoId');
+      return pistas;
     } catch (e) {
       _log.severe('Error al obtener pistas del himno $himnoId: $e');
       throw AudioFailure('Error al obtener pistas de audio: $e');
@@ -49,7 +52,13 @@ class AudioRepositoryImpl implements AudioRepository {
         throw AudioFailure('Pista de audio no encontrada (id: $pistaId)');
       }
 
-      await _dataSource.playFromAsset(pista.rutaArchivo);
+      // Si la ruta es absoluta (empieza con /), usar playFromFile
+      // Si no, usar playFromAsset (para assets del bundle)
+      if (pista.rutaArchivo.startsWith('/')) {
+        await _audioDataSource.playFromFile(pista.rutaArchivo);
+      } else {
+        await _audioDataSource.playFromAsset(pista.rutaArchivo);
+      }
       _log.info('Reproduciendo pista $pistaId: ${pista.rutaArchivo}');
     } on AudioFailure {
       rethrow;
@@ -62,7 +71,7 @@ class AudioRepositoryImpl implements AudioRepository {
   @override
   Future<void> stop() async {
     try {
-      await _dataSource.stop();
+      await _audioDataSource.stop();
       _log.info('Reproducción detenida.');
     } catch (e) {
       _log.severe('Error al detener audio: $e');

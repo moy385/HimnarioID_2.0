@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/database_helper.dart';
 import '../../../data/datasources/local/audio_local_datasource.dart';
+import '../../../data/datasources/local/catalog_local_datasource.dart';
 import '../../../data/repositories/audio_repository_impl.dart';
 import '../../../domain/repositories/audio_repository.dart';
 
@@ -13,8 +15,12 @@ final audioLocalDataSourceProvider = Provider<AudioLocalDataSource>((ref) {
 
 /// Provider del repositorio de audio.
 final audioRepositoryProvider = Provider<AudioRepository>((ref) {
-  final dataSource = ref.read(audioLocalDataSourceProvider);
-  return AudioRepositoryImpl(dataSource: dataSource);
+  final audioDS = ref.read(audioLocalDataSourceProvider);
+  final catalogDS = CatalogLocalDataSource(dbHelper: DatabaseHelper.instance);
+  return AudioRepositoryImpl(
+    audioDataSource: audioDS,
+    catalogDataSource: catalogDS,
+  );
 });
 
 /// Provider que indica si hay audio reproduciéndose actualmente.
