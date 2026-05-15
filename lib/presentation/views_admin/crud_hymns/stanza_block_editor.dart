@@ -6,7 +6,7 @@ import '../../../../core/enums/estrofa_tipo.dart';
 ///
 /// Widget reutilizable que permite editar el tipo, contenido ChordPro
 /// y reordenar/eliminar una estrofa dentro de la lista dinámica.
-class StanzaBlockEditor extends StatelessWidget {
+class StanzaBlockEditor extends StatefulWidget {
   final int index;
   final int total;
   final EstrofaTipo tipo;
@@ -31,9 +31,44 @@ class StanzaBlockEditor extends StatelessWidget {
   });
 
   @override
+  State<StanzaBlockEditor> createState() => _StanzaBlockEditorState();
+}
+
+class _StanzaBlockEditorState extends State<StanzaBlockEditor> {
+  late TextEditingController _controller;
+  late String _lastContent;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastContent = widget.contenido;
+    _controller = TextEditingController(text: widget.contenido);
+  }
+
+  @override
+  void didUpdateWidget(StanzaBlockEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Solo actualizar el controlador si el contenido externo cambió
+    // y es diferente de lo que tenemos (evita perder posición del cursor)
+    if (widget.contenido != _lastContent) {
+      _lastContent = widget.contenido;
+      final wasFocused = FocusScope.of(context).hasFocus;
+      if (!wasFocused) {
+        _controller.text = widget.contenido;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final label = 'Estrofa ${index + 1} (${tipo.value})';
+    final label = 'Estrofa ${widget.index + 1} (${widget.tipo.value})';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -58,18 +93,18 @@ class StanzaBlockEditor extends StatelessWidget {
                 _iconButton(
                   icon: Icons.keyboard_arrow_up,
                   tooltip: 'Mover arriba',
-                  onPressed: index > 0 ? onMoveUp : null,
+                  onPressed: widget.index > 0 ? widget.onMoveUp : null,
                 ),
                 _iconButton(
                   icon: Icons.keyboard_arrow_down,
                   tooltip: 'Mover abajo',
-                  onPressed: index < total - 1 ? onMoveDown : null,
+                  onPressed: widget.index < widget.total - 1 ? widget.onMoveDown : null,
                 ),
                 _iconButton(
                   icon: Icons.delete_outline,
                   tooltip: 'Eliminar',
                   color: colorScheme.error,
-                  onPressed: onDelete,
+                  onPressed: widget.onDelete,
                 ),
               ],
             ),
@@ -84,14 +119,14 @@ class StanzaBlockEditor extends StatelessWidget {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<EstrofaTipo>(
-                  value: tipo,
+                  value: widget.tipo,
                   isDense: true,
                   isExpanded: true,
                   items: EstrofaTipo.values.map((t) {
                     return DropdownMenuItem(value: t, child: Text(t.value));
                   }).toList(),
                   onChanged: (v) {
-                    if (v != null) onTipoChanged(v);
+                    if (v != null) widget.onTipoChanged(v);
                   },
                 ),
               ),
@@ -100,13 +135,11 @@ class StanzaBlockEditor extends StatelessWidget {
 
             // ── Campo de contenido ChordPro ──────────────────
             TextField(
-              controller: TextEditingController.fromValue(
-                TextEditingValue(
-                  text: contenido,
-                  selection: TextSelection.collapsed(offset: contenido.length),
-                ),
-              ),
-              onChanged: onContenidoChanged,
+              controller: _controller,
+              onChanged: (value) {
+                _lastContent = value;
+                widget.onContenidoChanged(value);
+              },
               maxLines: 6,
               minLines: 3,
               decoration: InputDecoration(
@@ -114,10 +147,13 @@ class StanzaBlockEditor extends StatelessWidget {
                 hintText: '[C]Texto del acorde y letra...',
                 alignLabelWithHint: true,
                 border: const OutlineInputBorder(),
-                suffixIcon: contenido.isNotEmpty
+                suffixIcon: widget.contenido.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () => onContenidoChanged(''),
+                        onPressed: () {
+                          _controller.clear();
+                          widget.onContenidoChanged('');
+                        },
                       )
                     : null,
               ),
