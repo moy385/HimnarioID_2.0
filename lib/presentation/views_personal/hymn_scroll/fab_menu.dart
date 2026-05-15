@@ -86,7 +86,7 @@ class _FabMenuState extends State<FabMenu>
             _FabOption(
               animation: _expandAnimation,
               icon: Icons.brush,
-              label: 'Brocha',
+              label: 'Apariencia',
               offset: 0,
               color: colorScheme.tertiaryContainer,
               onTap: () => _handleTap(widget.onBrushTap),
@@ -94,7 +94,7 @@ class _FabMenuState extends State<FabMenu>
             _FabOption(
               animation: _expandAnimation,
               icon: Icons.audiotrack,
-              label: 'Nota',
+              label: 'Pistas',
               offset: 1,
               color: colorScheme.secondaryContainer,
               onTap: () => _handleTap(widget.onNoteTap),
@@ -102,7 +102,7 @@ class _FabMenuState extends State<FabMenu>
             _FabOption(
               animation: _expandAnimation,
               icon: Icons.music_note,
-              label: 'Solfa',
+              label: 'Acordes',
               offset: 2,
               color: colorScheme.tertiaryContainer,
               onTap: () => _handleTap(widget.onSolfaTap),
@@ -110,7 +110,7 @@ class _FabMenuState extends State<FabMenu>
             _FabOption(
               animation: _expandAnimation,
               icon: Icons.search,
-              label: 'Lupa',
+              label: 'Buscar',
               offset: 3,
               color: colorScheme.secondaryContainer,
               onTap: () => _handleTap(widget.onSearchTap),

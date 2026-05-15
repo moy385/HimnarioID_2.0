@@ -340,7 +340,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     final parts = processedLyric.split('\n');
 
     // Escala base para texto y acordes (ambos escalan proporcionalmente con fontScale)
-    final double chordFontSize = 14 * appearance.fontScale;
+    final double chordFontSize = baseFontSize - 3;
 
     // Estilo de línea base para medición y renderizado
     final TextStyle? lyricStyle = textTheme.bodyLarge?.copyWith(
