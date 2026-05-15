@@ -95,7 +95,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Cabecera del himno
                     _buildHeader(context, widget.himno, colorScheme, textTheme, appearance),
