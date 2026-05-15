@@ -335,9 +335,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     // Transponer usando el utility ChordTransposer
     final transposedLyric = transposeChordPro(lyric, transposeValue);
 
-    // Medir y refluir líneas largas
+    // Medir y refluir líneas largas (scroll padding 16 + stanza padding 16 = 64 total)
     final double availableWidth =
-        MediaQuery.of(context).size.width - 32; // 16px padding each side
+        MediaQuery.of(context).size.width - 64;
     final double baseFontSize =
         (textTheme.bodyLarge?.fontSize ?? 16) * appearance.fontScale;
 
