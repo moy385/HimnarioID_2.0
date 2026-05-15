@@ -448,11 +448,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       final TextPainter tp = TextPainter(
         text: TextSpan(text: textBeforePlain, style: lyricStyle),
         textDirection: TextDirection.ltr,
-        maxLines: 1,
       )..layout(maxWidth: availableWidth);
 
       final String chord = match.group(1) ?? '';
-      double left = tp.width;
 
       // Medir el ancho del acorde para control de solapamiento
       final TextPainter chordTp = TextPainter(
@@ -467,13 +465,17 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         textDirection: TextDirection.ltr,
         maxLines: 1,
       )..layout(maxWidth: availableWidth);
+      final double chordWidth = chordTp.width;
+
+      // Clamp contra bounds para evitar que el acorde se salga de la pantalla
+      double left = tp.width.clamp(0.0, availableWidth - chordWidth);
 
       // Si este acorde caería muy cerca del anterior → desplazar a la derecha
       if (left < lastChordRight + minChordGap) {
         left = lastChordRight + minChordGap;
       }
 
-      lastChordRight = left + chordTp.width;
+      lastChordRight = left + chordWidth;
 
       chordWidgets.add(
         Positioned(
@@ -496,7 +498,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 4),
       child: Stack(
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.hardEdge,
         children: [
           // Child NO positionado → define el tamaño del Stack
           Padding(
@@ -550,37 +552,42 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   Widget _buildTransposeBar(BuildContext context, int transposeValue, String transposedKey, ColorScheme colorScheme, TextTheme textTheme) {
     return Row(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue - 1).clamp(-6, 6),
-                icon: const Icon(Icons.remove),
-                tooltip: 'Bajar tono',
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Tono', style: textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                    Text(transposedKey, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
-                  ],
+        Flexible(
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue - 1).clamp(-6, 6),
+                  icon: const Icon(Icons.remove),
+                  tooltip: 'Bajar tono',
                 ),
-              ),
-              IconButton(
-                onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue + 1).clamp(-6, 6),
-                icon: const Icon(Icons.add),
-                tooltip: 'Subir tono',
-              ),
-            ],
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Tono', style: textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                        Text(transposedKey, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue + 1).clamp(-6, 6),
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Subir tono',
+                ),
+              ],
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         IconButton.filled(
           onPressed: _togglePlayback,
           icon: const Icon(Icons.play_arrow_rounded),

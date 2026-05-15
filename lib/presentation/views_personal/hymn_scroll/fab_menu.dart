@@ -76,56 +76,60 @@ class _FabMenuState extends State<FabMenu>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return SizedBox(
-      width: 200,
-      height: 56 + 4 * 64 + 8,
-      child: Stack(
-        alignment: Alignment.bottomRight,
-        children: [
-          if (_isOpen) ...[
-            _FabOption(
-              animation: _expandAnimation,
-              icon: Icons.brush,
-              label: 'Apariencia',
-              offset: 0,
-              color: colorScheme.tertiaryContainer,
-              onTap: () => _handleTap(widget.onBrushTap),
-            ),
-            _FabOption(
-              animation: _expandAnimation,
-              icon: Icons.audiotrack,
-              label: 'Pistas',
-              offset: 1,
-              color: colorScheme.secondaryContainer,
-              onTap: () => _handleTap(widget.onNoteTap),
-            ),
-            _FabOption(
-              animation: _expandAnimation,
-              icon: Icons.music_note,
-              label: 'Acordes',
-              offset: 2,
-              color: colorScheme.tertiaryContainer,
-              onTap: () => _handleTap(widget.onSolfaTap),
-            ),
-            _FabOption(
-              animation: _expandAnimation,
-              icon: Icons.search,
-              label: 'Buscar',
-              offset: 3,
-              color: colorScheme.secondaryContainer,
-              onTap: () => _handleTap(widget.onSearchTap),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.6,
+      ),
+      child: SizedBox(
+        height: 56 + 4 * 64 + 8,
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            if (_isOpen) ...[
+              _FabOption(
+                animation: _expandAnimation,
+                icon: Icons.brush,
+                label: 'Apariencia',
+                offset: 0,
+                color: colorScheme.tertiaryContainer,
+                onTap: () => _handleTap(widget.onBrushTap),
+              ),
+              _FabOption(
+                animation: _expandAnimation,
+                icon: Icons.audiotrack,
+                label: 'Pistas',
+                offset: 1,
+                color: colorScheme.secondaryContainer,
+                onTap: () => _handleTap(widget.onNoteTap),
+              ),
+              _FabOption(
+                animation: _expandAnimation,
+                icon: Icons.music_note,
+                label: 'Acordes',
+                offset: 2,
+                color: colorScheme.tertiaryContainer,
+                onTap: () => _handleTap(widget.onSolfaTap),
+              ),
+              _FabOption(
+                animation: _expandAnimation,
+                icon: Icons.search,
+                label: 'Buscar',
+                offset: 3,
+                color: colorScheme.secondaryContainer,
+                onTap: () => _handleTap(widget.onSearchTap),
+              ),
+            ],
+            // Botón principal
+            FloatingActionButton(
+              onPressed: _toggle,
+              heroTag: 'fab_main',
+              child: AnimatedIcon(
+                icon: AnimatedIcons.menu_close,
+                progress: _expandAnimation,
+              ),
             ),
           ],
-          // Botón principal
-          FloatingActionButton(
-            onPressed: _toggle,
-            heroTag: 'fab_main',
-            child: AnimatedIcon(
-              icon: AnimatedIcons.menu_close,
-              progress: _expandAnimation,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
