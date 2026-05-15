@@ -1,4 +1,7 @@
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'dart:io' show Platform;
+import 'package:sqflite/sqflite.dart' as mobile;
+import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart' as desktop;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -26,22 +29,29 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    // Inicializar FFI para desktop (Linux/Windows/Mac)
-    sqfliteFfiInit();
-
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, 'himnario_id.db');
 
-    // Usar databaseFactoryFfi como factory para crear la BD
-    final factory = databaseFactoryFfi;
-    return await factory.openDatabase(
-      path,
-      options: OpenDatabaseOptions(
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Usar sqflite (plugin nativo) en móvil
+      return await mobile.openDatabase(
+        path,
         version: 3,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
-      ),
-    );
+      );
+    } else {
+      // Usar sqflite_common_ffi en desktop (Linux/Windows/Mac)
+      desktop.sqfliteFfiInit();
+      return await desktop.databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 3,
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
