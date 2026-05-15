@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../../core/database/database_helper.dart';
 import '../../../core/enums/himno_tipo.dart';
 import '../../../core/errors/exceptions.dart' as exc;
+import '../../../core/utils/string_utils.dart';
 
 import '../../models/categoria_model.dart';
 import '../../models/estrofa_model.dart';
@@ -55,7 +56,10 @@ class HymnLocalDataSource {
       conditions.add('h.activo = 1');
 
       List<Map<String, dynamic>> maps;
-      final effectiveOrderBy = orderBy ?? 'h.numero_oficial ASC';
+      // Si ordena por título, no usar ORDER BY en SQL (se ordena en Dart)
+      final effectiveOrderBy = (orderBy != null && orderBy.contains('titulo_principal'))
+          ? null
+          : (orderBy ?? 'h.numero_oficial ASC');
 
       if (categoriaId != null) {
         // Con filtro por categoría: usar rawQuery con JOIN a Himno_Categoria
@@ -88,7 +92,7 @@ class HymnLocalDataSource {
         );
       }
 
-      final himnos = maps.map((map) => HimnoModel.fromMap(map)).toList();
+      var himnos = maps.map((map) => HimnoModel.fromMap(map)).toList();
 
       // Cargar versiones para cada himno (con JOIN a Pais)
       for (final himno in himnos) {
@@ -115,6 +119,17 @@ class HymnLocalDataSource {
                   nombre: cm['nombre'] as String,
                 ))
             .toList();
+      }
+
+      // Ordenar en Dart cuando es por título (sort inteligente con acentos)
+      if (orderBy != null && orderBy.contains('titulo_principal')) {
+        himnos.sort((a, b) => StringUtils.compareForSort(
+          a.tituloPrincipal,
+          b.tituloPrincipal,
+        ));
+        if (orderBy.contains('DESC')) {
+          himnos = himnos.reversed.toList();
+        }
       }
 
       _log.info('Búsqueda "$query" encontró ${himnos.length} resultados.');
