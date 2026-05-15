@@ -69,6 +69,15 @@ class AudioRepositoryImpl implements AudioRepository {
   }
 
   @override
+  bool get isPlaying => _audioDataSource.isPlaying;
+
+  @override
+  Stream<Duration> get onPositionChanged => _audioDataSource.onPositionChanged;
+
+  @override
+  Stream<Duration?> get onDurationChanged => _audioDataSource.onDurationChanged;
+
+  @override
   Future<void> stop() async {
     try {
       await _audioDataSource.stop();
@@ -76,6 +85,33 @@ class AudioRepositoryImpl implements AudioRepository {
     } catch (e) {
       _log.severe('Error al detener audio: $e');
       throw AudioFailure('Error al detener la reproducción: $e');
+    }
+  }
+
+  @override
+  Future<void> pause() async {
+    try {
+      await _audioDataSource.pause();
+    } catch (e) {
+      _log.severe('Error al pausar: $e');
+    }
+  }
+
+  @override
+  Future<void> resume() async {
+    try {
+      await _audioDataSource.resume();
+    } catch (e) {
+      _log.severe('Error al reanudar: $e');
+    }
+  }
+
+  @override
+  Future<void> seek(Duration position) async {
+    try {
+      await _audioDataSource.seek(position);
+    } catch (e) {
+      _log.severe('Error al seek: $e');
     }
   }
 }

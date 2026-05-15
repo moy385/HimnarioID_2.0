@@ -26,6 +26,27 @@ class AudioLocalDataSource {
   /// Indica si hay una reproducción en curso.
   bool get isPlaying => _player.state == PlayerState.playing;
 
+  /// Stream de cambios de posición durante la reproducción.
+  Stream<Duration> get onPositionChanged => _player.onPositionChanged;
+
+  /// Stream con la duración total del audio actual.
+  Stream<Duration?> get onDurationChanged => _player.onDurationChanged;
+
+  /// Pausa la reproducción actual.
+  Future<void> pause() async {
+    await _player.pause();
+  }
+
+  /// Reanuda la reproducción pausada.
+  Future<void> resume() async {
+    await _player.resume();
+  }
+
+  /// Navega a una posición específica del audio.
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+  }
+
   /// Reproduce un archivo desde la carpeta de assets.
   ///
   /// [assetPath] debe ser una ruta relativa a assets/, ej: "audio/001.mp3".

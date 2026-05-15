@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../entities/pista_audio.dart';
 
 /// Repositorio de audio.
@@ -11,4 +13,22 @@ abstract class AudioRepository {
 
   /// Detiene la reproducción actual.
   Future<void> stop();
+
+  /// Pausa la reproducción actual.
+  Future<void> pause();
+
+  /// Reanuda la reproducción pausada.
+  Future<void> resume();
+
+  /// Navega a una posición específica.
+  Future<void> seek(Duration position);
+
+  /// Stream de cambios de posición.
+  Stream<Duration> get onPositionChanged;
+
+  /// Stream con la duración total.
+  Stream<Duration?> get onDurationChanged;
+
+  /// Indica si hay reproducción en curso.
+  bool get isPlaying;
 }
