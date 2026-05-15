@@ -75,6 +75,20 @@ class HymnLocalDataSource {
         );
         himno.versiones =
             versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
+
+        // Cargar categorías para cada himno
+        final catMaps = await db.rawQuery(
+          'SELECT c.id, c.nombre FROM Himno_Categoria hc '
+          'JOIN Categoria c ON c.id = hc.categoria_id '
+          'WHERE hc.himno_id = ?',
+          [himno.id],
+        );
+        himno.categorias = catMaps
+            .map((cm) => CategoriaModel(
+                  id: cm['id'] as int,
+                  nombre: cm['nombre'] as String,
+                ))
+            .toList();
       }
 
       _log.info('Búsqueda "$query" encontró ${himnos.length} resultados.');
