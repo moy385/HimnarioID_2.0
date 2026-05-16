@@ -23,7 +23,8 @@ void main(List<String> args) async {
     final container = ProviderContainer();
     // Inicializar servicios necesarios para la ventana de proyección
     AppContainer().init(container);
-    await AppInitializer.initialize(container);
+    // El subproceso NO necesita servidor gRPC (se comunica por stdin/stdout)
+    await AppInitializer.initialize(container: container, skipNetwork: true);
 
     runApp(
       UncontrolledProviderScope(
@@ -51,7 +52,7 @@ void main(List<String> args) async {
   AppContainer().init(container);
 
   // Inicializar servicios asíncronos (BD, mDNS, servidor gRPC, etc.)
-  await AppInitializer.initialize(container);
+  await AppInitializer.initialize(container: container);
 
   runApp(
     UncontrolledProviderScope(

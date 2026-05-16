@@ -10,6 +10,7 @@ import '../../../core/enums/himno_tipo.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../providers/live_control_providers.dart';
+import '../providers/projection_providers.dart';
 import 'live_projection_screen.dart';
 
 /// Punto de entrada para la segunda ventana de proyección.
@@ -27,8 +28,13 @@ import 'live_projection_screen.dart';
 /// - `GO_TO_STANZA`: Va a una estrofa específica por índice
 /// - `SET_CONFIG`: Actualiza configuración visual
 /// - `BLACKOUT`: Activa/desactiva el modo blackout
+///
+/// [stdinOverride] permite inyectar un stream de entrada alternativo
+/// (p.ej. en tests) en lugar del global [stdin].
 class ProjectionApp extends ConsumerStatefulWidget {
-  const ProjectionApp({super.key});
+  final Stream<String>? stdinOverride;
+
+  const ProjectionApp({super.key, this.stdinOverride});
 
   @override
   ConsumerState<ProjectionApp> createState() => _ProjectionAppState();
@@ -45,12 +51,16 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
 
   /// Configura la escucha de stdin para recibir mensajes JSON
   /// del proceso padre.
+  ///
+  /// Usa [widget.stdinOverride] si se proveyó (útil en tests);
+  /// caso contrario lee del global [stdin] de `dart:io`.
   void _setupStdinListener() {
     try {
-      _stdinSubscription = stdin
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .listen(_handleMessage);
+      final inputStream = widget.stdinOverride ??
+          stdin
+              .transform(utf8.decoder)
+              .transform(const LineSplitter());
+      _stdinSubscription = inputStream.listen(_handleMessage);
     } catch (_) {
       // Sin stdin disponible (web, test, etc.) — modo lectura sola
     }
@@ -72,7 +82,7 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
           final index = message['index'] as int;
           notifier.goToStanza(index);
         case 'SET_CONFIG':
-          // Configuración visual (opcional)
+          _handleSetConfig(message);
         case 'BLACKOUT':
           final enabled = message['enabled'] as bool;
           if (enabled) {
@@ -118,6 +128,46 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
     }).toList();
 
     notifier.loadHymn(hymn, estrofas);
+  }
+
+  /// Procesa un mensaje SET_CONFIG: actualiza la configuración visual
+  /// de la proyección (color de fondo, tamaño de fuente, velocidad de
+  /// transición, fondo seleccionado).
+  void _handleSetConfig(Map<String, dynamic> message) {
+    final configNotifier = ref.read(projectionConfigProvider.notifier);
+
+    if (message.containsKey('backgroundColor')) {
+      final hex = message['backgroundColor'] as String;
+      try {
+        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
+        configNotifier.setBackgroundColor(color);
+      } catch (_) {
+        // Ignorar color inválido
+      }
+    }
+
+    if (message.containsKey('fontSize')) {
+      final fontSize = message['fontSize'] as String;
+      final parsed = ProjectionFontSize.values.firstWhere(
+        (e) => e.name == fontSize,
+        orElse: () => ProjectionFontSize.medium,
+      );
+      configNotifier.setFontSize(parsed);
+    }
+
+    if (message.containsKey('transitionSpeed')) {
+      final speed = (message['transitionSpeed'] as num).toDouble();
+      configNotifier.setTransitionSpeed(speed);
+    }
+
+    if (message.containsKey('background')) {
+      final bg = message['background'] as String;
+      final parsed = ProjectionBackground.values.firstWhere(
+        (e) => e.name == bg,
+        orElse: () => ProjectionBackground.black,
+      );
+      configNotifier.setBackground(parsed);
+    }
   }
 
   @override
