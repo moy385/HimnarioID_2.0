@@ -78,17 +78,12 @@
 
 ---
 
-## TAREA-QA-006: Tests para TAREA-006 (SimpleProjectionView)
+## ~~TAREA-QA-006: Tests para TAREA-006 (SimpleProjectionView)~~ (CANCELADA - F5.2)
 **Prioridad**: P1 (Alta)
 
-### Qué testear
-- [ ] SimpleProjectionView se muestra en modo Desktop sin Present
-- [ ] Navegación prev/next funciona
-- [ ] No hay FAB ni controles extras
-- [ ] Transiciones entre estrofas
+**Motivo**: El widget SimpleProjectionView fue eliminado en Fase 5.2 porque fue reemplazado por `HymnDetailScreen` completo desde Fase 1.
 
-### Archivos de test
-- `test/presentation/views_projection/display/simple_projection_view_test.dart` (nuevo)
+---
 
 ---
 

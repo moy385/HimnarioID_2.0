@@ -31,7 +31,7 @@ Himno _createTestHimno({
     numero: numero,
     tipo: HimnoTipo.oficial,
     versiones: [
-      VersionPais(id: 1, himnoId: id, pais: 'HN', tonalidadOriginal: 'G'),
+      VersionPais(id: 1, himnoId: id, paisId: 0, paisNombre: 'Honduras', paisCodigo: 'HN', tonalidadOriginal: 'G'),
     ],
     categorias: [
       const Categoria(id: 1, nombre: 'Alabanza'),

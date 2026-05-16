@@ -10,9 +10,6 @@ import 'package:himnario_id_2/domain/repositories/control_repository.dart';
 import 'package:himnario_id_2/presentation/views_projection/display/projection_app.dart';
 import 'package:himnario_id_2/presentation/views_projection/display/receptor_binding.dart';
 import 'package:himnario_id_2/presentation/views_projection/providers/connection_providers.dart';
-import 'package:himnario_id_2/presentation/views_projection/providers/live_control_providers.dart';
-import 'package:himnario_id_2/presentation/views_projection/providers/projection_providers.dart';
-import 'package:himnario_id_2/presentation/shared_widgets/providers/appearance_provider.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // Mocks
