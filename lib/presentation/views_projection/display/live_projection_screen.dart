@@ -192,7 +192,7 @@ class _TitleSlide extends StatelessWidget {
               style: textTheme.displayLarge?.copyWith(
                 fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
-                fontSize: baseFontSize * 0.8,
+                fontSize: baseFontSize * 4.0,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
