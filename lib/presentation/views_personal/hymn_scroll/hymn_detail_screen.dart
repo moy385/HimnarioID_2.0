@@ -4,11 +4,15 @@ import 'package:logging/logging.dart';
 
 import '../../../core/utils/chord_transposer.dart';
 import '../../../core/utils/stanza_layout_engine.dart';
+import '../../../core/window_manager/window_providers.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/audio_repository.dart';
+import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
+import '../../views_projection/providers/live_control_providers.dart';
+import '../../views_projection/providers/presentation_providers.dart';
 import '../providers/audio_providers.dart';
 import '../providers/hymn_providers.dart';
 import '../providers/transpose_providers.dart';
@@ -36,10 +40,12 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   bool _isPlaying = false;
   bool _showChords = true;
   int? _currentPistaId;
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeKeyFromHymn();
     });
@@ -68,6 +74,60 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     ref.read(currentKeyProvider.notifier).state = tonalidad;
   }
 
+  /// Presenta el himno actual en la ventana de proyección.
+  /// Abre la ventana, carga himno+estrofas, y envía mensaje LOAD_HYMN.
+  Future<void> _presentCurrentHymn() async {
+    final windowService = ref.read(windowServiceProvider);
+    final isPresenting = ref.read(isPresentingProvider);
+    try {
+      if (!isPresenting) {
+        await windowService.openProjectionWindow({
+          'mode': 'local',
+          'source': 'hymn-detail',
+        });
+        ref.read(isPresentingProvider.notifier).state = true;
+      }
+      final repo = ref.read(hymnRepositoryProvider);
+      final himnoCompleto = await repo.getHymnById(widget.himno.id);
+      final versionPaisId = himnoCompleto.primaryVersionPaisId;
+      final estrofas = await repo.getStanzas(versionPaisId);
+      ref.read(liveControlProvider.notifier).loadHymn(
+        himnoCompleto, estrofas, versionPaisId: versionPaisId,
+      );
+      await windowService.sendMessage({
+        'type': 'LOAD_HYMN',
+        'himno_id': himnoCompleto.id,
+        'titulo': himnoCompleto.titulo,
+        'numero': himnoCompleto.numero,
+        'tipo': himnoCompleto.tipo.name,
+        'estrofas': estrofas
+            .map((e) => {
+                  'id': e.id,
+                  'version_pais_id': e.versionPaisId,
+                  'tipo': e.tipo.name,
+                  'orden': e.orden,
+                  'contenido': e.contenido,
+                },)
+            .toList(),
+        'currentIndex': 0,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Presentando: ${widget.himno.titulo}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al presentar: $e')),
+        );
+      }
+    }
+  }
+
   void _togglePlayback() {
     setState(() {
       _isPlaying = !_isPlaying;
@@ -87,11 +147,116 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     final transposeValue = ref.watch(transposeValueProvider);
     final transposedKey = ref.watch(transposedKeyProvider);
     final stanzasAsync = ref.watch(stanzasProvider(widget.himno.primaryVersionPaisId));
+    final isDesktop = ref.watch(isDesktopModeProvider);
+    final isPresenting = ref.watch(isPresentingProvider);
+
+    // ── Contenido scrollable (extraído para reusar entre desktop y móvil) ──
+    final scrollContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Cabecera del himno
+        _buildHeader(context, widget.himno, colorScheme, textTheme, appearance),
+        const SizedBox(height: 24),
+
+        // Renderizado de letra desde provider
+        stanzasAsync.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, stack) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: colorScheme.error,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error al cargar la letra',
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          data: (estrofas) {
+            if (estrofas.isEmpty) {
+              return Center(
+                child: Text(
+                  'No hay estrofas disponibles',
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              );
+            }
+            int estrofaCounter = 0;
+            return Column(
+              children: estrofas.map((estrofa) {
+                if (!estrofa.isChorus) estrofaCounter++;
+                return _buildStanza(
+                  context,
+                  estrofa,
+                  transposeValue,
+                  colorScheme,
+                  textTheme,
+                  appearance,
+                  stanzaNumber: estrofa.isChorus ? null : estrofaCounter,
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+
+    // ── SingleChildScrollView base (con controller en desktop) ──
+    final scrollView = SingleChildScrollView(
+      controller: isDesktop ? _scrollController : null,
+      padding: const EdgeInsets.all(16),
+      child: scrollContent,
+    );
+
+    // ── En desktop: centrar con ancho máximo de 800px + scrollbar visible ──
+    Widget bodyContent;
+    if (isDesktop) {
+      bodyContent = Center(
+        child: SizedBox(
+          width: 800,
+          child: scrollView,
+        ),
+      );
+    } else {
+      bodyContent = scrollView;
+    }
+
+    if (isDesktop) {
+      bodyContent = Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        child: bodyContent,
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Himno ${widget.himno.numero ?? ''}'),
         actions: [
+          // ── Botón Presentar (solo desktop) ──
+          if (isDesktop)
+            IconButton(
+              icon: Icon(isPresenting ? Icons.stop_screen_share : Icons.screen_share),
+              tooltip: isPresenting ? 'Detener presentación' : 'Presentar',
+              onPressed: _presentCurrentHymn,
+            ),
           // Menú de opciones
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -125,75 +290,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           Expanded(
             child: Container(
               color: appearance.bgColor,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Cabecera del himno
-                    _buildHeader(context, widget.himno, colorScheme, textTheme, appearance),
-                    const SizedBox(height: 24),
-
-                    // Renderizado de letra desde provider
-                    stanzasAsync.when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (error, stack) => Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: colorScheme.error,
-                                size: 48,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Error al cargar la letra',
-                                style: textTheme.bodyLarge?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      data: (estrofas) {
-                        if (estrofas.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No hay estrofas disponibles',
-                              style: textTheme.bodyLarge?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          );
-                        }
-                        int estrofaCounter = 0;
-                        return Column(
-                          children: estrofas.map((estrofa) {
-                            if (!estrofa.isChorus) estrofaCounter++;
-                            return _buildStanza(
-                              context,
-                              estrofa,
-                              transposeValue,
-                              colorScheme,
-                              textTheme,
-                              appearance,
-                              stanzaNumber: estrofa.isChorus ? null : estrofaCounter,
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              child: bodyContent,
             ),
           ),
 
@@ -335,23 +432,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     // Transponer usando el utility ChordTransposer
     final transposedLyric = transposeChordPro(lyric, transposeValue);
 
-    // Medir y refluir líneas largas (scroll padding 16 + stanza padding 16 = 64 total)
-    final double availableWidth =
-        MediaQuery.of(context).size.width - 64;
     final double baseFontSize =
         (textTheme.bodyLarge?.fontSize ?? 16) * appearance.fontScale;
-
-    final processedLyric = StanzaLayoutEngine.processStanza(
-      transposedLyric,
-      maxWidth: availableWidth,
-      style: textTheme.bodyLarge?.copyWith(
-        fontFamily: appearance.fontFamily,
-        fontSize: baseFontSize,
-        fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
-
-    final parts = processedLyric.split('\n');
 
     // Escala base para texto y acordes (ambos escalan proporcionalmente con fontScale)
     final double chordFontSize = (baseFontSize * 0.6).clamp(8.0, 13.0);
@@ -365,48 +447,70 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: parts.map((line) {
-        if (!_showChords) {
-          // ── Sin acordes: solo texto plano, limpio, sin espacios vacíos ──
-          final plainLine = line.replaceAll(chordRegex, '');
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Text(
-              plainLine,
-              textAlign: TextAlign.justify,
-              style: lyricStyle,
-            ),
-          );
-        }
+    // Usamos LayoutBuilder para que availableWidth refleje el ancho real
+    // del contenedor (útil en desktop con SizedBox(width: 800)).
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double availableWidth = constraints.maxWidth;
 
-        final matches = chordRegex.allMatches(line).toList();
-
-        if (matches.isEmpty) {
-          // ── Línea sin acordes ──
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Text(
-              line,
-              textAlign: TextAlign.justify,
-              style: lyricStyle,
-            ),
-          );
-        }
-
-        // ── Línea CON acordes → Stack: acordes arriba, texto abajo ──
-        return _buildChordLineStacked(
-          line: line,
-          matches: matches,
-          chordRegex: chordRegex,
-          lyricStyle: lyricStyle,
-          chordFontSize: chordFontSize,
-          chordColor: appearance.chordColor,
-          fontFamily: appearance.fontFamily,
-          availableWidth: availableWidth,
+        final processedLyric = StanzaLayoutEngine.processStanza(
+          transposedLyric,
+          maxWidth: availableWidth,
+          style: textTheme.bodyLarge?.copyWith(
+            fontFamily: appearance.fontFamily,
+            fontSize: baseFontSize,
+            fontWeight: appearance.isBold
+                ? FontWeight.bold
+                : FontWeight.normal,
+          ),
         );
-      }).toList(),
+
+        final parts = processedLyric.split('\n');
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: parts.map((line) {
+            if (!_showChords) {
+              // ── Sin acordes: solo texto plano ──
+              final plainLine = line.replaceAll(chordRegex, '');
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  plainLine,
+                  textAlign: TextAlign.justify,
+                  style: lyricStyle,
+                ),
+              );
+            }
+
+            final matches = chordRegex.allMatches(line).toList();
+
+            if (matches.isEmpty) {
+              // ── Línea sin acordes ──
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  line,
+                  textAlign: TextAlign.justify,
+                  style: lyricStyle,
+                ),
+              );
+            }
+
+            // ── Línea CON acordes → Stack: acordes arriba, texto abajo ──
+            return _buildChordLineStacked(
+              line: line,
+              matches: matches,
+              chordRegex: chordRegex,
+              lyricStyle: lyricStyle,
+              chordFontSize: chordFontSize,
+              chordColor: appearance.chordColor,
+              fontFamily: appearance.fontFamily,
+              availableWidth: availableWidth,
+            );
+          }).toList(),
+        );
+      },
     );
   }
 
@@ -611,6 +715,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     if (_isPlaying) {
       // Disparar stop sin await — el widget se está destruyendo
       ref.read(audioRepositoryProvider).stop();
