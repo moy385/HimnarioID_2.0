@@ -7,9 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:himnario_id_2/domain/repositories/control_repository.dart';
+import 'package:himnario_id_2/presentation/shared_widgets/providers/appearance_provider.dart';
 import 'package:himnario_id_2/presentation/views_projection/display/projection_app.dart';
 import 'package:himnario_id_2/presentation/views_projection/display/receptor_binding.dart';
 import 'package:himnario_id_2/presentation/views_projection/providers/connection_providers.dart';
+import 'package:himnario_id_2/presentation/views_projection/providers/projection_providers.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // Mocks
@@ -236,6 +238,218 @@ void main() {
 
       expect(find.text('Santo, Santo, Santo'), findsOneWidget);
       await stdinCtrl.close();
+    });
+
+    group('SET_CONFIG — nuevos campos de apariencia', () {
+      testWidgets('8. textColor — actualiza el color del texto',
+          (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        // Enviar SET_CONFIG con textColor
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'textColor': '#FFB3261E',
+        }));
+        await tester.pumpAndSettle();
+
+        // Leer el estado del provider
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+        final appearance = container.read(hymnAppearanceProvider);
+
+        expect(appearance.textColor, const Color(0xFFB3261E));
+        await stdinCtrl.close();
+      });
+
+      testWidgets('9. chordColor — actualiza el color de acordes',
+          (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'chordColor': '#FF1A6B8A',
+        }));
+        await tester.pumpAndSettle();
+
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+        final appearance = container.read(hymnAppearanceProvider);
+
+        expect(appearance.chordColor, const Color(0xFF1A6B8A));
+        await stdinCtrl.close();
+      });
+
+      testWidgets('10. fontFamily — actualiza la tipografía', (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'fontFamily': 'Lora',
+        }));
+        await tester.pumpAndSettle();
+
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+        final appearance = container.read(hymnAppearanceProvider);
+
+        expect(appearance.fontFamily, 'Lora');
+        await stdinCtrl.close();
+      });
+
+      testWidgets('11. isBold — activa/desactiva negritas', (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        // Activar bold
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'isBold': true,
+        }));
+        await tester.pumpAndSettle();
+
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+        expect(container.read(hymnAppearanceProvider).isBold, true);
+
+        // Desactivar bold
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'isBold': false,
+        }));
+        await tester.pumpAndSettle();
+
+        expect(container.read(hymnAppearanceProvider).isBold, false);
+        await stdinCtrl.close();
+      });
+
+      testWidgets('12. fontScale — actualiza la escala de fuente',
+          (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'fontScale': 1.5,
+        }));
+        await tester.pumpAndSettle();
+
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+        final appearance = container.read(hymnAppearanceProvider);
+
+        expect(appearance.fontScale, 1.5);
+        await stdinCtrl.close();
+      });
+
+      testWidgets('13. bgColor — actualiza fondo en ambos providers',
+          (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'bgColor': '#FF1D6F42',
+        }));
+        await tester.pumpAndSettle();
+
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+
+        // Verificar en hymnAppearanceProvider
+        final appearance = container.read(hymnAppearanceProvider);
+        expect(appearance.bgColor, const Color(0xFF1D6F42));
+
+        // Verificar en projectionConfigProvider (compatibilidad)
+        final config = container.read(projectionConfigProvider);
+        expect(config.backgroundColor, const Color(0xFF1D6F42));
+
+        await stdinCtrl.close();
+      });
+
+      testWidgets('14. Campos legacy coexisten con nuevos campos',
+          (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        // Enviar mensaje legacy + nuevo
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'backgroundColor': '#FF000000',
+          'fontSize': 'large',
+          'transitionSpeed': 0.8,
+          'background': 'color',
+          'textColor': '#FFFFFFFF',
+          'fontFamily': 'Cinzel',
+        }));
+        await tester.pumpAndSettle();
+
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+
+        // Campos legacy
+        final config = container.read(projectionConfigProvider);
+        expect(config.backgroundColor, const Color(0xFF000000));
+        expect(config.fontSize, ProjectionFontSize.large);
+        expect(config.transitionSpeed, 0.8);
+        expect(config.background, ProjectionBackground.color);
+
+        // Campos nuevos
+        final appearance = container.read(hymnAppearanceProvider);
+        expect(appearance.textColor, const Color(0xFFFFFFFF));
+        expect(appearance.fontFamily, 'Cinzel');
+
+        await stdinCtrl.close();
+      });
+
+      testWidgets('15. Color hex inválido — no crashea', (tester) async {
+        final stdinCtrl = StreamController<String>.broadcast();
+        await tester.pumpWidget(
+          _buildTestApp(stdinOverride: stdinCtrl.stream),
+        );
+        await tester.pumpAndSettle();
+
+        // Enviar hex inválido
+        stdinCtrl.add(jsonEncode({
+          'type': 'SET_CONFIG',
+          'textColor': 'no-es-un-color',
+          'bgColor': 'inválido',
+        }));
+        await tester.pumpAndSettle();
+
+        // La app no debe crashear, estado debe permanecer default
+        final container =
+            ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
+        final appearance = container.read(hymnAppearanceProvider);
+        // Valores por defecto
+        expect(appearance.textColor, const Color(0xFF1C1B1F));
+        expect(appearance.bgColor, Colors.transparent);
+
+        await stdinCtrl.close();
+      });
     });
   });
 }

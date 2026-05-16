@@ -53,8 +53,15 @@ class _FondoSentinel {
 /// Configuración completa de la proyección en vivo.
 class ProjectionConfig {
   final ProjectionBackground background;
+
+  /// @deprecated Usar [HymnAppearanceState.bgColor] de hymnAppearanceProvider.
+  @Deprecated('Usar bgColor de hymnAppearanceProvider')
   final Color backgroundColor;
+
+  /// @deprecated Usar [HymnAppearanceState.fontScale] de hymnAppearanceProvider.
+  @Deprecated('Usar fontScale de hymnAppearanceProvider')
   final ProjectionFontSize fontSize;
+
   final double transitionSpeed;
   final FondoPantalla? fondoSeleccionado;
 

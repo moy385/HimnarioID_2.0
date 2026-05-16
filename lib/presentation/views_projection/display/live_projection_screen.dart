@@ -13,8 +13,9 @@ import '../../../core/utils/stanza_layout_engine.dart';
 /// transiciones suaves entre estrofas usando [AnimatedSwitcher],
 /// indicador de progreso minimalista y diseño de alto contraste.
 ///
-/// Lee el estado directamente de [liveControlProvider] y la configuración
-/// visual de [projectionConfigProvider], por lo que no requiere props.
+/// Lee el estado de [liveControlProvider], la apariencia visual de
+/// [hymnAppearanceProvider] (fuente única de verdad para colores y
+/// tipografía), y la velocidad de transición de [projectionConfigProvider].
 class LiveProjectionScreen extends ConsumerWidget {
   const LiveProjectionScreen({super.key});
 
@@ -29,9 +30,10 @@ class LiveProjectionScreen extends ConsumerWidget {
 
     final bgColor = liveState.isBlackout
         ? Colors.black
-        : config.backgroundColor;
+        : appearance.bgColor;
 
-    final fontSize = config.fontSizeValue;
+    final baseFontSize =
+        (textTheme.bodyLarge?.fontSize ?? 36) * appearance.fontScale;
 
     // ── Blackout: pantalla completamente negra ──
     if (liveState.isBlackout || liveState.hymn == null) {
@@ -49,7 +51,7 @@ class LiveProjectionScreen extends ConsumerWidget {
       maxWidth: projectionWidth,
       style: textTheme.bodyLarge?.copyWith(
         fontFamily: appearance.fontFamily,
-        fontSize: fontSize,
+        fontSize: baseFontSize,
         height: 1.8,
         fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
       ),
@@ -75,9 +77,9 @@ class LiveProjectionScreen extends ConsumerWidget {
                     '#${liveState.hymn!.numero ?? liveState.hymn!.id}',
                     style: textTheme.displayLarge?.copyWith(
                       fontFamily: appearance.fontFamily,
-                      color: colors.primary.withValues(alpha: 0.3),
+                      color: appearance.textColor.withValues(alpha: 0.3),
                       fontWeight: FontWeight.bold,
-                      fontSize: fontSize * 0.6,
+                      fontSize: baseFontSize * 0.6,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -87,8 +89,8 @@ class LiveProjectionScreen extends ConsumerWidget {
                     liveState.hymn!.titulo,
                     style: textTheme.displayLarge?.copyWith(
                       fontFamily: appearance.fontFamily,
-                      color: colors.primary,
-                      fontSize: fontSize * 1.2,
+                      color: appearance.textColor,
+                      fontSize: baseFontSize * 1.2,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
@@ -121,8 +123,8 @@ class LiveProjectionScreen extends ConsumerWidget {
                           processedContent,
                           style: textTheme.bodyLarge?.copyWith(
                             fontFamily: appearance.fontFamily,
-                            color: colors.primary,
-                            fontSize: fontSize,
+                            color: appearance.textColor,
+                            fontSize: baseFontSize,
                             height: 1.8,
                             fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
                           ),
