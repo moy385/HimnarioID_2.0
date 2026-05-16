@@ -23,7 +23,7 @@ void main() {
         expect(StringUtils.normalizeForSort('¿Qué?'), 'Que?');
       });
 
-      test('conserva caracteres válidos: \"Himnario\" → Himnario', () {
+      test('conserva caracteres válidos: "Himnario" → Himnario', () {
         expect(StringUtils.normalizeForSort('Himnario'), 'Himnario');
       });
 

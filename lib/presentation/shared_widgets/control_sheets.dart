@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/flag_utils.dart';
+import '../../../core/window_manager/window_providers.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
@@ -119,6 +120,43 @@ class _ColorCircle extends StatelessWidget {
 
     return circle;
   }
+}
+
+/// Convierte [Color] a string hexadecimal con prefijo `#`.
+String _colorToHex(Color color) {
+  return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+}
+
+/// Mapea [fontScale] al nombre del enum [ProjectionFontSize] legacy.
+String _fontScaleToFontSizeName(double scale) {
+  if (scale <= 0.8) return 'small';
+  if (scale <= 1.2) return 'medium';
+  if (scale <= 1.5) return 'large';
+  return 'extraLarge';
+}
+
+/// Envía el estado actual de [hymnAppearanceProvider] a la ventana
+/// de proyección vía [WindowService.sendMessage] (silencioso).
+void _syncAppearanceToProjection(WidgetRef ref) {
+  final appearance = ref.read(hymnAppearanceProvider);
+  final isTransparent = appearance.bgColor.a == 0.0;
+  final message = <String, dynamic>{
+    'type': 'SET_CONFIG',
+    // Nuevos campos de apariencia
+    'textColor': _colorToHex(appearance.textColor),
+    'chordColor': _colorToHex(appearance.chordColor),
+    'fontFamily': appearance.fontFamily,
+    'isBold': appearance.isBold,
+    'fontScale': appearance.fontScale,
+    'bgColor': _colorToHex(appearance.bgColor),
+    // Campos legacy (retrocompatibilidad)
+    'backgroundColor': _colorToHex(appearance.bgColor),
+    'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
+    'transitionSpeed': 0.5,
+    'background': isTransparent ? 'black' : 'color',
+  };
+  // Fire-and-forget silencioso
+  ref.read(windowServiceProvider).sendMessage(message);
 }
 
 /// Muestra el sheet de configuración visual (fondo, tamaño fuente,
@@ -306,6 +344,7 @@ List<Widget> _brushSheetChildren({
                 ref
                     .read(hymnAppearanceProvider.notifier)
                     .setBgColor(color);
+                _syncAppearanceToProjection(ref);
                 setSheetState(() {});
               },
             );
@@ -340,6 +379,7 @@ List<Widget> _brushSheetChildren({
               ref
                   .read(hymnAppearanceProvider.notifier)
                   .setFontScale(value);
+              _syncAppearanceToProjection(ref);
               setSheetState(() {});
             },
           ),
@@ -372,6 +412,7 @@ List<Widget> _brushSheetChildren({
             ref
                 .read(hymnAppearanceProvider.notifier)
                 .setTextColor(color);
+            _syncAppearanceToProjection(ref);
             setSheetState(() {});
           },
         );
@@ -402,6 +443,7 @@ List<Widget> _brushSheetChildren({
             ref
                 .read(hymnAppearanceProvider.notifier)
                 .setChordColor(color);
+            _syncAppearanceToProjection(ref);
             setSheetState(() {});
           },
         );
@@ -439,6 +481,7 @@ List<Widget> _brushSheetChildren({
           isSelected: appearance.fontFamily == 'Merriweather',
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather');
+            _syncAppearanceToProjection(ref);
             setSheetState(() {});
           },
         ),
@@ -449,6 +492,7 @@ List<Widget> _brushSheetChildren({
           isSelected: appearance.fontFamily == 'Lora',
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora');
+            _syncAppearanceToProjection(ref);
             setSheetState(() {});
           },
         ),
@@ -459,6 +503,7 @@ List<Widget> _brushSheetChildren({
           isSelected: appearance.fontFamily == 'Playfair Display',
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display');
+            _syncAppearanceToProjection(ref);
             setSheetState(() {});
           },
         ),
@@ -469,6 +514,7 @@ List<Widget> _brushSheetChildren({
           isSelected: appearance.fontFamily == 'Cinzel',
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel');
+            _syncAppearanceToProjection(ref);
             setSheetState(() {});
           },
         ),
@@ -492,6 +538,7 @@ List<Widget> _brushSheetChildren({
       value: appearance.isBold,
       onChanged: (bool value) {
         ref.read(hymnAppearanceProvider.notifier).setIsBold(value);
+        _syncAppearanceToProjection(ref);
         setSheetState(() {});
       },
     ),
@@ -506,6 +553,7 @@ List<Widget> _brushSheetChildren({
           ref
               .read(hymnAppearanceProvider.notifier)
               .reset();
+          _syncAppearanceToProjection(ref);
           setSheetState(() {});
         },
         icon: const Icon(Icons.restart_alt),

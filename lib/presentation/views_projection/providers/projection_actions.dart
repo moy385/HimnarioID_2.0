@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 import '../../views_personal/providers/hymn_providers.dart';
 import '../providers/live_control_providers.dart';
 import '../../../core/window_manager/window_providers.dart';
@@ -36,10 +38,47 @@ Future<String?> projectHymn(WidgetRef ref, Himno himno) async {
       _buildLoadHymnMessage(himnoCompleto, estrofas),
     );
 
+    // 3. Sincronizar apariencia actual con la ventana de proyección
+    final appearance = ref.read(hymnAppearanceProvider);
+    await windowService.sendMessage(_buildSetConfigMessage(appearance));
+
     return null; // éxito
   } catch (e) {
     return e.toString();
   }
+}
+
+/// Convierte [Color] a string hexadecimal con prefijo `#`.
+String _colorToHex(Color color) {
+  return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+}
+
+/// Construye el payload del mensaje [SET_CONFIG] con la apariencia actual.
+Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
+  final isTransparent = appearance.bgColor.a == 0.0;
+  return {
+    'type': 'SET_CONFIG',
+    // Nuevos campos de apariencia
+    'textColor': _colorToHex(appearance.textColor),
+    'chordColor': _colorToHex(appearance.chordColor),
+    'fontFamily': appearance.fontFamily,
+    'isBold': appearance.isBold,
+    'fontScale': appearance.fontScale,
+    'bgColor': _colorToHex(appearance.bgColor),
+    // Campos legacy (retrocompatibilidad)
+    'backgroundColor': _colorToHex(appearance.bgColor),
+    'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
+    'transitionSpeed': 0.5,
+    'background': isTransparent ? 'black' : 'color',
+  };
+}
+
+/// Mapea [fontScale] al nombre del enum [ProjectionFontSize] legacy.
+String _fontScaleToFontSizeName(double scale) {
+  if (scale <= 0.8) return 'small';
+  if (scale <= 1.2) return 'medium';
+  if (scale <= 1.5) return 'large';
+  return 'extraLarge';
 }
 
 /// Construye el payload del mensaje [LOAD_HYMN].

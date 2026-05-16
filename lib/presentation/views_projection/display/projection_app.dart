@@ -9,6 +9,7 @@ import '../../../core/enums/estrofa_tipo.dart';
 import '../../../core/enums/himno_tipo.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
 import 'live_projection_screen.dart';
@@ -132,10 +133,12 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
 
   /// Procesa un mensaje SET_CONFIG: actualiza la configuración visual
   /// de la proyección (color de fondo, tamaño de fuente, velocidad de
-  /// transición, fondo seleccionado).
+  /// transición, fondo seleccionado, y apariencia de texto).
   void _handleSetConfig(Map<String, dynamic> message) {
     final configNotifier = ref.read(projectionConfigProvider.notifier);
+    final appearanceNotifier = ref.read(hymnAppearanceProvider.notifier);
 
+    // ── Campos legacy (retrocompatibilidad) ──
     if (message.containsKey('backgroundColor')) {
       final hex = message['backgroundColor'] as String;
       try {
@@ -167,6 +170,51 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
         orElse: () => ProjectionBackground.black,
       );
       configNotifier.setBackground(parsed);
+    }
+
+    // ── Nuevos campos de apariencia (Brocha) ──
+
+    if (message.containsKey('textColor')) {
+      final hex = message['textColor'] as String;
+      try {
+        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
+        appearanceNotifier.setTextColor(color);
+      } catch (_) {
+        // Ignorar color inválido
+      }
+    }
+
+    if (message.containsKey('chordColor')) {
+      final hex = message['chordColor'] as String;
+      try {
+        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
+        appearanceNotifier.setChordColor(color);
+      } catch (_) {
+        // Ignorar color inválido
+      }
+    }
+
+    if (message.containsKey('fontFamily')) {
+      appearanceNotifier.setFontFamily(message['fontFamily'] as String);
+    }
+
+    if (message.containsKey('isBold')) {
+      appearanceNotifier.setIsBold(message['isBold'] as bool);
+    }
+
+    if (message.containsKey('fontScale')) {
+      appearanceNotifier.setFontScale((message['fontScale'] as num).toDouble());
+    }
+
+    if (message.containsKey('bgColor')) {
+      final hex = message['bgColor'] as String;
+      try {
+        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
+        appearanceNotifier.setBgColor(color);
+        configNotifier.setBackgroundColor(color);
+      } catch (_) {
+        // Ignorar color inválido
+      }
     }
   }
 
