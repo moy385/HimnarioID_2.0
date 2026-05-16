@@ -11,8 +11,9 @@ import '../../../domain/repositories/audio_repository.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
-import '../../views_projection/providers/live_control_providers.dart';
 import '../../views_projection/providers/presentation_providers.dart';
+import '../../views_projection/providers/projection_actions.dart'
+    show projectHymn;
 import '../providers/audio_providers.dart';
 import '../providers/hymn_providers.dart';
 import '../providers/transpose_providers.dart';
@@ -87,44 +88,29 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         });
         ref.read(isPresentingProvider.notifier).state = true;
       }
-      final repo = ref.read(hymnRepositoryProvider);
-      final himnoCompleto = await repo.getHymnById(widget.himno.id);
-      final versionPaisId = himnoCompleto.primaryVersionPaisId;
-      final estrofas = await repo.getStanzas(versionPaisId);
-      ref.read(liveControlProvider.notifier).loadHymn(
-        himnoCompleto, estrofas, versionPaisId: versionPaisId,
-      );
-      await windowService.sendMessage({
-        'type': 'LOAD_HYMN',
-        'himno_id': himnoCompleto.id,
-        'titulo': himnoCompleto.titulo,
-        'numero': himnoCompleto.numero,
-        'tipo': himnoCompleto.tipo.name,
-        'estrofas': estrofas
-            .map((e) => {
-                  'id': e.id,
-                  'version_pais_id': e.versionPaisId,
-                  'tipo': e.tipo.name,
-                  'orden': e.orden,
-                  'contenido': e.contenido,
-                },)
-            .toList(),
-        'currentIndex': 0,
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Presentando: ${widget.himno.titulo}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al presentar: $e')),
         );
       }
+      return;
+    }
+
+    final error = await projectHymn(ref, widget.himno);
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al presentar: $error')),
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Presentando: ${widget.himno.titulo}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
