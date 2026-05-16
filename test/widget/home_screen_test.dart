@@ -30,7 +30,7 @@ Himno _createTestHimno({
     numero: numero,
     tipo: tipo,
     versiones: [
-      VersionPais(id: 1, himnoId: id, pais: 'HN', tonalidadOriginal: 'G'),
+      VersionPais(id: 1, himnoId: id, paisId: 0, paisNombre: 'Honduras', paisCodigo: 'HN', tonalidadOriginal: 'G'),
     ],
     categorias: [
       const Categoria(id: 1, nombre: 'Alabanza'),
@@ -125,7 +125,8 @@ void main() {
       expect(find.text('Inspiradas'), findsOneWidget);
 
       // Verificar que FilterChip se usa
-      expect(find.byType(FilterChip), findsNWidgets(3));
+      // 3 de filtro + 2 de orden + 1 de categoría = 6
+      expect(find.byType(FilterChip), findsNWidgets(6));
     });
 
     testWidgets('Muestra loading state mientras carga himnos', (tester) async {

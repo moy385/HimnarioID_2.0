@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Directory, Platform, Process;
+import 'dart:io' show Directory, Platform, Process, ProcessStartMode;
 
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
@@ -103,6 +103,42 @@ class DesktopWindowService implements WindowService {
   Stream<WindowEvent> get onWindowEvent => _eventController.stream;
 }
 
+/// Firma de función para iniciar un proceso, análoga a [Process.start].
+///
+/// Los parámetros nombrados son [nullable] porque Dart no permite valores
+/// por defecto en [typedef] de función. [SubprocessWindowService] pasa los
+/// valores reales; los tests pueden omitirlos.
+/// Se inyecta en [SubprocessWindowService] para facilitar los tests unitarios.
+typedef ProcessStarter = Future<Process> Function(
+  String executable,
+  List<String> arguments, {
+  String? workingDirectory,
+  Map<String, String>? environment,
+  bool? includeParentEnvironment,
+  bool? runInShell,
+  ProcessStartMode? mode,
+});
+
+/// Starter por defecto que delega en [Process.start].
+Future<Process> _defaultStarter(
+  String executable,
+  List<String> arguments, {
+  String? workingDirectory,
+  Map<String, String>? environment,
+  bool? includeParentEnvironment,
+  bool? runInShell,
+  ProcessStartMode? mode,
+}) =>
+    Process.start(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment ?? true,
+      runInShell: runInShell ?? false,
+      mode: mode ?? ProcessStartMode.normal,
+    );
+
 /// Implementación que lanza una segunda instancia del proceso para la
 /// ventana de proyección.
 ///
@@ -124,7 +160,15 @@ class DesktopWindowService implements WindowService {
 /// usando mensajes JSON delimitados por newline (\n).
 /// La ventana principal escribe mensajes al stdin del hijo, y el hijo
 /// responde por stdout.
+///
+/// [processStarter] permite inyectar un mecanismo de creación de procesos
+/// alternativo (p.ej. en tests). Por defecto usa [Process.start].
 class SubprocessWindowService implements WindowService {
+  final ProcessStarter _processStarter;
+
+  SubprocessWindowService({ProcessStarter? processStarter})
+      : _processStarter = processStarter ?? _defaultStarter;
+
   final StreamController<WindowEvent> _eventController =
       StreamController<WindowEvent>.broadcast();
 
@@ -147,10 +191,13 @@ class SubprocessWindowService implements WindowService {
     }
 
     try {
-      _projectionProcess = await Process.start(
+      _projectionProcess = await _processStarter(
         Platform.resolvedExecutable,
         ['--projection'],
         workingDirectory: Directory.current.path,
+        includeParentEnvironment: true,
+        runInShell: false,
+        mode: ProcessStartMode.normal,
       );
 
       // Escuchar stdout del hijo para parsear respuestas JSON

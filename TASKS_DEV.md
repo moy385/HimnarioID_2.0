@@ -172,34 +172,15 @@ _FunctionButton(
 
 ---
 
-## TAREA-006: SimpleProjectionView
-**Prioridad**: P1 (Alta) | **Archivos**: Crear `simple_projection_view.dart`
+## ~~TAREA-006: SimpleProjectionView~~ (CANCELADA - F5.2)
+**Prioridad**: P1 (Alta) | **Archivos**: ~~`simple_projection_view.dart`~~
 
 ### Qué hacer
-Crear vista simplificada para cuando el usuario en Desktop NO ha presionado Present y selecciona un himno.
+~~Crear vista simplificada para cuando el usuario en Desktop NO ha presionado Present y selecciona un himno.~~
 
-### Código base
-```dart
-class SimpleProjectionView extends ConsumerWidget {
-  final Himno himno;
-  const SimpleProjectionView({required this.himno, super.key});
-  
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Scaffold con AppBar con título + botones prev/next
-    // Body: estrofa actual con navegación
-    // Sin FAB, sin audio, sin transposición
-  }
-}
-```
+**Motivo**: Reemplazado por `HymnDetailScreen` completo desde Fase 1. El widget `SimpleProjectionView` y su test fueron eliminados en Fase 5.2.
 
-### Registro en himnario_dual_app.dart
-```dart
-// Cuando es desktop y NO está presentando
-if (isDesktop && !ref.watch(isPresentingProvider)) {
-  // Usar SimpleProjectionView en lugar de HymnDetailScreen
-}
-```
+---
 
 ---
 

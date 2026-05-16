@@ -26,7 +26,13 @@ class AppInitializer {
 
   /// Inicializa todos los servicios necesarios para la app.
   /// Debe llamarse antes de runApp().
-  static Future<void> initialize([ProviderContainer? container]) async {
+  ///
+  /// [skipNetwork] evita iniciar el servidor gRPC y mDNS. Útil para el
+  /// subproceso de proyección (`--projection`) que se comunica vía stdin/stdout.
+  static Future<void> initialize({
+    ProviderContainer? container,
+    bool skipNetwork = false,
+  }) async {
     _log.info('Inicializando HimnarioID 2.0...');
 
     // 1. Configurar logging
@@ -43,8 +49,10 @@ class AppInitializer {
     // 3. Configurar detección de plataforma
     await _initPlatform();
 
-    // 4. Inicializar servicios de red (mDNS/gRPC)
-    await _initNetworkServices(container);
+    // 4. Inicializar servicios de red (mDNS/gRPC) — se salta en subproceso
+    if (!skipNetwork) {
+      await _initNetworkServices(container);
+    }
 
     _log.info('Inicialización completada.');
   }

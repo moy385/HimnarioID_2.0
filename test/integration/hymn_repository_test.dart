@@ -131,7 +131,7 @@ void main() {
 
         // Versions
         expect(himno.versiones, hasLength(1));
-        expect(himno.versiones[0].pais, 'El Salvador');
+        expect(himno.versiones[0].paisNombre, 'El Salvador');
         expect(himno.versiones[0].tonalidadOriginal, 'G');
 
         // Stanzas within version
@@ -350,12 +350,12 @@ void main() {
         expect(created.versiones, hasLength(2));
 
         final vEs =
-            created.versiones.firstWhere((v) => v.pais == 'El Salvador');
+            created.versiones.firstWhere((v) => v.paisNombre == 'El Salvador');
         expect(vEs.tonalidadOriginal, 'D');
         expect(vEs.estrofas, hasLength(2));
 
         final vGt =
-            created.versiones.firstWhere((v) => v.pais == 'Guatemala');
+            created.versiones.firstWhere((v) => v.paisNombre == 'Guatemala');
         expect(vGt.tonalidadOriginal, 'C');
         expect(vGt.estrofas, hasLength(1));
 
@@ -408,7 +408,7 @@ void main() {
 
         // Versions replaced
         expect(updated.versiones, hasLength(1));
-        expect(updated.versiones[0].pais, 'México');
+        expect(updated.versiones[0].paisNombre, 'México');
         expect(updated.versiones[0].estrofas, hasLength(2));
 
         // Categories replaced

@@ -41,7 +41,7 @@ void main() {
         VersionPais(
           id: 10,
           himnoId: id,
-          pais: 'MX',
+          paisId: 1, paisNombre: 'México', paisCodigo: 'MX',
           tonalidadOriginal: 'C',
           estrofas: [
             const Estrofa(
