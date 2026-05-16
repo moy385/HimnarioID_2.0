@@ -8,7 +8,6 @@ import '../views_personal/hymn_scroll/arrangement_editor_screen.dart';
 import '../views_personal/hymn_scroll/hymn_detail_screen.dart';
 import '../views_projection/controller/live_control_screen.dart';
 import '../views_projection/controller/present_control_bar.dart';
-import '../views_projection/display/simple_projection_view.dart';
 import '../views_projection/providers/presentation_providers.dart';
 import 'device_mode.dart';
 import 'device_switch.dart';
@@ -45,19 +44,7 @@ class HimnarioDualApp extends ConsumerWidget {
         '/hymn-detail': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is! Himno) return const HomeScreen();
-
-          // En Desktop sin Present activo: usar vista simplificada
-          return Consumer(
-            builder: (context, ref, _) {
-              final isDesktop = ref.watch(isDesktopModeProvider);
-              final isPresenting = ref.watch(isPresentingProvider);
-
-              if (isDesktop && !isPresenting) {
-                return SimpleProjectionView(himno: args);
-              }
-              return HymnDetailScreen(himno: args);
-            },
-          );
+          return HymnDetailScreen(himno: args);
         },
         '/live-control': (context) {
           return const LiveControlScreen();
