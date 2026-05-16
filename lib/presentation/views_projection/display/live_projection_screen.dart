@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../domain/entities/projection_slide.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
 import 'receptor_binding.dart';
@@ -9,13 +10,14 @@ import '../../../core/utils/stanza_layout_engine.dart';
 
 /// Pantalla de Proyección en Vivo (Live Projection).
 ///
-/// Muestra el himno actual en una pantalla grande (TV/proyector) con
-/// transiciones suaves entre estrofas usando [AnimatedSwitcher],
-/// indicador de progreso minimalista y diseño de alto contraste.
+/// Renderiza el slide actual según su tipo:
+/// - [TitleSlide]  → portada con título + número
+/// - [LyricsSlide] → letra de estrofa con transición
+/// - [AmenSlide]   → "Amén" de cierre
 ///
 /// Lee el estado de [liveControlProvider], la apariencia visual de
-/// [hymnAppearanceProvider] (fuente única de verdad para colores y
-/// tipografía), y la velocidad de transición de [projectionConfigProvider].
+/// [hymnAppearanceProvider] y la velocidad de transición de
+/// [projectionConfigProvider].
 class LiveProjectionScreen extends ConsumerWidget {
   const LiveProjectionScreen({super.key});
 
@@ -43,109 +45,20 @@ class LiveProjectionScreen extends ConsumerWidget {
       );
     }
 
-    // Procesar contenido con StanzaLayoutEngine
-    final double projectionWidth =
-        MediaQuery.of(context).size.width - 160; // 80px padding each side
-    final processedContent = StanzaLayoutEngine.processStanza(
-      liveState.currentStanza?.contenido ?? '',
-      maxWidth: projectionWidth,
-      style: textTheme.bodyLarge?.copyWith(
-        fontFamily: appearance.fontFamily,
-        fontSize: baseFontSize * 3.0,
-        height: 1.8,
-        fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
-
     return Scaffold(
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          // ── Contenido principal ──
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 80,
-                vertical: 60,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // ── Número del himno ──
-                  Text(
-                    '#${liveState.hymn!.numero ?? liveState.hymn!.id}',
-                    style: textTheme.displayLarge?.copyWith(
-                      fontFamily: appearance.fontFamily,
-                      color: appearance.textColor.withValues(alpha: 0.3),
-                      fontWeight: FontWeight.bold,
-                      fontSize: baseFontSize * 0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Título del himno ──
-                  Text(
-                    liveState.hymn!.titulo,
-                    style: textTheme.displayLarge?.copyWith(
-                      fontFamily: appearance.fontFamily,
-                      color: appearance.textColor,
-                      fontSize: baseFontSize * 0.6,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 48),
-
-                  // ── Divisor decorativo ──
-                  _buildDivider(colors),
-                  const SizedBox(height: 48),
-
-                  // ── Contenido de la estrofa con transición ──
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: Duration(
-                        milliseconds: config.transitionDurationMs,
-                      ),
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
-                      child: SingleChildScrollView(
-                        key: ValueKey(
-                          '${liveState.currentIndex}_${liveState.currentStanza?.contenido ?? ''}',
-                        ),
-                        child: Text(
-                          processedContent,
-                          style: textTheme.bodyLarge?.copyWith(
-                            fontFamily: appearance.fontFamily,
-                            color: appearance.textColor,
-                            fontSize: baseFontSize * 3.0,
-                            height: 1.8,
-                            fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // ── Indicador de progreso (dots) ──
-                  if (liveState.estrofas.isNotEmpty) ...[
-                    const SizedBox(height: 32),
-                    _buildProgressIndicator(
-                      colors,
-                      current: liveState.currentIndex,
-                      total: liveState.estrofas.length,
-                    ),
-                  ],
-                ],
-              ),
-            ),
+          // ── Contenido del slide según su tipo ──
+          _buildSlideContent(
+            context,
+            ref,
+            liveState,
+            baseFontSize,
+            config,
+            appearance,
+            textTheme,
+            colors,
           ),
 
           // ── Indicador de conexión (esquina inferior derecha) ──
@@ -157,6 +70,45 @@ class LiveProjectionScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Delega la renderización al widget especializado según el tipo de slide.
+  Widget _buildSlideContent(
+    BuildContext context,
+    WidgetRef ref,
+    LiveControlState liveState,
+    double baseFontSize,
+    ProjectionConfig config,
+    HymnAppearanceState appearance,
+    TextTheme textTheme,
+    ColorScheme colors,
+  ) {
+    final slide = liveState.currentSlide;
+    if (slide == null) return const SizedBox.shrink();
+
+    return switch (slide) {
+      TitleSlide(:final himno) => _TitleSlide(
+          titulo: himno.titulo,
+          numero: himno.numero,
+          baseFontSize: baseFontSize,
+          appearance: appearance,
+          textTheme: textTheme,
+        ),
+      LyricsSlide(:final estrofa) => _LyricsSlide(
+          key: ValueKey('lyrics_${liveState.currentSlideIndex}'),
+          contenido: estrofa.contenido,
+          baseFontSize: baseFontSize,
+          transitionDuration: config.transitionDurationMs,
+          totalSlides: liveState.slides.length,
+          currentSlideIndex: liveState.currentSlideIndex,
+          appearance: appearance,
+          textTheme: textTheme,
+        ),
+      AmenSlide() => _AmenSlide(
+          baseFontSize: baseFontSize,
+          appearance: appearance,
+        ),
+    };
   }
 
   /// Chip minimalista que indica el estado del servidor gRPC.
@@ -201,34 +153,159 @@ class LiveProjectionScreen extends ConsumerWidget {
     );
   }
 
-  /// Divisor con gradiente horizontal.
-  Widget _buildDivider(ColorScheme colors) {
-    return SizedBox(
-      width: 200,
-      height: 2,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              colors.primary.withValues(alpha: 0.5),
-              Colors.transparent,
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Slide widgets
+// ═══════════════════════════════════════════════════════════════
+
+/// Slide de portada: título enorme + número semitransparente.
+///
+/// Ocupa todo el espacio disponible centrado vertical y horizontalmente.
+/// Sin [AnimatedSwitcher], sin scroll, sin progress indicator.
+class _TitleSlide extends StatelessWidget {
+  final String titulo;
+  final int? numero;
+  final double baseFontSize;
+  final HymnAppearanceState appearance;
+  final TextTheme textTheme;
+
+  const _TitleSlide({
+    required this.titulo,
+    required this.numero,
+    required this.baseFontSize,
+    required this.appearance,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 60),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Título enorme
+            Text(
+              titulo,
+              style: textTheme.displayLarge?.copyWith(
+                fontFamily: appearance.fontFamily,
+                color: appearance.textColor,
+                fontSize: baseFontSize * 0.8,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 24),
+            // Número semitransparente
+            if (numero != null)
+              Text(
+                '#$numero',
+                style: textTheme.displayLarge?.copyWith(
+                  fontFamily: appearance.fontFamily,
+                  color: appearance.textColor.withValues(alpha: 0.3),
+                  fontWeight: FontWeight.bold,
+                  fontSize: baseFontSize * 0.4,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Slide de letra: solo el contenido de la estrofa, texto enormizado.
+///
+/// Mantiene [AnimatedSwitcher] para transiciones suaves,
+/// [StanzaLayoutEngine.processStanza] para el formateo inteligente,
+/// y progress indicator (dots) que refleja el total de slides.
+///
+/// Sin scroll, sin título ni número arriba.
+class _LyricsSlide extends StatelessWidget {
+  final String contenido;
+  final double baseFontSize;
+  final int transitionDuration;
+  final int totalSlides;
+  final int currentSlideIndex;
+  final HymnAppearanceState appearance;
+  final TextTheme textTheme;
+
+  const _LyricsSlide({
+    super.key,
+    required this.contenido,
+    required this.baseFontSize,
+    required this.transitionDuration,
+    required this.totalSlides,
+    required this.currentSlideIndex,
+    required this.appearance,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double projectionWidth =
+        MediaQuery.of(context).size.width - 160; // 80px padding each side
+
+    final processedContent = StanzaLayoutEngine.processStanza(
+      contenido,
+      maxWidth: projectionWidth,
+      style: textTheme.bodyLarge?.copyWith(
+        fontFamily: appearance.fontFamily,
+        fontSize: baseFontSize * 3.5,
+        height: 1.8,
+        fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 60),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // ── Contenido de la estrofa con transición ──
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: Duration(milliseconds: transitionDuration),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+                child: Text(
+                  processedContent,
+                  key: ValueKey(contenido),
+                  style: textTheme.bodyLarge?.copyWith(
+                    fontFamily: appearance.fontFamily,
+                    color: appearance.textColor,
+                    fontSize: baseFontSize * 3.5,
+                    height: 1.8,
+                    fontWeight:
+                        appearance.isBold ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+
+            // ── Indicador de progreso (dots) ──
+            if (totalSlides > 1) ...[
+              const SizedBox(height: 32),
+              _buildProgressIndicatorDots(totalSlides, currentSlideIndex),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  /// Indicador de progreso tipo "puntos" (dots).
-  ///
-  /// El punto activo es más ancho y usa el color primario.
-  /// Los puntos inactivos son pequeños y semitransparentes.
-  Widget _buildProgressIndicator(
-    ColorScheme colors, {
-    required int current,
-    required int total,
-  }) {
+  /// Indicador de progreso tipo "puntos" reutilizable.
+  Widget _buildProgressIndicatorDots(int total, int current) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(total, (i) {
@@ -239,12 +316,41 @@ class LiveProjectionScreen extends ConsumerWidget {
           height: 8,
           decoration: BoxDecoration(
             color: isActive
-                ? colors.primary
-                : colors.primary.withValues(alpha: 0.2),
+                ? appearance.textColor
+                : appearance.textColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
           ),
         );
       }),
+    );
+  }
+}
+
+/// Slide de cierre: "Amén" centrado, full screen, fuente enorme.
+///
+/// Sin [AnimatedSwitcher], sin progress indicator, sin scroll.
+class _AmenSlide extends StatelessWidget {
+  final double baseFontSize;
+  final HymnAppearanceState appearance;
+
+  const _AmenSlide({
+    required this.baseFontSize,
+    required this.appearance,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Amén',
+        style: TextStyle(
+          fontFamily: appearance.fontFamily,
+          color: appearance.textColor,
+          fontSize: baseFontSize * 5.0,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

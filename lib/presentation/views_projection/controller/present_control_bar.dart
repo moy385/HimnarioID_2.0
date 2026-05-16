@@ -149,18 +149,20 @@ class PresentControlBar extends ConsumerWidget {
     TextTheme textTheme,
     LiveControlState liveState,
   ) {
+    final slide = liveState.currentSlide;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _NavButton(
           icon: Icons.skip_previous,
           label: 'Anterior',
-          onPressed: liveState.hasPrev
+          onPressed: liveState.hasPrevSlide
               ? () {
-                  ref.read(liveControlProvider.notifier).prevStanza();
+                  ref.read(liveControlProvider.notifier).prevSlide();
                   ref
                       .read(windowServiceProvider)
-                      .sendMessage({'type': 'PREV_STANZA'});
+                      .sendMessage({'type': 'PREV_SLIDE'});
                 }
               : null,
         ),
@@ -172,9 +174,9 @@ class PresentControlBar extends ConsumerWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            liveState.currentStanza != null
-                ? '${liveState.currentStanza!.tipo.value} '
-                    '${liveState.currentIndex + 1} / ${liveState.estrofas.length}'
+            slide != null
+                ? '${slide.displayLabel} '
+                    '${liveState.currentSlideIndex + 1} / ${liveState.slides.length}'
                 : '—',
             style: textTheme.labelSmall?.copyWith(
               color: colorScheme.onPrimaryContainer,
@@ -186,12 +188,12 @@ class PresentControlBar extends ConsumerWidget {
         _NavButton(
           icon: Icons.skip_next,
           label: 'Siguiente',
-          onPressed: liveState.hasNext
+          onPressed: liveState.hasNextSlide
               ? () {
-                  ref.read(liveControlProvider.notifier).nextStanza();
+                  ref.read(liveControlProvider.notifier).nextSlide();
                   ref
                       .read(windowServiceProvider)
-                      .sendMessage({'type': 'NEXT_STANZA'});
+                      .sendMessage({'type': 'NEXT_SLIDE'});
                 }
               : null,
         ),

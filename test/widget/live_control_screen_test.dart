@@ -129,31 +129,44 @@ void main() {
       expect(find.text('Santo, Santo, Santo'), findsOneWidget);
     });
 
-    testWidgets('Botón SIGUIENTE funciona', (tester) async {
+    testWidgets('Muestra indicador de slide actual en AppBar', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      // El slide actual es TitleSlide → displayLabel = "Portada"
+      // Debe mostrar "Portada 1" (nombre + índice 1-based)
+      expect(find.textContaining('Portada 1'), findsOneWidget);
+    });
+
+    testWidgets('Botón SIGUIENTE avanza al LyricsSlide "Estrofa"',
+        (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pumpAndSettle();
 
       // Verificar que el botón SIGUIENTE está presente
       expect(find.text('SIGUIENTE'), findsOneWidget);
 
+      // Antes de avanzar, el slide actual es "Portada" (TitleSlide)
+      expect(find.textContaining('Portada 1'), findsOneWidget);
+
       // Hacer tap en SIGUIENTE
       await tester.tap(find.text('SIGUIENTE'));
       await tester.pumpAndSettle();
 
-      // La estrofa actual debería cambiar al coro (índice 1)
-      // El preview panel muestra "Coro" (tipo.value) y el badge "EstrofaTipo.coro"
-      expect(find.text('Coro'), findsOneWidget);
+      // Ahora el slide actual es LyricsSlide → displayLabel "Letra 2"
+      expect(find.textContaining('Letra 2'), findsOneWidget);
     });
 
-    testWidgets('Botón Anterior funciona', (tester) async {
-      // Crear un notifier que comience en el índice 1 (CORO)
+    testWidgets('Botón Anterior retrocede al TitleSlide "Portada"',
+        (tester) async {
+      // Crear un notifier que comience en el slide 1 (LyricsSlide de estrofa0)
       final notifier = LiveControlNotifier();
       notifier.loadHymn(
         _createTestHimno(),
         _createTestStanzas(),
       );
-      // Avanzar una vez para estar en índice 1
-      notifier.nextStanza();
+      // Avanzar una vez para estar en slide 1
+      notifier.nextSlide();
 
       final override = liveControlProvider.overrideWith(
         (ref) => notifier,
@@ -164,16 +177,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verificar que estamos en Coro (el preview panel muestra tipo.value = 'Coro')
-      expect(find.text('Coro'), findsOneWidget);
+      // Verificar que estamos en "Letra 2/5"
+      expect(find.textContaining('Letra 2'), findsOneWidget);
 
       // Hacer tap en Anterior
       await tester.tap(find.text('Anterior'));
       await tester.pumpAndSettle();
 
-      // Debería retroceder a la primera estrofa
-      // La vista previa muestra "Actual: Estrofa" (tipo.value = 'Estrofa')
-      expect(find.text('Estrofa'), findsOneWidget);
+      // Debería retroceder al TitleSlide → "Portada 1/5"
+      expect(find.textContaining('Portada 1'), findsOneWidget);
     });
 
     testWidgets('Botón Apagar activa modo blackout', (tester) async {
@@ -243,7 +255,7 @@ void main() {
       expect(find.byIcon(Icons.cast_rounded), findsOneWidget);
     });
 
-    testWidgets('Vista previa muestra estrofa actual y siguiente',
+    testWidgets('Vista previa muestra slide actual y siguiente',
         (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pumpAndSettle();
@@ -252,10 +264,10 @@ void main() {
       expect(find.text('Actual'), findsOneWidget);
       expect(find.text('Siguiente'), findsOneWidget);
 
-      // La estrofa actual (índice 0) muestra "Estrofa" (tipo.value) y
-      // la siguiente (índice 1) muestra "Coro"
-      expect(find.text('Estrofa'), findsOneWidget);
-      expect(find.text('Coro'), findsOneWidget);
+      // Slide actual (índice 0): TitleSlide → displayLabel "Portada"
+      // Slide siguiente (índice 1): LyricsSlide → displayLabel "Letra"
+      expect(find.text('Portada'), findsOneWidget);
+      expect(find.text('Letra'), findsOneWidget);
     });
   });
 }

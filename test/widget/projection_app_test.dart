@@ -90,7 +90,8 @@ void main() {
       expect(find.text('Esperando proyección...'), findsOneWidget);
     });
 
-    testWidgets('2. LOAD_HYMN — muestra el himno cargado', (tester) async {
+    testWidgets('2. LOAD_HYMN — muestra el TitleSlide (portada)',
+        (tester) async {
       final stdinCtrl = StreamController<String>.broadcast();
       await tester.pumpWidget(
         _buildTestApp(stdinOverride: stdinCtrl.stream),
@@ -101,13 +102,34 @@ void main() {
       stdinCtrl.add(jsonEncode(_loadHymnMessage()));
       await tester.pumpAndSettle();
 
-      // Verificar que el himno se muestra
+      // Verificar que el TitleSlide se muestra con el título del himno
       expect(find.text('Santo, Santo, Santo'), findsOneWidget);
+      // El contenido de la estrofa NO debe mostrarse porque es el TitleSlide
+      expect(find.text('Estrofa 1 de prueba'), findsNothing);
+      await stdinCtrl.close();
+    });
+
+    testWidgets('3. NEXT_SLIDE — avanza al LyricsSlide', (tester) async {
+      final stdinCtrl = StreamController<String>.broadcast();
+      await tester.pumpWidget(
+        _buildTestApp(stdinOverride: stdinCtrl.stream),
+      );
+      await tester.pumpAndSettle();
+
+      // Cargar himno con 3 estrofas
+      stdinCtrl.add(jsonEncode(_loadHymnMessage(stanzaCount: 3)));
+      await tester.pumpAndSettle();
+
+      // Avanzar al primer LyricsSlide (slide 1)
+      stdinCtrl.add(jsonEncode({'type': 'NEXT_SLIDE'}));
+      await tester.pumpAndSettle();
+
+      // Ahora debe mostrar el contenido de la primera estrofa
       expect(find.text('Estrofa 1 de prueba'), findsOneWidget);
       await stdinCtrl.close();
     });
 
-    testWidgets('3. NEXT_STANZA — avanza a la siguiente estrofa',
+    testWidgets('4. NEXT_STANZA (legacy) — avanza al LyricsSlide',
         (tester) async {
       final stdinCtrl = StreamController<String>.broadcast();
       await tester.pumpWidget(
@@ -117,19 +139,44 @@ void main() {
 
       // Cargar himno con 3 estrofas
       stdinCtrl.add(jsonEncode(_loadHymnMessage(stanzaCount: 3)));
+      await tester.pumpAndSettle();
+
+      // NEXT_STANZA debe avanzar al primer LyricsSlide
+      stdinCtrl.add(jsonEncode({'type': 'NEXT_STANZA'}));
       await tester.pumpAndSettle();
 
       expect(find.text('Estrofa 1 de prueba'), findsOneWidget);
-
-      // Avanzar
-      stdinCtrl.add(jsonEncode({'type': 'NEXT_STANZA'}));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Estrofa 2 de prueba'), findsOneWidget);
       await stdinCtrl.close();
     });
 
-    testWidgets('4. PREV_STANZA — retrocede a la estrofa anterior',
+    testWidgets('5. PREV_SLIDE — retrocede al TitleSlide', (tester) async {
+      final stdinCtrl = StreamController<String>.broadcast();
+      await tester.pumpWidget(
+        _buildTestApp(stdinOverride: stdinCtrl.stream),
+      );
+      await tester.pumpAndSettle();
+
+      // Cargar himno con 3 estrofas
+      stdinCtrl.add(jsonEncode(_loadHymnMessage(stanzaCount: 3)));
+      await tester.pumpAndSettle();
+
+      // Avanzar 2 veces para llegar al slide 2 (LyricsSlide, estrofa 2)
+      stdinCtrl.add(jsonEncode({'type': 'NEXT_SLIDE'}));
+      await tester.pumpAndSettle();
+      stdinCtrl.add(jsonEncode({'type': 'NEXT_SLIDE'}));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Estrofa 2 de prueba'), findsOneWidget);
+
+      // Retroceder al slide 1 (LyricsSlide, estrofa 1)
+      stdinCtrl.add(jsonEncode({'type': 'PREV_SLIDE'}));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Estrofa 1 de prueba'), findsOneWidget);
+      await stdinCtrl.close();
+    });
+
+    testWidgets('6. GO_TO_STANZA (legacy) — va a un índice específico',
         (tester) async {
       final stdinCtrl = StreamController<String>.broadcast();
       await tester.pumpWidget(
@@ -141,41 +188,13 @@ void main() {
       stdinCtrl.add(jsonEncode(_loadHymnMessage(stanzaCount: 3)));
       await tester.pumpAndSettle();
 
-      // Avanzar 2 veces
-      stdinCtrl.add(jsonEncode({'type': 'NEXT_STANZA'}));
-      await tester.pumpAndSettle();
-      stdinCtrl.add(jsonEncode({'type': 'NEXT_STANZA'}));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Estrofa 3 de prueba'), findsOneWidget);
-
-      // Retroceder 1
-      stdinCtrl.add(jsonEncode({'type': 'PREV_STANZA'}));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Estrofa 2 de prueba'), findsOneWidget);
-      await stdinCtrl.close();
-    });
-
-    testWidgets('5. GO_TO_STANZA — va a un índice específico',
-        (tester) async {
-      final stdinCtrl = StreamController<String>.broadcast();
-      await tester.pumpWidget(
-        _buildTestApp(stdinOverride: stdinCtrl.stream),
-      );
-      await tester.pumpAndSettle();
-
-      // Cargar himno con 3 estrofas
-      stdinCtrl.add(jsonEncode(_loadHymnMessage(stanzaCount: 3)));
-      await tester.pumpAndSettle();
-
-      // Ir directamente a la estrofa 3 (índice 2)
+      // GO_TO_STANZA mapea a goToSlide(index + 1). index 2 → slide 3
       stdinCtrl.add(jsonEncode({'type': 'GO_TO_STANZA', 'index': 2}));
       await tester.pumpAndSettle();
 
       expect(find.text('Estrofa 3 de prueba'), findsOneWidget);
 
-      // Volver a la estrofa 1 (índice 0)
+      // Volver a index 0 → slide 1 (estrofa 1)
       stdinCtrl.add(jsonEncode({'type': 'GO_TO_STANZA', 'index': 0}));
       await tester.pumpAndSettle();
 
@@ -183,7 +202,7 @@ void main() {
       await stdinCtrl.close();
     });
 
-    testWidgets('6. BLACKOUT — activa/desactiva pantalla negra',
+    testWidgets('7. BLACKOUT — activa/desactiva pantalla negra',
         (tester) async {
       final stdinCtrl = StreamController<String>.broadcast();
       await tester.pumpWidget(
@@ -199,7 +218,7 @@ void main() {
       stdinCtrl.add(jsonEncode({'type': 'BLACKOUT', 'enabled': true}));
       await tester.pumpAndSettle();
 
-      // Con blackout activado, el texto del himno NO debe mostrarse
+      // Con blackout activado, el título del himno NO debe mostrarse
       expect(find.text('Santo, Santo, Santo'), findsNothing);
 
       // Desactivar blackout
@@ -211,7 +230,7 @@ void main() {
       await stdinCtrl.close();
     });
 
-    testWidgets('7. Mensaje mal formado — no crashea', (tester) async {
+    testWidgets('8. Mensaje mal formado — no crashea', (tester) async {
       final stdinCtrl = StreamController<String>.broadcast();
       await tester.pumpWidget(
         _buildTestApp(stdinOverride: stdinCtrl.stream),
@@ -241,7 +260,7 @@ void main() {
     });
 
     group('SET_CONFIG — nuevos campos de apariencia', () {
-      testWidgets('8. textColor — actualiza el color del texto',
+      testWidgets('9. textColor — actualiza el color del texto',
           (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
@@ -265,7 +284,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('9. chordColor — actualiza el color de acordes',
+      testWidgets('10. chordColor — actualiza el color de acordes',
           (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
@@ -287,7 +306,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('10. fontFamily — actualiza la tipografía', (tester) async {
+      testWidgets('11. fontFamily — actualiza la tipografía', (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
           _buildTestApp(stdinOverride: stdinCtrl.stream),
@@ -308,7 +327,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('11. isBold — activa/desactiva negritas', (tester) async {
+      testWidgets('12. isBold — activa/desactiva negritas', (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
           _buildTestApp(stdinOverride: stdinCtrl.stream),
@@ -337,7 +356,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('12. fontScale — actualiza la escala de fuente',
+      testWidgets('13. fontScale — actualiza la escala de fuente',
           (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
@@ -359,7 +378,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('13. bgColor — actualiza fondo en ambos providers',
+      testWidgets('14. bgColor — actualiza fondo en ambos providers',
           (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
@@ -387,7 +406,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('14. Campos legacy coexisten con nuevos campos',
+      testWidgets('15. Campos legacy coexisten con nuevos campos',
           (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
@@ -425,7 +444,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('15. Color hex inválido — no crashea', (tester) async {
+      testWidgets('16. Color hex inválido — no crashea', (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
           _buildTestApp(stdinOverride: stdinCtrl.stream),

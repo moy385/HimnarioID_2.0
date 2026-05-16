@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/window_manager/window_providers.dart';
+import '../../../domain/entities/projection_slide.dart';
 import '../../../domain/repositories/control_repository.dart';
 import '../providers/connection_providers.dart';
 import '../providers/live_control_providers.dart';
@@ -23,6 +24,9 @@ class LiveControlScreen extends ConsumerWidget {
     final liveState = ref.watch(liveControlProvider);
     final isConnected = ref.watch(isConnectedProvider);
 
+    // Slide actual y sus metadatos para la UI
+    final currentSlide = liveState.currentSlide;
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -39,8 +43,8 @@ class LiveControlScreen extends ConsumerWidget {
             size: 20,
           ),
           const SizedBox(width: 8),
-          // Indicador de estrofa actual
-          if (liveState.currentStanza != null)
+          // Indicador de slide actual
+          if (currentSlide != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -48,7 +52,7 @@ class LiveControlScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${liveState.currentStanza!.tipo} ${liveState.currentIndex + 1}',
+                '${currentSlide.displayLabel} ${liveState.currentSlideIndex + 1}',
                 style: textTheme.labelMedium?.copyWith(
                   color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,
@@ -81,7 +85,7 @@ class LiveControlScreen extends ConsumerWidget {
                           ref,
                           () => ref
                               .read(liveControlProvider.notifier)
-                              .nextStanza(),
+                              .nextSlide(),
                           (repo) => repo.sendNextStanza(),
                         );
                       },
@@ -107,7 +111,7 @@ class LiveControlScreen extends ConsumerWidget {
                                 ref,
                                 () => ref
                                     .read(liveControlProvider.notifier)
-                                    .prevStanza(),
+                                    .prevSlide(),
                                 (repo) => repo.sendPrevStanza(),
                               );
                             },
@@ -234,6 +238,10 @@ class LiveControlScreen extends ConsumerWidget {
     return chorusIndex >= 0 ? chorusIndex : 0;
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Preview Panel
+  // ─────────────────────────────────────────────────────────────
+
   Widget _buildPreviewPanel(
     BuildContext context,
     WidgetRef ref,
@@ -241,6 +249,11 @@ class LiveControlScreen extends ConsumerWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    final currentSlide = liveState.currentSlide;
+    final nextSlide = liveState.hasNextSlide
+        ? liveState.slides[liveState.currentSlideIndex + 1]
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -264,81 +277,25 @@ class LiveControlScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              // Estrofa actual
+              // Slide actual
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Actual',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        liveState.currentStanza?.tipo.value ?? '—',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (liveState.currentStanza != null)
-                        Text(
-                          liveState.currentStanza!.contenido.split('\n').first,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
+                child: _buildSlidePreview(
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  label: 'Actual',
+                  slide: currentSlide,
+                  isCurrent: true,
                 ),
               ),
               const SizedBox(width: 12),
-              // Siguiente estrofa
+              // Siguiente slide
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Siguiente',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        liveState.nextStanza?.tipo.value ?? 'Fin',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (liveState.nextStanza != null)
-                        Text(
-                          liveState.nextStanza!.contenido.split('\n').first,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
+                child: _buildSlidePreview(
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  label: 'Siguiente',
+                  slide: nextSlide,
+                  isCurrent: false,
                 ),
               ),
               // Botón de configuración
@@ -352,6 +309,92 @@ class LiveControlScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Renderiza una tarjeta de preview para un [ProjectionSlide].
+  Widget _buildSlidePreview({
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    required String label,
+    required ProjectionSlide? slide,
+    required bool isCurrent,
+  }) {
+    final bgColor = isCurrent
+        ? colorScheme.primaryContainer
+        : colorScheme.surfaceContainerHighest;
+    final fgColor = isCurrent
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: textTheme.labelSmall?.copyWith(color: fgColor),
+          ),
+          const SizedBox(height: 4),
+          if (slide == null)
+            Text(
+              'Fin',
+              style: textTheme.bodyMedium?.copyWith(
+                color: fgColor,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          else
+            ...switch (slide) {
+              TitleSlide(:final himno) => [
+                  Text(
+                    slide.displayLabel,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: fgColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${himno.titulo}${himno.numero != null ? ' (#${himno.numero})' : ''}',
+                    style: textTheme.bodySmall?.copyWith(color: fgColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              LyricsSlide(:final estrofa) => [
+                  Text(
+                    slide.displayLabel,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: fgColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    estrofa.contenido.split('\n').first,
+                    style: textTheme.bodySmall?.copyWith(color: fgColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              AmenSlide() => [
+                  Text(
+                    slide.displayLabel,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: fgColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+            },
         ],
       ),
     );

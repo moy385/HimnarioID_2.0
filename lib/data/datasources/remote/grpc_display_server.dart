@@ -6,6 +6,7 @@ import 'package:grpc/grpc.dart';
 import 'package:logging/logging.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../domain/entities/projection_slide.dart';
 import '../../../presentation/views_projection/providers/live_control_providers.dart';
 import '../../../proto/generated/hymn_control.pbgrpc.dart';
 
@@ -108,8 +109,9 @@ class GrpcDisplayServer extends HymnControlServiceBase {
         case CommandType.NEXT_STANZA:
           _dispatch(
             (state) => state.copyWith(
-              currentIndex:
-                  state.hasNext ? state.currentIndex + 1 : state.currentIndex,
+              currentSlideIndex: state.hasNextSlide
+                  ? state.currentSlideIndex + 1
+                  : state.currentSlideIndex,
               isBlackout: false,
             ),
           );
@@ -118,8 +120,9 @@ class GrpcDisplayServer extends HymnControlServiceBase {
         case CommandType.PREV_STANZA:
           _dispatch(
             (state) => state.copyWith(
-              currentIndex:
-                  state.hasPrev ? state.currentIndex - 1 : state.currentIndex,
+              currentSlideIndex: state.hasPrevSlide
+                  ? state.currentSlideIndex - 1
+                  : state.currentSlideIndex,
               isBlackout: false,
             ),
           );
@@ -128,10 +131,12 @@ class GrpcDisplayServer extends HymnControlServiceBase {
         case CommandType.GO_TO_STANZA:
           if (request.hasStanzaIndex()) {
             _dispatch((state) {
-              final maxIdx = (state.estrofas.length - 1).clamp(0, 999);
-              final idx = request.stanzaIndex.clamp(0, maxIdx);
+              // stanzaIndex 0 → slide 1 (primer lyrics después del título)
+              final slideIdx = request.stanzaIndex + 1;
+              final maxIdx = (state.slides.length - 1).clamp(0, 999);
+              final idx = slideIdx.clamp(0, maxIdx);
               return state.copyWith(
-                currentIndex: idx,
+                currentSlideIndex: idx,
                 isBlackout: false,
               );
             });
@@ -140,10 +145,12 @@ class GrpcDisplayServer extends HymnControlServiceBase {
 
         case CommandType.GO_TO_CHORUS:
           _dispatch((state) {
-            final chorusIndex = state.estrofas.indexWhere((e) => e.isChorus);
+            final chorusIndex = state.slides.indexWhere(
+              (s) => s is LyricsSlide && s.estrofa.isChorus,
+            );
             if (chorusIndex != -1) {
               return state.copyWith(
-                currentIndex: chorusIndex,
+                currentSlideIndex: chorusIndex,
                 isBlackout: false,
               );
             }
@@ -157,7 +164,10 @@ class GrpcDisplayServer extends HymnControlServiceBase {
 
         case CommandType.CLEAR_BLACKOUT:
           _dispatch(
-            (state) => state.copyWith(currentIndex: 0, isBlackout: false),
+            (state) => state.copyWith(
+              currentSlideIndex: 0,
+              isBlackout: false,
+            ),
           );
           break;
 
@@ -252,11 +262,14 @@ class GrpcDisplayServer extends HymnControlServiceBase {
   /// Construye un [DisplayStatus] a partir del estado real de [LiveControlState].
   DisplayStatus _buildDisplayStatus() {
     final state = _container!.read(liveControlProvider);
+    final lyrics =
+        state.slides.whereType<LyricsSlide>().map((s) => s.estrofa).toList();
+    final currentLyricsIndex = (state.currentSlideIndex - 1).clamp(0, lyrics.length - 1);
     return DisplayStatus(
       currentHymnId: state.hymn?.id ?? 0,
       currentHymnTitle: state.hymn?.titulo ?? '',
-      currentStanzaIndex: state.currentIndex,
-      totalStanzas: state.estrofas.length,
+      currentStanzaIndex: currentLyricsIndex,
+      totalStanzas: lyrics.length,
       transpositionSemitones: 0,
       isBlackout: state.isBlackout,
       fontSize: 48.0,

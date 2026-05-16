@@ -2,47 +2,66 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
+import '../../../domain/entities/projection_slide.dart';
+
+// ═══════════════════════════════════════════════════════════════
+// Providers independientes (infraestructura / legacy)
+// ═══════════════════════════════════════════════════════════════
 
 /// Provider del himno activo actualmente en proyección.
 final activeHymnProvider = StateProvider<Himno?>((ref) => null);
 
 /// Provider de la lista completa de estrofas del himno activo.
-final estrofasProvider = StateProvider<List<Estrofa>>((ref) => []);
+///
+/// Deriva del [liveControlProvider] para mantenerse sincronizado.
+/// @Deprecated('Usar liveControlProvider en lugar de providers sueltos')
+final estrofasProvider = Provider<List<Estrofa>>((ref) {
+  return ref.watch(liveControlProvider).estrofas;
+});
 
 /// Provider del índice de la estrofa actual en la proyección.
-final currentStanzaIndexProvider = StateProvider<int>((ref) => 0);
+///
+/// Deriva del [liveControlProvider] para mantenerse sincronizado.
+/// @Deprecated('Usar currentSlideIndex de LiveControlState')
+final currentStanzaIndexProvider = Provider<int>((ref) {
+  return ref.watch(liveControlProvider).currentIndex;
+});
 
 /// Provider que indica si la pantalla está en modo blackout.
 final isBlackoutProvider = StateProvider<bool>((ref) => false);
 
 /// Provider que retorna la estrofa actual.
+/// @Deprecated('Usar currentSlide de LiveControlState')
 final currentStanzaProvider = Provider<Estrofa?>((ref) {
-  final estrofas = ref.watch(estrofasProvider);
-  final index = ref.watch(currentStanzaIndexProvider);
-  if (index < 0 || index >= estrofas.length) return null;
-  return estrofas[index];
+  return ref.watch(liveControlProvider).currentStanza;
 });
 
 /// Provider que retorna la siguiente estrofa (si existe).
+/// @Deprecated('Usar nextSlide de LiveControlState')
 final nextStanzaProvider = Provider<Estrofa?>((ref) {
-  final estrofas = ref.watch(estrofasProvider);
-  final index = ref.watch(currentStanzaIndexProvider);
-  final nextIndex = index + 1;
-  if (nextIndex >= estrofas.length) return null;
-  return estrofas[nextIndex];
+  return ref.watch(liveControlProvider).nextStanza;
 });
 
 /// Provider que retorna true si hay una estrofa siguiente.
+/// @Deprecated('Usar hasNextSlide de LiveControlState')
 final hasNextStanzaProvider = Provider<bool>((ref) {
-  final estrofas = ref.watch(estrofasProvider);
-  final index = ref.watch(currentStanzaIndexProvider);
-  return index < estrofas.length - 1;
+  return ref.watch(liveControlProvider).hasNextSlide;
 });
 
 /// Provider que retorna true si hay una estrofa anterior.
+/// @Deprecated('Usar hasPrevSlide de LiveControlState')
 final hasPrevStanzaProvider = Provider<bool>((ref) {
-  return ref.watch(currentStanzaIndexProvider) > 0;
+  return ref.watch(liveControlProvider).hasPrevSlide;
 });
+
+/// Provider que retorna el slide actual de la proyección.
+final currentSlideProvider = Provider<ProjectionSlide?>((ref) {
+  return ref.watch(liveControlProvider).currentSlide;
+});
+
+// ═══════════════════════════════════════════════════════════════
+// LiveControlProvider (StateNotifier)
+// ═══════════════════════════════════════════════════════════════
 
 /// Notifier para controlar la navegación entre estrofas.
 final liveControlProvider =
@@ -50,112 +69,229 @@ final liveControlProvider =
   return LiveControlNotifier();
 });
 
+// ═══════════════════════════════════════════════════════════════
+// LiveControlState
+// ═══════════════════════════════════════════════════════════════
+
 /// Estado completo del control en vivo.
+///
+/// Modela el flujo de presentación basado en [ProjectionSlide]:
+///   Slide 0:  [TÍTULO + NÚMERO]
+///   Slide 1:  [LETRA ESTROFA 1]
+///   ...
+///   Slide N:  ["AMÉN"]
 class LiveControlState {
   final Himno? hymn;
-  final List<Estrofa> estrofas;
-  final int currentIndex;
+  final List<ProjectionSlide> slides;
+  final int currentSlideIndex;
   final bool isBlackout;
   final int? versionPaisId;
 
   const LiveControlState({
     this.hymn,
-    this.estrofas = const [],
-    this.currentIndex = 0,
+    this.slides = const [],
+    this.currentSlideIndex = 0,
     this.isBlackout = false,
     this.versionPaisId,
   });
 
-  bool get hasNext => currentIndex < estrofas.length - 1;
-  bool get hasPrev => currentIndex > 0;
+  // ── Getters del nuevo modelo ───────────────────────────────
 
-  Estrofa? get currentStanza =>
-      estrofas.isNotEmpty && currentIndex < estrofas.length
-          ? estrofas[currentIndex]
+  /// Slide actual de la presentación.
+  ProjectionSlide? get currentSlide =>
+      slides.isNotEmpty && currentSlideIndex < slides.length
+          ? slides[currentSlideIndex]
           : null;
 
-  Estrofa? get nextStanza => hasNext ? estrofas[currentIndex + 1] : null;
+  /// `true` si existe un slide siguiente al actual.
+  bool get hasNextSlide => currentSlideIndex < slides.length - 1;
+
+  /// `true` si existe un slide anterior al actual.
+  bool get hasPrevSlide => currentSlideIndex > 0;
+
+  /// Total de slides en la presentación.
+  int get slideCount => slides.length;
+
+  /// Slide siguiente (si existe).
+  ProjectionSlide? get nextSlide =>
+      hasNextSlide ? slides[currentSlideIndex + 1] : null;
+
+  /// Slide anterior (si existe).
+  ProjectionSlide? get prevSlide =>
+      hasPrevSlide ? slides[currentSlideIndex - 1] : null;
+
+  // ── Getters backward compat (@Deprecated) ──────────────────
+
+  /// @Deprecated('Usar slides en su lugar')
+  @Deprecated('Usar slides y whereType<LyricsSlide>()')
+  List<Estrofa> get estrofas =>
+      slides.whereType<LyricsSlide>().map((s) => s.estrofa).toList();
+
+  /// @Deprecated('Usar currentSlideIndex en su lugar')
+  @Deprecated('Usar currentSlideIndex en su lugar')
+  int get currentIndex {
+    if (!slides.any((s) => s is LyricsSlide)) return 0;
+    if (currentSlideIndex <= 0) return 0;
+    if (currentSlideIndex >= slides.length - 1) {
+      return slides.whereType<LyricsSlide>().length - 1;
+    }
+    return currentSlideIndex - 1;
+  }
+
+  /// @Deprecated('Usar hasNextSlide en su lugar')
+  @Deprecated('Usar hasNextSlide en su lugar')
+  bool get hasNext => hasNextSlide;
+
+  /// @Deprecated('Usar hasPrevSlide en su lugar')
+  @Deprecated('Usar hasPrevSlide en su lugar')
+  bool get hasPrev => hasPrevSlide;
+
+  /// @Deprecated('Usar currentSlide en su lugar')
+  @Deprecated('Usar currentSlide y pattern matching')
+  Estrofa? get currentStanza {
+    final slide = currentSlide;
+    if (slide is LyricsSlide) return slide.estrofa;
+    return null;
+  }
+
+  /// @Deprecated('Usar nextSlide en su lugar')
+  @Deprecated('Usar nextSlide y pattern matching')
+  Estrofa? get nextStanza {
+    final next = nextSlide;
+    if (next is LyricsSlide) return next.estrofa;
+    return null;
+  }
+
+  // ── copyWith ───────────────────────────────────────────────
 
   LiveControlState copyWith({
     Himno? hymn,
-    List<Estrofa>? estrofas,
-    int? currentIndex,
+    List<ProjectionSlide>? slides,
+    int? currentSlideIndex,
     bool? isBlackout,
     int? versionPaisId,
   }) {
     return LiveControlState(
       hymn: hymn ?? this.hymn,
-      estrofas: estrofas ?? this.estrofas,
-      currentIndex: currentIndex ?? this.currentIndex,
+      slides: slides ?? this.slides,
+      currentSlideIndex: currentSlideIndex ?? this.currentSlideIndex,
       isBlackout: isBlackout ?? this.isBlackout,
       versionPaisId: versionPaisId ?? this.versionPaisId,
     );
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// LiveControlNotifier
+// ═══════════════════════════════════════════════════════════════
+
 /// Notifier que maneja la navegación en vivo.
 class LiveControlNotifier extends StateNotifier<LiveControlState> {
   LiveControlNotifier() : super(const LiveControlState());
+
+  // ── Construcción de slides ─────────────────────────────────
+
+  /// Construye la lista completa de [ProjectionSlide] a partir
+  /// de un [Himno] y sus [Estrofa]s.
+  ///
+  /// Retorna: `[TitleSlide, ...LyricsSlide..., AmenSlide]`
+  List<ProjectionSlide> _buildSlides(Himno hymn, List<Estrofa> stanzas) {
+    return [
+      ProjectionSlide.title(himno: hymn),
+      ...stanzas.map((e) => ProjectionSlide.lyrics(estrofa: e)),
+      const ProjectionSlide.amen(),
+    ];
+  }
+
+  // ── Métodos del nuevo modelo ───────────────────────────────
 
   /// Carga un himno para proyección.
   void loadHymn(Himno hymn, List<Estrofa> stanzas, {int? versionPaisId}) {
     state = LiveControlState(
       hymn: hymn,
-      estrofas: stanzas,
-      currentIndex: 0,
+      slides: _buildSlides(hymn, stanzas),
+      currentSlideIndex: 0,
       isBlackout: false,
       versionPaisId: versionPaisId ?? hymn.primaryVersionPaisId,
     );
   }
 
-  /// Avanza a la siguiente estrofa.
-  void nextStanza() {
-    if (state.hasNext) {
+  /// Avanza al siguiente slide.
+  void nextSlide() {
+    if (state.hasNextSlide) {
       state = state.copyWith(
-        currentIndex: state.currentIndex + 1,
+        currentSlideIndex: state.currentSlideIndex + 1,
         isBlackout: false,
       );
     }
   }
 
-  /// Retrocede a la estrofa anterior.
-  void prevStanza() {
-    if (state.hasPrev) {
+  /// Retrocede al slide anterior.
+  void prevSlide() {
+    if (state.hasPrevSlide) {
       state = state.copyWith(
-        currentIndex: state.currentIndex - 1,
+        currentSlideIndex: state.currentSlideIndex - 1,
         isBlackout: false,
       );
     }
   }
 
-  /// Va al primer coro disponible.
+  /// Va a un slide específico por índice.
+  void goToSlide(int index) {
+    if (index >= 0 && index < state.slides.length) {
+      state = state.copyWith(
+        currentSlideIndex: index,
+        isBlackout: false,
+      );
+    }
+  }
+
+  /// Va al primer coro disponible (busca en [LyricsSlide]).
   void goToChorus() {
-    final chorusIndex = state.estrofas.indexWhere((e) => e.isChorus);
+    final chorusIndex = state.slides.indexWhere(
+      (s) => s is LyricsSlide && s.estrofa.isChorus,
+    );
     if (chorusIndex != -1) {
       state = state.copyWith(
-        currentIndex: chorusIndex,
+        currentSlideIndex: chorusIndex,
         isBlackout: false,
       );
     }
   }
 
-  /// Va a una estrofa específica por índice.
-  void goToStanza(int index) {
-    if (index >= 0 && index < state.estrofas.length) {
-      state = state.copyWith(
-        currentIndex: index,
-        isBlackout: false,
-      );
-    }
-  }
-
-  /// Va al inicio (estrofa 0).
+  /// Va al inicio de la presentación (Slide 0: título).
   void goToStart() {
     state = state.copyWith(
-      currentIndex: 0,
+      currentSlideIndex: 0,
       isBlackout: false,
     );
   }
+
+  /// Va al primer slide de letra (Slide 1).
+  void goToFirstLyrics() {
+    if (state.slides.length >= 2) {
+      state = state.copyWith(
+        currentSlideIndex: 1,
+        isBlackout: false,
+      );
+    }
+  }
+
+  // ── Métodos backward compat (@Deprecated) ──────────────────
+
+  /// @Deprecated('Usar nextSlide() en su lugar')
+  @Deprecated('Usar nextSlide() en su lugar')
+  void nextStanza() => nextSlide();
+
+  /// @Deprecated('Usar prevSlide() en su lugar')
+  @Deprecated('Usar prevSlide() en su lugar')
+  void prevStanza() => prevSlide();
+
+  /// @Deprecated('Usar goToSlide(index + 1) en su lugar')
+  @Deprecated('Usar goToSlide(int index) en su lugar (nota: +1 por TitleSlide)')
+  void goToStanza(int index) => goToSlide(index + 1);
+
+  // ── Blackout ───────────────────────────────────────────────
 
   /// Activa/desactiva el modo blackout.
   void toggleBlackout() {

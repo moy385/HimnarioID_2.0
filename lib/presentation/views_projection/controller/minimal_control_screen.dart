@@ -68,7 +68,7 @@ class MinimalControlScreen extends ConsumerWidget {
                   isConnected ? 'Modo Emisor - Conectado' : 'Sin conexión',
                   style: TextStyle(color: colorScheme.onPrimaryContainer),
                 ),
-                if (liveState.currentStanza != null) ...[
+                if (liveState.currentSlide != null) ...[
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -81,8 +81,8 @@ class MinimalControlScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${liveState.currentStanza!.tipo.value} '
-                      '${liveState.currentIndex + 1}',
+                      '${liveState.currentSlide!.displayLabel} '
+                      '${liveState.currentSlideIndex + 1}',
                       style: textTheme.labelSmall?.copyWith(
                         color: colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
@@ -103,11 +103,11 @@ class MinimalControlScreen extends ConsumerWidget {
               _ControlButton(
                 icon: Icons.skip_previous,
                 label: 'Anterior',
-                onPressed: liveState.hasPrev
+                onPressed: liveState.hasPrevSlide
                     ? () {
                   ref
                       .read(liveControlProvider.notifier)
-                      .prevStanza();
+                      .prevSlide();
                 }
                     : null,
               ),
@@ -115,11 +115,11 @@ class MinimalControlScreen extends ConsumerWidget {
               _ControlButton(
                 icon: Icons.skip_next,
                 label: 'Siguiente',
-                onPressed: liveState.hasNext
+                onPressed: liveState.hasNextSlide
                     ? () {
                   ref
                       .read(liveControlProvider.notifier)
-                      .nextStanza();
+                      .nextSlide();
                 }
                     : null,
               ),

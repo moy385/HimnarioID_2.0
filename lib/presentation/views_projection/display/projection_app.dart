@@ -24,9 +24,12 @@ import 'live_projection_screen.dart';
 /// Recibe mensajes JSON desde el proceso padre a través de stdin.
 /// Cada mensaje es una línea JSON independiente:
 /// - `LOAD_HYMN`: Carga un himno completo con sus estrofas
-/// - `NEXT_STANZA`: Avanza a la siguiente estrofa
-/// - `PREV_STANZA`: Retrocede a la estrofa anterior
-/// - `GO_TO_STANZA`: Va a una estrofa específica por índice
+/// - `NEXT_SLIDE`: Avanza al siguiente slide
+/// - `PREV_SLIDE`: Retrocede al slide anterior
+/// - `GO_TO_SLIDE`: Va a un slide específico por índice
+/// - `NEXT_STANZA`: (deprecated) Usar NEXT_SLIDE
+/// - `PREV_STANZA`: (deprecated) Usar PREV_SLIDE
+/// - `GO_TO_STANZA`: (deprecated) Usar GO_TO_SLIDE con index + 1
 /// - `SET_CONFIG`: Actualiza configuración visual
 /// - `BLACKOUT`: Activa/desactiva el modo blackout
 ///
@@ -75,13 +78,22 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       switch (message['type'] as String?) {
         case 'LOAD_HYMN':
           _handleLoadHymn(notifier, message);
+        // ── Nuevos comandos de slides ──
+        case 'NEXT_SLIDE':
+          notifier.nextSlide();
+        case 'PREV_SLIDE':
+          notifier.prevSlide();
+        case 'GO_TO_SLIDE':
+          final slideIndex = message['index'] as int;
+          notifier.goToSlide(slideIndex);
+        // ── Comandos legacy (backward compat) ──
         case 'NEXT_STANZA':
-          notifier.nextStanza();
+          notifier.nextSlide();
         case 'PREV_STANZA':
-          notifier.prevStanza();
+          notifier.prevSlide();
         case 'GO_TO_STANZA':
           final index = message['index'] as int;
-          notifier.goToStanza(index);
+          notifier.goToSlide(index + 1); // +1 por TitleSlide
         case 'SET_CONFIG':
           _handleSetConfig(message);
         case 'BLACKOUT':

@@ -46,11 +46,11 @@ class KeyboardHandler extends ConsumerWidget {
     switch (key.keyLabel) {
       case 'Arrow Right':
       case ' ':
-        ref.read(liveControlProvider.notifier).nextStanza();
+        ref.read(liveControlProvider.notifier).nextSlide();
         return true;
 
       case 'Arrow Left':
-        ref.read(liveControlProvider.notifier).prevStanza();
+        ref.read(liveControlProvider.notifier).prevSlide();
         return true;
 
       case 'B':

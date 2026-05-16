@@ -48,6 +48,33 @@ Future<String?> projectHymn(WidgetRef ref, Himno himno) async {
   }
 }
 
+/// Construye el payload del mensaje [LOAD_HYMN].
+Map<String, dynamic> _buildLoadHymnMessage(
+  Himno himno,
+  List<Estrofa> estrofas,
+) {
+  // totalSlides = título + N estrofas + "Amén"
+  final totalSlides = 1 + estrofas.length + 1;
+  return {
+    'type': 'LOAD_HYMN',
+    'himno_id': himno.id,
+    'titulo': himno.titulo,
+    'numero': himno.numero,
+    'tipo': himno.tipo.name,
+    'estrofas': estrofas
+        .map((e) => {
+              'id': e.id,
+              'version_pais_id': e.versionPaisId,
+              'tipo': e.tipo.name,
+              'orden': e.orden,
+              'contenido': e.contenido,
+            },)
+        .toList(),
+    'currentIndex': 0,
+    'totalSlides': totalSlides,
+  };
+}
+
 /// Convierte [Color] a string hexadecimal con prefijo `#`.
 String _colorToHex(Color color) {
   return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
@@ -81,26 +108,4 @@ String _fontScaleToFontSizeName(double scale) {
   return 'extraLarge';
 }
 
-/// Construye el payload del mensaje [LOAD_HYMN].
-Map<String, dynamic> _buildLoadHymnMessage(
-  Himno himno,
-  List<Estrofa> estrofas,
-) {
-  return {
-    'type': 'LOAD_HYMN',
-    'himno_id': himno.id,
-    'titulo': himno.titulo,
-    'numero': himno.numero,
-    'tipo': himno.tipo.name,
-    'estrofas': estrofas
-        .map((e) => {
-              'id': e.id,
-              'version_pais_id': e.versionPaisId,
-              'tipo': e.tipo.name,
-              'orden': e.orden,
-              'contenido': e.contenido,
-            },)
-        .toList(),
-    'currentIndex': 0,
-  };
-}
+
