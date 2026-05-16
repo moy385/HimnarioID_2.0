@@ -5,6 +5,7 @@ import '../../../core/utils/flag_utils.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
+import '../dual_mode_wrapper/dual_mode_providers.dart';
 import '../views_personal/providers/audio_providers.dart';
 import '../views_personal/providers/hymn_providers.dart';
 import '../views_personal/providers/transpose_providers.dart';
@@ -126,334 +127,392 @@ void showBrushSheet(
   BuildContext context, {
   required WidgetRef ref,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) {
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-          final appearance = ref.watch(hymnAppearanceProvider);
-          final fondosAsync = ref.watch(fondosColorSolidoProvider);
+  final isDesktop = ref.read(isDesktopModeProvider);
 
-          return DraggableScrollableSheet(
-            initialChildSize: 0.85,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+  if (isDesktop) {
+    // ── Desktop: Dialog sin drag handle ──
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            final textTheme = Theme.of(context).textTheme;
+            final appearance = ref.watch(hymnAppearanceProvider);
+            final fondosAsync = ref.watch(fondosColorSolidoProvider);
+
+            return Dialog(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
                 child: ListView(
-                  controller: scrollController,
-                  children: <Widget>[
-                    // ---- Handle ----
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    // ---- Title ----
-                    Row(
-                      children: <Widget>[
-                        Icon(
-                          Icons.brush,
-                          color: colorScheme.tertiary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Configuración visual',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ==========================================
-                    // 1. Fondos guardados (desde BD)
-                    // ==========================================
-                    Text(
-                      'Fondos guardados',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    fondosAsync.when(
-                      loading: () => const SizedBox(
-                        height: 60,
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      ),
-                      error: (_, __) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          'Error al cargar fondos',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.error,
-                          ),
-                        ),
-                      ),
-                      data: (fondos) {
-                        if (fondos.isEmpty) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text(
-                              'No hay fondos guardados',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          );
-                        }
-                        return Wrap(
-                          spacing: 16,
-                          runSpacing: 12,
-                          children: fondos.map((FondoPantalla fondo) {
-                            final color = _parseHexColor(fondo.colorHex) ??
-                                colorScheme.surfaceContainerHighest;
-                            final isSelected =
-                                appearance.bgColor.toARGB32() == color.toARGB32();
-                            return _ColorCircle(
-                              color: color,
-                              isSelected: isSelected,
-                              isTransparent: false,
-                              label: fondo.nombre,
-                              onTap: () {
-                                ref
-                                    .read(hymnAppearanceProvider.notifier)
-                                    .setBgColor(color);
-                                setSheetState(() {});
-                              },
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ==========================================
-                    // 2. Tamaño de letra
-                    // ==========================================
-                    Text(
-                      'Tamaño de letra',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: <Widget>[
-                        const Icon(Icons.text_fields, size: 18),
-                        Expanded(
-                          child: Slider(
-                            value: appearance.fontScale,
-                            min: 0.7,
-                            max: 1.8,
-                            divisions: 11,
-                            label:
-                                '${(appearance.fontScale * 100).round()}%',
-                            onChanged: (value) {
-                              ref
-                                  .read(hymnAppearanceProvider.notifier)
-                                  .setFontScale(value);
-                              setSheetState(() {});
-                            },
-                          ),
-                        ),
-                        const Icon(Icons.text_fields, size: 26),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ==========================================
-                    // 4. Color de letra
-                    // ==========================================
-                    Text(
-                      'Color de letra',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: _textColors.map((Color color) {
-                        final isSelected =
-                            appearance.textColor.toARGB32() == color.toARGB32();
-                        return _ColorCircle(
-                          color: color,
-                          isSelected: isSelected,
-                          onTap: () {
-                            ref
-                                .read(hymnAppearanceProvider.notifier)
-                                .setTextColor(color);
-                            setSheetState(() {});
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ==========================================
-                    // 5. Color de acordes
-                    // ==========================================
-                    Text(
-                      'Color de acordes',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: _chordColors.map((Color color) {
-                        final isSelected =
-                            appearance.chordColor.toARGB32() == color.toARGB32();
-                        return _ColorCircle(
-                          color: color,
-                          isSelected: isSelected,
-                          onTap: () {
-                            ref
-                                .read(hymnAppearanceProvider.notifier)
-                                .setChordColor(color);
-                            setSheetState(() {});
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ==========================================
-                    // 6. Tipo de letra
-                    // ==========================================
-                    Text(
-                      'Tipo de letra',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Elige la tipografía para el texto de los himnos',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _FontOption(
-                          family: 'Merriweather',
-                          label: 'Merriweather',
-                          previewText: 'Texto',
-                          isSelected: appearance.fontFamily == 'Merriweather',
-                          onTap: () {
-                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather');
-                            setSheetState(() {});
-                          },
-                        ),
-                        _FontOption(
-                          family: 'Lora',
-                          label: 'Lora',
-                          previewText: 'Texto',
-                          isSelected: appearance.fontFamily == 'Lora',
-                          onTap: () {
-                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora');
-                            setSheetState(() {});
-                          },
-                        ),
-                        _FontOption(
-                          family: 'Playfair Display',
-                          label: 'Playfair Display',
-                          previewText: 'Texto',
-                          isSelected: appearance.fontFamily == 'Playfair Display',
-                          onTap: () {
-                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display');
-                            setSheetState(() {});
-                          },
-                        ),
-                        _FontOption(
-                          family: 'Cinzel',
-                          label: 'Cinzel',
-                          previewText: 'Texto',
-                          isSelected: appearance.fontFamily == 'Cinzel',
-                          onTap: () {
-                            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel');
-                            setSheetState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ── Negritas ──
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'Negritas',
-                        style: textTheme.bodyLarge,
-                      ),
-                      subtitle: Text(
-                        'Aplicar negritas al texto del himno',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      value: appearance.isBold,
-                      onChanged: (bool value) {
-                        ref.read(hymnAppearanceProvider.notifier).setIsBold(value);
-                        setSheetState(() {});
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ==========================================
-                    // 7. Restablecer
-                    // ==========================================
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          ref
-                              .read(hymnAppearanceProvider.notifier)
-                              .reset();
-                          setSheetState(() {});
-                        },
-                        icon: const Icon(Icons.restart_alt),
-                        label: const Text('Restablecer valores'),
-                      ),
-                    ),
-                  ],
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                  children: _brushSheetChildren(
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    appearance: appearance,
+                    fondosAsync: fondosAsync,
+                    ref: ref,
+                    setSheetState: setSheetState,
+                  ),
                 ),
-              );
-            },
+              ),
+            );
+          },
+        );
+      },
+    );
+  } else {
+    // ── Móvil: ModalBottomSheet + DraggableScrollableSheet ──
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            final textTheme = Theme.of(context).textTheme;
+            final appearance = ref.watch(hymnAppearanceProvider);
+            final fondosAsync = ref.watch(fondosColorSolidoProvider);
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (context, scrollController) {
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                  child: ListView(
+                    controller: scrollController,
+                    children: <Widget>[
+                      // ---- Handle (solo móvil) ----
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      ..._brushSheetChildren(
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                        appearance: appearance,
+                        fondosAsync: fondosAsync,
+                        ref: ref,
+                        setSheetState: setSheetState,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Contenido compartido del sheet Brocha (sin handle, sin wrapper).
+List<Widget> _brushSheetChildren({
+  required ColorScheme colorScheme,
+  required TextTheme textTheme,
+  required HymnAppearanceState appearance,
+  required AsyncValue<List<FondoPantalla>> fondosAsync,
+  required WidgetRef ref,
+  required void Function(void Function()) setSheetState,
+}) {
+  return [
+    // ---- Title ----
+    Row(
+      children: <Widget>[
+        Icon(
+          Icons.brush,
+          color: colorScheme.tertiary,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Configuración visual',
+          style: textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 20),
+
+    // ==========================================
+    // 1. Fondos guardados (desde BD)
+    // ==========================================
+    Text(
+      'Fondos guardados',
+      style: textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 8),
+    fondosAsync.when(
+      loading: () => const SizedBox(
+        height: 60,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Error al cargar fondos',
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.error,
+          ),
+        ),
+      ),
+      data: (fondos) {
+        if (fondos.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No hay fondos guardados',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           );
+        }
+        return Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          children: fondos.map((FondoPantalla fondo) {
+            final color = _parseHexColor(fondo.colorHex) ??
+                colorScheme.surfaceContainerHighest;
+            final isSelected =
+                appearance.bgColor.toARGB32() == color.toARGB32();
+            return _ColorCircle(
+              color: color,
+              isSelected: isSelected,
+              isTransparent: false,
+              label: fondo.nombre,
+              onTap: () {
+                ref
+                    .read(hymnAppearanceProvider.notifier)
+                    .setBgColor(color);
+                setSheetState(() {});
+              },
+            );
+          }).toList(),
+        );
+      },
+    ),
+    const SizedBox(height: 20),
+
+    // ==========================================
+    // 2. Tamaño de letra
+    // ==========================================
+    Text(
+      'Tamaño de letra',
+      style: textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 4),
+    Row(
+      children: <Widget>[
+        const Icon(Icons.text_fields, size: 18),
+        Expanded(
+          child: Slider(
+            value: appearance.fontScale,
+            min: 0.7,
+            max: 1.8,
+            divisions: 11,
+            label:
+                '${(appearance.fontScale * 100).round()}%',
+            onChanged: (value) {
+              ref
+                  .read(hymnAppearanceProvider.notifier)
+                  .setFontScale(value);
+              setSheetState(() {});
+            },
+          ),
+        ),
+        const Icon(Icons.text_fields, size: 26),
+      ],
+    ),
+    const SizedBox(height: 20),
+
+    // ==========================================
+    // 4. Color de letra
+    // ==========================================
+    Text(
+      'Color de letra',
+      style: textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 8),
+    Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: _textColors.map((Color color) {
+        final isSelected =
+            appearance.textColor.toARGB32() == color.toARGB32();
+        return _ColorCircle(
+          color: color,
+          isSelected: isSelected,
+          onTap: () {
+            ref
+                .read(hymnAppearanceProvider.notifier)
+                .setTextColor(color);
+            setSheetState(() {});
+          },
+        );
+      }).toList(),
+    ),
+    const SizedBox(height: 20),
+
+    // ==========================================
+    // 5. Color de acordes
+    // ==========================================
+    Text(
+      'Color de acordes',
+      style: textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 8),
+    Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: _chordColors.map((Color color) {
+        final isSelected =
+            appearance.chordColor.toARGB32() == color.toARGB32();
+        return _ColorCircle(
+          color: color,
+          isSelected: isSelected,
+          onTap: () {
+            ref
+                .read(hymnAppearanceProvider.notifier)
+                .setChordColor(color);
+            setSheetState(() {});
+          },
+        );
+      }).toList(),
+    ),
+    const SizedBox(height: 24),
+
+    // ==========================================
+    // 6. Tipo de letra
+    // ==========================================
+    Text(
+      'Tipo de letra',
+      style: textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 4),
+    Text(
+      'Elige la tipografía para el texto de los himnos',
+      style: textTheme.bodySmall?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 12),
+
+    const SizedBox(height: 12),
+    Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _FontOption(
+          family: 'Merriweather',
+          label: 'Merriweather',
+          previewText: 'Texto',
+          isSelected: appearance.fontFamily == 'Merriweather',
+          onTap: () {
+            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather');
+            setSheetState(() {});
+          },
+        ),
+        _FontOption(
+          family: 'Lora',
+          label: 'Lora',
+          previewText: 'Texto',
+          isSelected: appearance.fontFamily == 'Lora',
+          onTap: () {
+            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora');
+            setSheetState(() {});
+          },
+        ),
+        _FontOption(
+          family: 'Playfair Display',
+          label: 'Playfair Display',
+          previewText: 'Texto',
+          isSelected: appearance.fontFamily == 'Playfair Display',
+          onTap: () {
+            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display');
+            setSheetState(() {});
+          },
+        ),
+        _FontOption(
+          family: 'Cinzel',
+          label: 'Cinzel',
+          previewText: 'Texto',
+          isSelected: appearance.fontFamily == 'Cinzel',
+          onTap: () {
+            ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel');
+            setSheetState(() {});
+          },
+        ),
+      ],
+    ),
+    const SizedBox(height: 16),
+
+    // ── Negritas ──
+    SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        'Negritas',
+        style: textTheme.bodyLarge,
+      ),
+      subtitle: Text(
+        'Aplicar negritas al texto del himno',
+        style: textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+      value: appearance.isBold,
+      onChanged: (bool value) {
+        ref.read(hymnAppearanceProvider.notifier).setIsBold(value);
+        setSheetState(() {});
+      },
+    ),
+    const SizedBox(height: 24),
+
+    // ==========================================
+    // 7. Restablecer
+    // ==========================================
+    Center(
+      child: TextButton.icon(
+        onPressed: () {
+          ref
+              .read(hymnAppearanceProvider.notifier)
+              .reset();
+          setSheetState(() {});
         },
-      );
-    },
-  );
+        icon: const Icon(Icons.restart_alt),
+        label: const Text('Restablecer valores'),
+      ),
+    ),
+  ];
 }
 
 
@@ -470,157 +529,217 @@ void showNoteSheet(
   required ValueChanged<int> onPlayPista,
   required VoidCallback onStop,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    builder: (sheetContext) {
-      final colorScheme = Theme.of(sheetContext).colorScheme;
-      final textTheme = Theme.of(sheetContext).textTheme;
-      // Escuchar estado reactivo en lugar de usar parámetro fijo
-      final isPlaying = ref.watch(isAudioPlayingProvider);
+  final isDesktop = ref.read(isDesktopModeProvider);
 
-      return Container(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // Handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+  if (isDesktop) {
+    // ── Desktop: Dialog sin drag handle ──
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        final colorScheme = Theme.of(_).colorScheme;
+        final textTheme = Theme.of(_).textTheme;
+        final isPlaying = ref.watch(isAudioPlayingProvider);
+
+        return Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              child: _noteSheetContent(
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+                ref: ref,
+                himnoId: himnoId,
+                currentPistaId: currentPistaId,
+                isPlaying: isPlaying,
+                onPlayPista: onPlayPista,
+                onStop: onStop,
               ),
             ),
-            Row(
-              children: <Widget>[
-                Icon(
-                  Icons.audiotrack,
-                  color: colorScheme.secondary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Pistas de audio',
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
+          ),
+        );
+      },
+    );
+  } else {
+    // ── Móvil: ModalBottomSheet ──
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) {
+        final colorScheme = Theme.of(_).colorScheme;
+        final textTheme = Theme.of(_).textTheme;
+        final isPlaying = ref.watch(isAudioPlayingProvider);
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // Handle (solo móvil)
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ],
+              ),
+              _noteSheetContent(
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+                ref: ref,
+                himnoId: himnoId,
+                currentPistaId: currentPistaId,
+                isPlaying: isPlaying,
+                onPlayPista: onPlayPista,
+                onStop: onStop,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Contenido compartido del sheet Nota (título + pistas).
+Widget _noteSheetContent({
+  required ColorScheme colorScheme,
+  required TextTheme textTheme,
+  required WidgetRef ref,
+  required int himnoId,
+  int? currentPistaId,
+  required bool isPlaying,
+  required ValueChanged<int> onPlayPista,
+  required VoidCallback onStop,
+}) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Row(
+        children: <Widget>[
+          Icon(
+            Icons.audiotrack,
+            color: colorScheme.secondary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Pistas de audio',
+            style: textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 16),
-            // Pistas del himno mediante FutureBuilder
-            FutureBuilder<List<PistaAudio>>(
-              future: ref.read(audioRepositoryProvider).getByHimno(himnoId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: CircularProgressIndicator(),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      FutureBuilder<List<PistaAudio>>(
+        future: ref.read(audioRepositoryProvider).getByHimno(himnoId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.error_outline,
+                    color: colorScheme.error,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Error al cargar pistas',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.error,
                     ),
-                  );
-                }
+                  ),
+                ],
+              ),
+            );
+          }
 
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: <Widget>[
-                        Icon(
-                          Icons.error_outline,
-                          color: colorScheme.error,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Error al cargar pistas',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.error,
-                          ),
-                        ),
-                      ],
+          final pistas = snapshot.data ?? <PistaAudio>[];
+
+          if (pistas.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  children: <Widget>[
+                    Icon(
+                      Icons.audio_file,
+                      size: 48,
+                      color: colorScheme.onSurfaceVariant,
                     ),
-                  );
-                }
-
-                final pistas = snapshot.data ?? <PistaAudio>[];
-
-                if (pistas.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Center(
-                      child: Column(
-                        children: <Widget>[
-                          Icon(
-                            Icons.audio_file,
-                            size: 48,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No hay pistas de audio disponibles para este himno',
-                            textAlign: TextAlign.center,
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'No hay pistas de audio disponibles para este himno',
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  );
-                }
+                  ],
+                ),
+              ),
+            );
+          }
 
-                    return Column(
-                      children: pistas.map((PistaAudio pista) {
-                        final fileName = pista.rutaArchivo.split('/').last;
-                        final isThisPistaPlaying = isPlaying && currentPistaId == pista.id;
-                        return ListTile(
-                          leading: IconButton(
-                            icon: Icon(
-                              isThisPistaPlaying
-                                  ? Icons.stop_rounded
-                                  : Icons.play_arrow_rounded,
-                              color: isThisPistaPlaying
-                                  ? colorScheme.error
-                                  : colorScheme.secondary,
-                            ),
-                            onPressed: () {
-                              if (isThisPistaPlaying) {
-                                onStop();
-                              } else {
-                                onPlayPista(pista.id);
-                              }
-                            },
-                          ),
-                          title: Text(
-                            pista.descripcion ?? fileName,
-                            style: textTheme.bodyLarge,
-                          ),
-                      subtitle: pista.duracionSegundos != null
-                          ? Text(
-                              _formatDuration(pista.duracionSegundos!),
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            )
-                          : null,
-                      trailing: const Icon(Icons.music_note),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-
-          ],
-        ),
-      );
-    },
+          return Column(
+            children: pistas.map((PistaAudio pista) {
+              final fileName = pista.rutaArchivo.split('/').last;
+              final isThisPistaPlaying = isPlaying && currentPistaId == pista.id;
+              return ListTile(
+                leading: IconButton(
+                  icon: Icon(
+                    isThisPistaPlaying
+                        ? Icons.stop_rounded
+                        : Icons.play_arrow_rounded,
+                    color: isThisPistaPlaying
+                        ? colorScheme.error
+                        : colorScheme.secondary,
+                  ),
+                  onPressed: () {
+                    if (isThisPistaPlaying) {
+                      onStop();
+                    } else {
+                      onPlayPista(pista.id);
+                    }
+                  },
+                ),
+                title: Text(
+                  pista.descripcion ?? fileName,
+                  style: textTheme.bodyLarge,
+                ),
+                subtitle: pista.duracionSegundos != null
+                    ? Text(
+                        _formatDuration(pista.duracionSegundos!),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : null,
+                trailing: const Icon(Icons.music_note),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    ],
   );
 }
 
@@ -643,138 +762,212 @@ void showSolfaSheet(
   required ValueChanged<bool> onShowChordsChanged,
   VoidCallback? onCreateArrangement,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    builder: (sheetContext) {
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-          final currentTranspose = ref.watch(transposeValueProvider);
-          final currentKey = ref.watch(transposedKeyProvider);
+  final isDesktop = ref.read(isDesktopModeProvider);
 
-          return Container(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+  if (isDesktop) {
+    // ── Desktop: Dialog sin drag handle ──
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            final textTheme = Theme.of(context).textTheme;
+            final currentTranspose = ref.watch(transposeValueProvider);
+            final currentKey = ref.watch(transposedKeyProvider);
+
+            return Dialog(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                  child: _solfaSheetContent(
+                    context: context,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    currentTranspose: currentTranspose,
+                    currentKey: currentKey,
+                    showChords: showChords,
+                    onShowChordsChanged: onShowChordsChanged,
+                    onCreateArrangement: onCreateArrangement,
+                    ref: ref,
+                    setSheetState: setSheetState,
                   ),
                 ),
-                Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.music_note,
-                      color: colorScheme.tertiary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Panel de músico',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
+              ),
+            );
+          },
+        );
+      },
+    );
+  } else {
+    // ── Móvil: ModalBottomSheet ──
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            final textTheme = Theme.of(context).textTheme;
+            final currentTranspose = ref.watch(transposeValueProvider);
+            final currentKey = ref.watch(transposedKeyProvider);
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // Handle (solo móvil)
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // Toggle de acordes
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Mostrar acordes',
-                    style: textTheme.bodyLarge,
                   ),
-                  subtitle: Text(
-                    'Muestra u oculta los acordes en la letra',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  _solfaSheetContent(
+                    context: context,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    currentTranspose: currentTranspose,
+                    currentKey: currentKey,
+                    showChords: showChords,
+                    onShowChordsChanged: onShowChordsChanged,
+                    onCreateArrangement: onCreateArrangement,
+                    ref: ref,
+                    setSheetState: setSheetState,
                   ),
-                  value: showChords,
-                  onChanged: (bool value) {
-                    setSheetState(() {
-                      onShowChordsChanged(value);
-                    });
-                  },
-                ),
-                const Divider(),
-                // Transposición
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Transposición',
-                    style: textTheme.bodyLarge,
-                  ),
-                  subtitle: Text(
-                    'Tono actual: $currentKey',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      IconButton(
-                        onPressed: () {
-                          ref.read(transposeValueProvider.notifier).state =
-                              (currentTranspose - 1).clamp(-6, 6);
-                        },
-                        icon: const Icon(Icons.remove_circle_outline),
-                        tooltip: 'Bajar tono',
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          '$currentTranspose',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          ref.read(transposeValueProvider.notifier).state =
-                              (currentTranspose + 1).clamp(-6, 6);
-                        },
-                        icon: const Icon(Icons.add_circle_outline),
-                        tooltip: 'Subir tono',
-                      ),
-                    ],
-                  ),
-                ),
-                if (onCreateArrangement != null)
-                  const Divider(),
-                if (onCreateArrangement != null)
-                  ListTile(
-                    leading: Icon(Icons.edit_note, color: colorScheme.tertiary),
-                    title: const Text('Crear Arreglo Personalizado'),
-                    subtitle: const Text('Fork del himno con tus propios acordes'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onCreateArrangement();
-                    },
-                  ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
+}
+
+/// Contenido compartido del sheet Solfa (título, acordes toggle, transposición).
+Widget _solfaSheetContent({
+  required BuildContext context,
+  required ColorScheme colorScheme,
+  required TextTheme textTheme,
+  required int currentTranspose,
+  required String currentKey,
+  required bool showChords,
+  required ValueChanged<bool> onShowChordsChanged,
+  VoidCallback? onCreateArrangement,
+  required WidgetRef ref,
+  required void Function(void Function()) setSheetState,
+}) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Row(
+        children: <Widget>[
+          Icon(
+            Icons.music_note,
+            color: colorScheme.tertiary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Panel de músico',
+            style: textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      // Toggle de acordes
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(
+          'Mostrar acordes',
+          style: textTheme.bodyLarge,
+        ),
+        subtitle: Text(
+          'Muestra u oculta los acordes en la letra',
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        value: showChords,
+        onChanged: (bool value) {
+          setSheetState(() {
+            onShowChordsChanged(value);
+          });
+        },
+      ),
+      const Divider(),
+      // Transposición
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(
+          'Transposición',
+          style: textTheme.bodyLarge,
+        ),
+        subtitle: Text(
+          'Tono actual: $currentKey',
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            IconButton(
+              onPressed: () {
+                ref.read(transposeValueProvider.notifier).state =
+                    (currentTranspose - 1).clamp(-6, 6);
+              },
+              icon: const Icon(Icons.remove_circle_outline),
+              tooltip: 'Bajar tono',
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                '$currentTranspose',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                ref.read(transposeValueProvider.notifier).state =
+                    (currentTranspose + 1).clamp(-6, 6);
+              },
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Subir tono',
+            ),
+          ],
+        ),
+      ),
+      if (onCreateArrangement != null)
+        const Divider(),
+      if (onCreateArrangement != null)
+        ListTile(
+          leading: Icon(Icons.edit_note, color: colorScheme.tertiary),
+          title: const Text('Crear Arreglo Personalizado'),
+          subtitle: const Text('Fork del himno con tus propios acordes'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.pop(context);
+            onCreateArrangement();
+          },
+        ),
+    ],
+  );
+}
 
 // =============================================================================
 // 4. Search (Lupa) — Hymn search sheet

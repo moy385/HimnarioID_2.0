@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/enums/himno_tipo.dart';
 import '../../../core/network/connection_state.dart';
-import '../../../core/window_manager/window_providers.dart';
 import '../../../domain/entities/himno.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../../core/utils/string_utils.dart';
@@ -14,8 +13,9 @@ import '../../views_projection/controller/widgets/discover_display_sheet.dart'
     show DiscoverDisplaySheet;
 import '../../views_projection/display/receptor_binding.dart';
 import '../../views_projection/providers/connection_providers.dart';
-import '../../views_projection/providers/live_control_providers.dart';
 import '../../views_projection/providers/presentation_providers.dart';
+import '../../views_projection/providers/projection_actions.dart'
+    show projectHymn;
 import '../../views_admin/login/login_screen.dart';
 import '../../views_admin/admin_panel_screen.dart';
 import '../../views_admin/providers/auth_providers.dart'
@@ -87,42 +87,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetRef ref,
     Himno himno,
   ) async {
-    try {
-      final repo = ref.read(hymnRepositoryProvider);
-      final himnoCompleto = await repo.getHymnById(himno.id);
-      final versionPaisId = himnoCompleto.primaryVersionPaisId;
-      final estrofas = await repo.getStanzas(versionPaisId);
-
-      // 1. Cargar en liveControlProvider local (actualiza PresentControlBar)
-      ref.read(liveControlProvider.notifier).loadHymn(
-            himnoCompleto,
-            estrofas,
-            versionPaisId: versionPaisId,
-          );
-
-      // 2. Enviar a la 2da ventana vía WindowService.sendMessage()
-      final windowService = ref.read(windowServiceProvider);
-      await windowService.sendMessage({
-        'type': 'LOAD_HYMN',
-        'himno_id': himnoCompleto.id,
-        'titulo': himnoCompleto.titulo,
-        'numero': himnoCompleto.numero,
-        'tipo': himnoCompleto.tipo.name,
-        'estrofas': estrofas.map((e) => {
-          'id': e.id,
-          'version_pais_id': e.versionPaisId,
-          'tipo': e.tipo.name,
-          'orden': e.orden,
-          'contenido': e.contenido,
-        }).toList(), // ignore: require_trailing_commas
-        'currentIndex': 0,
-      });
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar himno: $e')),
-        );
-      }
+    final error = await projectHymn(ref, himno);
+    if (error != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar himno: $error')),
+      );
     }
   }
 
