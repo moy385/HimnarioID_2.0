@@ -206,6 +206,12 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       appearanceNotifier.setFontScale((message['fontScale'] as num).toDouble());
     }
 
+    if (message.containsKey('projectionFontScale')) {
+      appearanceNotifier.setProjectionFontScale(
+        (message['projectionFontScale'] as num).toDouble(),
+      );
+    }
+
     if (message.containsKey('bgColor')) {
       final hex = message['bgColor'] as String;
       try {

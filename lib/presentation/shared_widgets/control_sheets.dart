@@ -148,6 +148,7 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'fontFamily': appearance.fontFamily,
     'isBold': appearance.isBold,
     'fontScale': appearance.fontScale,
+    'projectionFontScale': appearance.projectionFontScale,
     'bgColor': _colorToHex(appearance.bgColor),
     // Campos legacy (retrocompatibilidad)
     'backgroundColor': _colorToHex(appearance.bgColor),
@@ -181,7 +182,7 @@ void showBrushSheet(
 
             return Dialog(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+                constraints: const BoxConstraints(maxHeight: 700, maxWidth: 500),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
                   children: _brushSheetChildren(
@@ -281,6 +282,20 @@ List<Widget> _brushSheetChildren({
             fontWeight: FontWeight.bold,
           ),
         ),
+        if (ref.watch(isDesktopModeProvider)) ...[
+          const SizedBox(width: 8),
+          Chip(
+            label: const Text('Personal + Proyección'),
+            visualDensity: VisualDensity.compact,
+            labelStyle: textTheme.labelSmall?.copyWith(
+              color: colorScheme.tertiary,
+            ),
+            backgroundColor: colorScheme.tertiaryContainer,
+            side: BorderSide.none,
+            padding: EdgeInsets.zero,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
       ],
     ),
     const SizedBox(height: 20),
@@ -387,6 +402,50 @@ List<Widget> _brushSheetChildren({
         const Icon(Icons.text_fields, size: 26),
       ],
     ),
+    const SizedBox(height: 20),
+
+    // ==========================================
+    // 3b. Tamaño de letra — Proyección (solo desktop)
+    // ==========================================
+    if (ref.watch(isDesktopModeProvider)) ...[
+      const SizedBox(height: 16),
+      Text(
+        'Tamaño de letra — Proyección',
+        style: textTheme.labelLarge?.copyWith(
+          color: colorScheme.tertiary,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Row(
+        children: <Widget>[
+          const Icon(Icons.tv, size: 18),
+          Expanded(
+            child: Slider(
+              value: appearance.projectionFontScale,
+              min: 0.5,
+              max: 3.0,
+              divisions: 10,
+              label:
+                  '${(appearance.projectionFontScale * 100).round()}%',
+              onChanged: (value) {
+                ref
+                    .read(hymnAppearanceProvider.notifier)
+                    .setProjectionFontScale(value);
+                _syncAppearanceToProjection(ref);
+                setSheetState(() {});
+              },
+            ),
+          ),
+          const Icon(Icons.tv, size: 26),
+        ],
+      ),
+      Text(
+        'Escala independiente para la ventana de proyección',
+        style: textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ],
     const SizedBox(height: 20),
 
     // ==========================================

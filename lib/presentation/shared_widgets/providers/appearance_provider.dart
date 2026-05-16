@@ -12,6 +12,7 @@ class HymnAppearanceState {
   final double fontScale;
   final String fontFamily;
   final bool isBold;
+  final double projectionFontScale;
 
   const HymnAppearanceState({
     this.bgColor = Colors.transparent,
@@ -20,6 +21,7 @@ class HymnAppearanceState {
     this.fontScale = 1.0,
     this.fontFamily = 'Merriweather',
     this.isBold = false,
+    this.projectionFontScale = 1.0,
   });
 
   HymnAppearanceState copyWith({
@@ -29,6 +31,7 @@ class HymnAppearanceState {
     double? fontScale,
     String? fontFamily,
     bool? isBold,
+    double? projectionFontScale,
   }) {
     return HymnAppearanceState(
       bgColor: bgColor ?? this.bgColor,
@@ -37,6 +40,7 @@ class HymnAppearanceState {
       fontScale: fontScale ?? this.fontScale,
       fontFamily: fontFamily ?? this.fontFamily,
       isBold: isBold ?? this.isBold,
+      projectionFontScale: projectionFontScale ?? this.projectionFontScale,
     );
   }
 }
@@ -57,6 +61,8 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
       final textColor = await _dbHelper.getConfig('text_color');
       final chordColor = await _dbHelper.getConfig('chord_color');
       final fontScale = await _dbHelper.getConfig('font_scale');
+      final projectionFontScale =
+          await _dbHelper.getConfig('projection_font_scale');
 
       state = state.copyWith(
         fontFamily: fontFamily ?? 'Merriweather',
@@ -65,6 +71,9 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         textColor: textColor != null ? _hexToColor(textColor) : const Color(0xFF1C1B1F),
         chordColor: chordColor != null ? _hexToColor(chordColor) : const Color(0xFF6750A4),
         fontScale: fontScale != null ? double.tryParse(fontScale) ?? 1.0 : 1.0,
+        projectionFontScale: projectionFontScale != null
+            ? double.tryParse(projectionFontScale)?.clamp(0.5, 3.0) ?? 1.0
+            : 1.0,
       );
     } catch (e) {
       // Si falla la carga, usar valores por defecto
@@ -80,6 +89,10 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
       await _dbHelper.setConfig('text_color', _colorToHex(state.textColor));
       await _dbHelper.setConfig('chord_color', _colorToHex(state.chordColor));
       await _dbHelper.setConfig('font_scale', state.fontScale.toString());
+      await _dbHelper.setConfig(
+        'projection_font_scale',
+        state.projectionFontScale.toString(),
+      );
     } catch (e) {
       // Silent fail en escritura
     }
@@ -114,6 +127,11 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
 
   void setFontScale(double scale) {
     state = state.copyWith(fontScale: scale);
+    _saveToDb();
+  }
+
+  void setProjectionFontScale(double scale) {
+    state = state.copyWith(projectionFontScale: scale.clamp(0.5, 3.0));
     _saveToDb();
   }
 

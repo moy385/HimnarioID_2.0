@@ -33,7 +33,7 @@ class LiveProjectionScreen extends ConsumerWidget {
         : appearance.bgColor;
 
     final baseFontSize =
-        (textTheme.bodyLarge?.fontSize ?? 36) * appearance.fontScale;
+        (textTheme.bodyLarge?.fontSize ?? 36) * appearance.projectionFontScale;
 
     // ── Blackout: pantalla completamente negra ──
     if (liveState.isBlackout || liveState.hymn == null) {
@@ -51,7 +51,7 @@ class LiveProjectionScreen extends ConsumerWidget {
       maxWidth: projectionWidth,
       style: textTheme.bodyLarge?.copyWith(
         fontFamily: appearance.fontFamily,
-        fontSize: baseFontSize,
+        fontSize: baseFontSize * 3.0,
         height: 1.8,
         fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
       ),
@@ -79,7 +79,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                       fontFamily: appearance.fontFamily,
                       color: appearance.textColor.withValues(alpha: 0.3),
                       fontWeight: FontWeight.bold,
-                      fontSize: baseFontSize * 0.6,
+                      fontSize: baseFontSize * 0.3,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -90,7 +90,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                     style: textTheme.displayLarge?.copyWith(
                       fontFamily: appearance.fontFamily,
                       color: appearance.textColor,
-                      fontSize: baseFontSize * 1.2,
+                      fontSize: baseFontSize * 0.6,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
@@ -124,7 +124,7 @@ class LiveProjectionScreen extends ConsumerWidget {
                           style: textTheme.bodyLarge?.copyWith(
                             fontFamily: appearance.fontFamily,
                             color: appearance.textColor,
-                            fontSize: baseFontSize,
+                            fontSize: baseFontSize * 3.0,
                             height: 1.8,
                             fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
                           ),
