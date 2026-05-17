@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,10 +30,12 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
   final TextEditingController _searchController = TextEditingController();
   HimnoTipo? _selectedFilter;
   String _searchQuery = '';
+  Timer? _debounce;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -86,11 +90,17 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
             child: HymnSearchBar(
               controller: _searchController,
               onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 400), () {
+                  if (mounted) {
+                    setState(() {
+                      _searchQuery = value.trim();
+                    });
+                  }
                 });
               },
               onClear: () {
+                _debounce?.cancel();
                 setState(() {
                   _searchQuery = '';
                 });

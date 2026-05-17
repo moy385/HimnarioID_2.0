@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -62,6 +64,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int? _selectedCategoriaId;
   String? _selectedCategoriaNombre;
   String _searchQuery = '';
+  Timer? _debounce;
   final ScrollController _scrollController = ScrollController();
   List<Himno>? _cachedHimnos;
   List<GlobalKey> _itemKeys = [];
@@ -69,6 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _debounce?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -212,11 +216,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: HymnSearchBar(
               controller: _searchController,
               onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 400), () {
+                  if (mounted) {
+                    setState(() {
+                      _searchQuery = value.trim();
+                    });
+                  }
                 });
               },
               onClear: () {
+                _debounce?.cancel();
                 setState(() {
                   _searchQuery = '';
                 });
