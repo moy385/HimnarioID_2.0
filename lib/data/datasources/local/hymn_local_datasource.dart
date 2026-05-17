@@ -116,21 +116,26 @@ class HymnLocalDataSource {
       if (normalizedQuery.length >= 3) {
         try {
           final stanzaHymnIds = await _searchStanzas(db, normalizedQuery, tipo: tipo, categoriaId: categoriaId);
-          for (final entry in stanzaHymnIds.entries) {
-            final hymnId = entry.key;
-            // Solo agregar si no está ya en scored
-            if (!scored.any((s) => s.himno.id == hymnId)) {
-              // Cargar himno básico
-              final hymnMaps = await db.query('Himno',
-                where: 'id = ? AND activo = 1',
-                whereArgs: [hymnId],
-              );
-              if (hymnMaps.isNotEmpty) {
-                final h = HimnoModel.fromMap(hymnMaps.first);
-                scored.add(_ScoredHymn(h, 35.0));
-              }
-            } else {
-              // Ya existe, dar bonus por match en estrofa
+
+          // Batch-load himnos encontrados por estrofa que no están ya en scored
+          final newHymnIds = stanzaHymnIds.keys
+              .where((id) => !scored.any((s) => s.himno.id == id))
+              .toList();
+
+          if (newHymnIds.isNotEmpty) {
+            final ph = newHymnIds.map((_) => '?').join(',');
+            final hymnMaps = await db.rawQuery(
+              'SELECT * FROM Himno WHERE id IN ($ph) AND activo = 1',
+              newHymnIds,
+            );
+            for (final map in hymnMaps) {
+              scored.add(_ScoredHymn(HimnoModel.fromMap(map), 35.0));
+            }
+          }
+
+          // Bonus de 35 para himnos que ya estaban en scored
+          for (final hymnId in stanzaHymnIds.keys) {
+            if (!newHymnIds.contains(hymnId)) {
               final idx = scored.indexWhere((s) => s.himno.id == hymnId);
               if (idx >= 0) {
                 scored[idx] = _ScoredHymn(scored[idx].himno, scored[idx].score + 35);
@@ -152,27 +157,9 @@ class HymnLocalDataSource {
 
       allHimnos = scored.map((s) => s.himno).toList();
 
-      // Paso 5: Cargar versiones y categorías (solo para resultados)
-      for (final himno in allHimnos) {
-        final versionMaps = await db.rawQuery(
-          'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
-          'FROM Version_Pais vp '
-          'LEFT JOIN Pais p ON p.id = vp.pais_id '
-          'WHERE vp.himno_id = ? AND vp.activo = 1',
-          [himno.id],
-        );
-        himno.versiones = versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
-
-        final catMaps = await db.rawQuery(
-          'SELECT c.id, c.nombre FROM Himno_Categoria hc '
-          'JOIN Categoria c ON c.id = hc.categoria_id '
-          'WHERE hc.himno_id = ?',
-          [himno.id],
-        );
-        himno.categorias = catMaps
-            .map((cm) => CategoriaModel(id: cm['id'] as int, nombre: cm['nombre'] as String))
-            .toList();
-      }
+      // Paso 5: Cargar versiones y categorías en lote (2 queries totales,
+      //            no 2 por himno)
+      await _loadVersionsAndCategories(db, allHimnos);
 
       // Paso 6: Orden alfabético en Dart (si aplica)
       if (orderBy != null && orderBy.contains('titulo_principal')) {
@@ -238,25 +225,8 @@ class HymnLocalDataSource {
 
     var himnos = maps.map((m) => HimnoModel.fromMap(m)).toList();
 
-    // Cargar versiones y categorías
-    for (final himno in himnos) {
-      final versionMaps = await db.rawQuery(
-        'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
-        'FROM Version_Pais vp LEFT JOIN Pais p ON p.id = vp.pais_id '
-        'WHERE vp.himno_id = ? AND vp.activo = 1',
-        [himno.id],
-      );
-      himno.versiones = versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
-
-      final catMaps = await db.rawQuery(
-        'SELECT c.id, c.nombre FROM Himno_Categoria hc '
-        'JOIN Categoria c ON c.id = hc.categoria_id WHERE hc.himno_id = ?',
-        [himno.id],
-      );
-      himno.categorias = catMaps
-          .map((cm) => CategoriaModel(id: cm['id'] as int, nombre: cm['nombre'] as String))
-          .toList();
-    }
+    // Cargar versiones y categorías en lote (2 queries totales)
+    await _loadVersionsAndCategories(db, himnos);
 
     // Orden alfabético en Dart (si aplica)
     if (effectiveOrderBy == null && orderBy != null && orderBy.contains('titulo_principal')) {
@@ -487,18 +457,8 @@ class HymnLocalDataSource {
 
       final himnos = maps.map((m) => HimnoModel.fromMap(m)).toList();
 
-      for (final himno in himnos) {
-        final versionMaps = await db.rawQuery(
-          'SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo '
-          'FROM Version_Pais vp '
-          'LEFT JOIN Pais p ON p.id = vp.pais_id '
-          'WHERE vp.himno_id = ? AND vp.activo = 1',
-          [himno.id],
-        );
-        himno.versiones =
-            versionMaps.map((vm) => VersionPaisModel.fromMap(vm)).toList();
-      }
-
+      // Cargar versiones en lote
+      await _loadVersionsAndCategories(db, himnos);
       return himnos;
     } catch (e) {
       _log.severe('Error en getHymnsByCategory: $e');
@@ -779,8 +739,61 @@ class HymnLocalDataSource {
   }
 }
 
-/// Helper para almacenar un himno con su puntaje de relevancia.
-class _ScoredHymn {
+  /// Carga versiones y categorías para una lista de himnos usando solo
+  /// **2 consultas SQL** en lugar de 2 por himno (elimina el N+1).
+  ///
+  /// Esto es crítico en Android donde cada consulta cruza el MethodChannel
+  /// con ~0.5–2ms de overhead. Para 40 himnos: 2 queries vs 80 queries.
+  Future<void> _loadVersionsAndCategories(
+    Database db,
+    List<HimnoModel> himnos,
+  ) async {
+    if (himnos.isEmpty) return;
+
+    final ids = himnos.map((h) => h.id).toList();
+    final placeholders = ids.map((_) => '?').join(',');
+
+    // 1. Cargar todas las versiones en una sola consulta
+    final versionMaps = await db.rawQuery('''
+      SELECT vp.*, p.nombre AS pais_nombre, p.codigo AS pais_codigo
+      FROM Version_Pais vp
+      LEFT JOIN Pais p ON p.id = vp.pais_id
+      WHERE vp.himno_id IN ($placeholders) AND vp.activo = 1
+    ''', ids);
+
+    final versionesByHymnId = <int, List<VersionPaisModel>>{};
+    for (final vm in versionMaps) {
+      final himnoId = vm['himno_id'] as int;
+      versionesByHymnId.putIfAbsent(himnoId, () => []);
+      versionesByHymnId[himnoId]!.add(VersionPaisModel.fromMap(vm));
+    }
+
+    // 2. Cargar todas las categorías en una sola consulta
+    final catMaps = await db.rawQuery('''
+      SELECT hc.himno_id, c.id, c.nombre
+      FROM Himno_Categoria hc
+      JOIN Categoria c ON c.id = hc.categoria_id
+      WHERE hc.himno_id IN ($placeholders)
+    ''', ids);
+
+    final catsByHymnId = <int, List<CategoriaModel>>{};
+    for (final cm in catMaps) {
+      final himnoId = cm['himno_id'] as int;
+      catsByHymnId.putIfAbsent(himnoId, () => []);
+      catsByHymnId[himnoId]!.add(
+        CategoriaModel(id: cm['id'] as int, nombre: cm['nombre'] as String),
+      );
+    }
+
+    // 3. Asignar a cada himno
+    for (final himno in himnos) {
+      himno.versiones = versionesByHymnId[himno.id] ?? [];
+      himno.categorias = catsByHymnId[himno.id] ?? [];
+    }
+  }
+
+  /// Helper para almacenar un himno con su puntaje de relevancia.
+  class _ScoredHymn {
   final HimnoModel himno;
   final double score;
   const _ScoredHymn(this.himno, this.score);
