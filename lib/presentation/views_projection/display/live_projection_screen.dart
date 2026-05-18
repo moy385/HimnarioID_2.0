@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/enums/estrofa_tipo.dart';
+import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -96,6 +98,7 @@ class LiveProjectionScreen extends ConsumerWidget {
         ),
       LyricsSlide(:final estrofa) => _LyricsSlide(
           key: ValueKey('lyrics_${liveState.currentSlideIndex}'),
+          estrofa: estrofa,
           contenido: estrofa.contenido,
           baseFontSize: baseFontSize,
           transitionDuration: config.transitionDurationMs,
@@ -226,6 +229,7 @@ class _TitleSlide extends StatelessWidget {
 ///
 /// Sin scroll, sin título ni número arriba.
 class _LyricsSlide extends StatelessWidget {
+  final Estrofa estrofa;
   final String contenido;
   final double baseFontSize;
   final int transitionDuration;
@@ -236,6 +240,7 @@ class _LyricsSlide extends StatelessWidget {
 
   const _LyricsSlide({
     super.key,
+    required this.estrofa,
     required this.contenido,
     required this.baseFontSize,
     required this.transitionDuration,
@@ -263,10 +268,13 @@ class _LyricsSlide extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 100),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // ── Etiqueta de tipo de estrofa (ej: "Estrofa 1", "Coro") ──
+            _buildEstrofaLabel(),
+
             // ── Contenido de la estrofa con transición ──
             Expanded(
               child: AnimatedSwitcher(
@@ -277,29 +285,54 @@ class _LyricsSlide extends StatelessWidget {
                     child: child,
                   );
                 },
-                child: Text(
-                  processedContent,
-                  key: ValueKey(contenido),
-                  style: textTheme.bodyLarge?.copyWith(
-                    fontFamily: appearance.fontFamily,
-                    color: appearance.textColor,
-                    fontSize: baseFontSize * 3.5,
-                    height: 1.8,
-                    fontWeight:
-                        appearance.isBold ? FontWeight.bold : FontWeight.normal,
+                child: Center(
+                  child: Text(
+                    processedContent,
+                    key: ValueKey(contenido),
+                    style: textTheme.bodyLarge?.copyWith(
+                      fontFamily: appearance.fontFamily,
+                      color: appearance.textColor,
+                      fontSize: baseFontSize * 3.5,
+                      height: 1.8,
+                      fontWeight: appearance.isBold
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ),
             ),
 
             // ── Indicador de progreso (dots) ──
             if (totalSlides > 1) ...[
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               _buildProgressIndicatorDots(totalSlides, currentSlideIndex),
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// Etiqueta sutil del tipo de estrofa: "Estrofa 1", "Coro", "Puente 2", etc.
+  Widget _buildEstrofaLabel() {
+    final label = estrofa.tipo == EstrofaTipo.coro
+        ? 'Coro'
+        : '${estrofa.tipo.value} ${estrofa.orden}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: textTheme.bodyMedium?.copyWith(
+          fontFamily: appearance.fontFamily,
+          color: appearance.textColor.withValues(alpha: 0.6),
+          fontSize: baseFontSize * 1.0,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 1.2,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
