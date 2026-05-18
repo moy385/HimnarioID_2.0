@@ -266,52 +266,46 @@ class _LyricsSlide extends StatelessWidget {
       ),
     );
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 100),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // ── Etiqueta de tipo de estrofa (ej: "Estrofa 1", "Coro") ──
-            _buildEstrofaLabel(),
-
-            // ── Contenido de la estrofa con transición ──
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: Duration(milliseconds: transitionDuration),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  );
-                },
-                child: Center(
-                  child: Text(
-                    processedContent,
-                    key: ValueKey(contenido),
-                    style: textTheme.bodyLarge?.copyWith(
-                      fontFamily: appearance.fontFamily,
-                      color: appearance.textColor,
-                      fontSize: baseFontSize * 3.5,
-                      height: 1.8,
-                      fontWeight: appearance.isBold
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+    return Stack(
+      children: [
+        // ── Texto de la estrofa: ocupa todo el espacio disponible ──
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 24),
+            child: Text(
+              processedContent,
+              key: ValueKey(contenido),
+              style: textTheme.bodyLarge?.copyWith(
+                fontFamily: appearance.fontFamily,
+                color: appearance.textColor,
+                fontSize: baseFontSize * 3.5,
+                height: 1.8,
+                fontWeight:
+                    appearance.isBold ? FontWeight.bold : FontWeight.normal,
               ),
+              textAlign: TextAlign.center,
             ),
-
-            // ── Indicador de progreso (dots) ──
-            if (totalSlides > 1) ...[
-              const SizedBox(height: 16),
-              _buildProgressIndicatorDots(totalSlides, currentSlideIndex),
-            ],
-          ],
+          ),
         ),
-      ),
+
+        // ── Etiqueta de estrofa superpuesta arriba ──
+        Positioned(
+          top: 16,
+          left: 0,
+          right: 0,
+          child: _buildEstrofaLabel(),
+        ),
+
+        // ── Indicador de progreso superpuesto abajo ──
+        if (totalSlides > 1)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child:
+                _buildProgressIndicatorDots(totalSlides, currentSlideIndex),
+          ),
+      ],
     );
   }
 
@@ -319,7 +313,7 @@ class _LyricsSlide extends StatelessWidget {
   Widget _buildEstrofaLabel() {
     final label = estrofa.tipo == EstrofaTipo.coro
         ? 'Coro'
-        : '${estrofa.tipo.value} ${estrofa.orden}';
+        : '${estrofa.tipo.value} ${estrofa.orden + 1}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
