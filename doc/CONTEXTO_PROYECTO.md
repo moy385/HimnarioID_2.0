@@ -9,12 +9,13 @@
 - **Hosting**: GitHub Releases (para pistas de audio)
 
 ## Base de Datos (SQLite)
-- Version actual: 3
+- Version actual: 4
 - Tablas: Himno, Version_Pais, Pais, Estrofa, Categoria, Himno_Categoria, Usuario,
   Arreglo_Musical, Estrofa_Arreglo, Pista_Audio, Fondo_Pantalla, Configuracion,
-  Historial_Reproduccion
+  Historial_Reproduccion, **Himno_Busqueda**
 - BD embebida en: `assets/db/himnario_id.db` (400 himnos precargados)
-- Migraciones: v1→v2→v3
+- Migraciones: v1→v2→v3→v4
+  - v4: `Himno_Busqueda` con texto pre-normalizado para búsqueda rápida en Android
 
 ## Estructura del Proyecto
 ```
@@ -64,27 +65,36 @@ lib/
 - Acordes sobre el texto (Stack + Positioned con TextPainter)
 - Transposición de tonos con tonalidad detectada del primer acorde
 - Brocha: tamaño fuente, color letra, color acordes, fondos desde BD, selector de fuente, negritas
+- Brocha conectada: cambios de apariencia se sincronizan vía IPC a ventana de proyección
+- Escalado independiente de fuente en modo proyección (`projectionFontScale`)
 - Pistas de audio: reproducción local, barra de progreso, seek, pausa/reanudar
 - Panel admin: CRUD himnos, categorías, países, fondos, pistas
 - Login/logout con persistencia de preferencias en BD
 - Filtros A-Z, Z-A por título (inteligente: ignora acentos y puntuación)
 - Scroll alfabético lateral (tipo Xiaomi)
-- Búsqueda inteligente (en estrofas, ranking por relevancia)
-- Modo proyección (no funcional en desarrollo actual)
-- Build Android funcional (APK debug)
+- Búsqueda inteligente (en estrofas, ranking por relevancia, tabla pre-normalizada)
+- Búsqueda optimizada para Android (debounce 400ms, eliminado N+1, tabla `Himno_Busqueda`)
+- Flujo de presentación por slides: Title → Lyrics → Amen
+- Labels de estrofa en proyección: "Estrofa 1", "Coro", "Puente 2", etc.
+- Modo proyección con ventana secundaria (SubprocessWindowService + IPC JSON)
+- Conexión Emisor/Receptor vía mDNS + gRPC (infraestructura)
+- Build Android funcional (APK release con JDK 17)
 
 ## Plataformas Soportadas
 - **Linux** (desarrollo principal) ✅
-- **Android** (APK debug, requiere SDK) ✅
-- **Windows/Mac/iOS** (no probado)
-
-## Build Android
-- JDK 17 (NO JDK 25)
-- Android SDK: platform 34, build-tools 34.0.0
-- APK: `build/app/outputs/flutter-apk/app-debug.apk`
-- Guía detallada: `doc/ANDROID_BUILD.md`
+- **Android** (APK release, requiere JDK 17) ✅
+- **Windows** (no probado)
+- **macOS/iOS** (no probado)
 
 ## Pistas de Audio
 - Alojadas en: GitHub Releases (`v1.0-audio`)
 - URL base: `https://github.com/moy385/HimnarioID_2.0/releases/download/v1.0-audio/`
 - Pendiente: implementar descarga desde la app
+
+## Ramas Recientes (mergeadas a main)
+- `feature/pc-modo-personal` — Adaptación de UI para desktop
+- `feature/fase4-subprocess-window` — Ventana de proyección secundaria
+- `feature/brocha-conectada` — Sincronización IPC de apariencia
+- `feature/escalado-proyeccion` — Font scale independiente en proyección
+- `feature/flujo-presentacion-slides` — Slides Title→Lyrics→Amen
+- `feature/busqueda-android-tabla-plana` — Tabla pre-normalizada para Android

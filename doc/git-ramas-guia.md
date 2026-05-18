@@ -2,7 +2,7 @@
 ### Para flujo de trabajo en equipo pequeño (1 persona) con Flutter/Dart en Linux
 
 > **Propósito:** Referencia rápida para el desarrollo de HimnarioID 2.0
-> **Fecha:** 15 de mayo de 2026
+> **Fecha:** 18 de mayo de 2026
 
 ---
 
@@ -283,6 +283,20 @@ git merge --no-ff feature/login
 ```
 
 `--no-ff` fuerza un commit de merge visible en el historial.
+
+---
+
+## Historial de Ramas (mayo 2026)
+
+| Rama | Descripción | Estado |
+|------|-------------|--------|
+| `feature/pc-modo-personal` | Adaptación UI para escritorio | ✅ Mergeada a main |
+| `feature/fase4-subprocess-window` | Ventana secundaria con IPC JSON | ✅ Mergeada a main |
+| `feature/brocha-conectada` | Sincronización IPC de apariencia | ✅ Mergeada a main |
+| `feature/escalado-proyeccion` | Font scale independiente en proyección | ✅ Mergeada a main |
+| `feature/flujo-presentacion-slides` | Slides Title→Lyrics→Amen | ✅ Mergeada a main |
+| `feature/busqueda-android-tabla-plana` | Tabla pre-normalizada para búsqueda | ✅ Mergeada a main |
+| `feature/proyeccion-estrofa-visibilidad` | Stack overlay + labels en proyección | ✅ Mergeada a main |
 
 ---
 
