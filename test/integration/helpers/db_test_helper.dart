@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:himnario_id_2/core/database/database_helper.dart';
+import 'package:himnario_id_2/core/utils/string_utils.dart';
 import 'package:himnario_id_2/data/datasources/local/hymn_local_datasource.dart';
 import 'package:himnario_id_2/data/repositories/hymn_repository_impl.dart';
 
@@ -156,6 +157,21 @@ Future<Database> createEmptyDatabase() async {
       FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
     );
   ''');
+  // ─── Himno_Busqueda ───
+  await db.execute('''
+    CREATE TABLE Himno_Busqueda (
+      himno_id INTEGER PRIMARY KEY,
+      titulo_normalizado TEXT NOT NULL DEFAULT '',
+      contenido_normalizado TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
+    );
+  ''');
+  await db.execute(
+    'CREATE INDEX idx_busqueda_titulo ON Himno_Busqueda(titulo_normalizado);',
+  );
+  await db.execute(
+    'CREATE INDEX idx_busqueda_contenido ON Himno_Busqueda(contenido_normalizado);',
+  );
   // ─── Índices ───
   await db.execute('CREATE INDEX idx_himno_numero ON Himno(numero_oficial);');
   await db.execute('CREATE INDEX idx_version_himno ON Version_Pais(himno_id);');
@@ -309,6 +325,32 @@ Future<void> seedDatabase(Database db) async {
   });
   await db.insert('Himno_Categoria', {'himno_id': 3, 'categoria_id': 2});
   await db.insert('Himno_Categoria', {'himno_id': 3, 'categoria_id': 3});
+
+  // ─── Himno_Busqueda (índice plano de búsqueda) ───
+  await db.insert('Himno_Busqueda', {
+    'himno_id': 1,
+    'titulo_normalizado': StringUtils.normalizeForSearch('Santo, Santo, Santo'),
+    'contenido_normalizado': StringUtils.normalizeForSearch(
+      '[G]¡Santo, [Em]Santo, [D]Santo! [G]Señor omni[G7]potente, '
+      '[C]siempre el [G]labio [Em]mío [G]loores [D7]te dar[G]á.',
+    ),
+  });
+  await db.insert('Himno_Busqueda', {
+    'himno_id': 2,
+    'titulo_normalizado': StringUtils.normalizeForSearch('Cuán grande es Dios'),
+    'contenido_normalizado': StringUtils.normalizeForSearch(
+      '[C]El esplendor de un Rey, [G]vestido en Ma[Am]jestad '
+      '[C]Cuán Grande es Dios, [G/B]cántale, [Am]Cuán grande es Dios',
+    ),
+  });
+  await db.insert('Himno_Busqueda', {
+    'himno_id': 3,
+    'titulo_normalizado': StringUtils.normalizeForSearch('Grande es tu fidelidad'),
+    'contenido_normalizado': StringUtils.normalizeForSearch(
+      '[C]Oh, Dios Eterno, [Am]tu misericordia '
+      '[F]¡Oh, Tu fidelidad! [G]¡Oh, Tu fidelidad!',
+    ),
+  });
 }
 
 /// Crea una base de datos con esquema completo + semilla y devuelve

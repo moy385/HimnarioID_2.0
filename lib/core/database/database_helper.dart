@@ -51,7 +51,7 @@ class DatabaseHelper {
       // Usar sqflite (plugin nativo) en móvil
       return await mobile.openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -61,7 +61,7 @@ class DatabaseHelper {
       return await desktop.databaseFactoryFfi.openDatabase(
         path,
         options: OpenDatabaseOptions(
-          version: 3,
+          version: 4,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
         ),
@@ -210,6 +210,22 @@ class DatabaseHelper {
         FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
       );
     ''');
+
+    // ─── Himno_Busqueda (índice plano de búsqueda) ───
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS Himno_Busqueda (
+        himno_id INTEGER PRIMARY KEY,
+        titulo_normalizado TEXT NOT NULL DEFAULT '',
+        contenido_normalizado TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
+      );
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_busqueda_titulo ON Himno_Busqueda(titulo_normalizado);',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_busqueda_contenido ON Himno_Busqueda(contenido_normalizado);',
+    );
 
     // Crear índices
     await db.execute('CREATE INDEX idx_himno_numero ON Himno(numero_oficial);');
@@ -361,6 +377,23 @@ class DatabaseHelper {
         LEFT JOIN Estrofa e ON e.version_pais_id = vp.id
         GROUP BY vp.himno_id, vp.id;
       ''');
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS Himno_Busqueda (
+          himno_id INTEGER PRIMARY KEY,
+          titulo_normalizado TEXT NOT NULL DEFAULT '',
+          contenido_normalizado TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (himno_id) REFERENCES Himno(id) ON DELETE CASCADE
+        );
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_busqueda_titulo ON Himno_Busqueda(titulo_normalizado);',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_busqueda_contenido ON Himno_Busqueda(contenido_normalizado);',
+      );
     }
   }
 

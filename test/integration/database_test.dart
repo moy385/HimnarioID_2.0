@@ -35,12 +35,13 @@ void main() {
         expect(tableNames, contains('Configuracion'));
         expect(tableNames, contains('Fondo_Pantalla'));
         expect(tableNames, contains('Historial_Reproduccion'));
+        expect(tableNames, contains('Himno_Busqueda'));
 
         // Excluimos sqlite_sequence (auto-generado por AUTOINCREMENT)
         // del conteo porque no es una tabla de la aplicación.
         final appTables =
             tableNames.where((n) => n != 'sqlite_sequence').toList();
-        expect(appTables, hasLength(12));
+        expect(appTables, hasLength(13));
       } finally {
         await db.close();
       }
@@ -62,6 +63,8 @@ void main() {
         expect(indexNames, contains('idx_pista_himno'));
         expect(indexNames, contains('idx_historial_timestamp'));
         expect(indexNames, contains('idx_himno_activo'));
+        expect(indexNames, contains('idx_busqueda_titulo'));
+        expect(indexNames, contains('idx_busqueda_contenido'));
       } finally {
         await db.close();
       }
