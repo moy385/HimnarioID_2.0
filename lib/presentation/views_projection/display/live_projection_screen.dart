@@ -187,7 +187,7 @@ class _TitleSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -260,7 +260,7 @@ class _LyricsSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double projectionWidth =
-        MediaQuery.of(context).size.width - 160; // 80px padding each side
+        MediaQuery.of(context).size.width - 80; // 40px padding each side
     final double screenHeight = MediaQuery.of(context).size.height;
     final double estrofaLabelHeight = 40.0;
     final double progressDotsHeight = totalSlides > 1 ? 32.0 : 0.0;
@@ -301,7 +301,7 @@ class _LyricsSlide extends StatelessWidget {
         // ── Texto de la estrofa: ocupa todo el espacio disponible ──
         Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               transitionBuilder: (child, animation) => FadeTransition(
@@ -360,6 +360,49 @@ class _LyricsSlide extends StatelessWidget {
     );
   }
 
+  /// Aplica [StanzaLayoutEngine.processStanza] al contenido ChordPro:
+  /// mide con el texto limpio (sin acordes) para decidir saltos de línea,
+  /// pero preserva los marcadores originales en el resultado.
+  String _reflowChordContent(
+    String content,
+    double width,
+    TextStyle style,
+  ) {
+    if (content.isEmpty || width <= 0) return content;
+
+    final stripped = stripChords(content);
+
+    // Paso 1: obtener el texto plano con saltos optimizados
+    final processed = StanzaLayoutEngine.processStanza(
+      stripped,
+      maxWidth: width,
+      style: style,
+    );
+
+    // Paso 2: reconstruir contenido ChordPro aplicando las mismas uniones
+    final originalLines = content.split('\n');
+    final processedLines = processed.split('\n');
+
+    final result = <String>[];
+    int origIdx = 0;
+
+    for (final targetLine in processedLines) {
+      final buffer = StringBuffer(originalLines[origIdx]);
+      origIdx++;
+
+      while (origIdx < originalLines.length) {
+        if (stripChords(buffer.toString()) == targetLine) break;
+        buffer.write(' ');
+        buffer.write(originalLines[origIdx]);
+        origIdx++;
+      }
+
+      result.add(buffer.toString());
+    }
+
+    return result.join('\n');
+  }
+
   /// Renderiza el contenido ChordPro línea por línea con [ChordOverlayText].
   ///
   /// Cada línea se renderiza con alineación izquierda para que los acordes
@@ -371,9 +414,10 @@ class _LyricsSlide extends StatelessWidget {
     TextStyle lyricStyle,
     TextStyle chordStyle,
   ) {
-    // Dividir por líneas directamente (no se usa processStanza porque los
-    // marcadores [G] distorsionarían la medición de ancho)
-    final lines = content.split('\n');
+    // Aplicar reflow inteligente para unir líneas que caben en un mismo
+    // renglón, igual que se hace en _buildPlainContent con processStanza
+    final reflowed = _reflowChordContent(content, width, lyricStyle);
+    final lines = reflowed.split('\n');
 
     return Column(
       key: const ValueKey('chords'),
@@ -528,7 +572,8 @@ class _LyricsSlide extends StatelessWidget {
     required TextStyle chordStyle,
     required double maxWidth,
   }) {
-    final lines = text.split('\n');
+    final reflowed = _reflowChordContent(text, maxWidth, style);
+    final lines = reflowed.split('\n');
     final fontSize = style.fontSize ?? 14;
     final effectiveLineHeight = (style.height ?? 1.0) * fontSize;
     double totalHeight = 0;
