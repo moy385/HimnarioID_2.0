@@ -223,7 +223,10 @@ class _TitleSlide extends StatelessWidget {
   }
 }
 
-/// Slide de letra: solo el contenido de la estrofa, texto enormizado.
+/// Slide de letra: contenido de la estrofa con fontSize fijo.
+///
+/// El fontSize es siempre `baseFontSize * 3.5`. Si el contenido no cabe
+/// verticalmente, se envuelve en [SingleChildScrollView] para scroll.
 ///
 /// Mantiene [AnimatedSwitcher] para transiciones suaves,
 /// [StanzaLayoutEngine.processStanza] para el formateo inteligente,
@@ -232,8 +235,6 @@ class _TitleSlide extends StatelessWidget {
 /// Cuando [appearance.showChords] es `true`, renderiza cada línea con
 /// [ChordOverlayText] para superponer acordes sobre el texto.
 /// Cuando es `false`, usa el comportamiento original (texto limpio sin acordes).
-///
-/// Sin scroll, sin título ni número arriba.
 class _LyricsSlide extends StatelessWidget {
   final Estrofa estrofa;
   final String contenido;
@@ -260,6 +261,11 @@ class _LyricsSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final double projectionWidth =
         MediaQuery.of(context).size.width - 160; // 80px padding each side
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double estrofaLabelHeight = 40.0;
+    final double progressDotsHeight = totalSlides > 1 ? 32.0 : 0.0;
+    final double availableHeight =
+        screenHeight - 48 - estrofaLabelHeight - progressDotsHeight;
     final showChords = appearance.showChords;
 
     // Estilo base del texto de la letra (proyección)
@@ -280,6 +286,16 @@ class _LyricsSlide extends StatelessWidget {
       fontSize: (baseFontSize * 3.5 * 0.5).clamp(24.0, 80.0),
     );
 
+    // ── Detección de desbordamiento vertical ──
+    final double contentHeight = _measureContentHeight(
+      contenido: contenido,
+      projectionWidth: projectionWidth,
+      lyricStyle: lyricStyle,
+      chordStyle: chordStyle,
+      showChords: showChords,
+    );
+    final bool needsScroll = contentHeight > availableHeight;
+
     return Stack(
       children: [
         // ── Texto de la estrofa: ocupa todo el espacio disponible ──
@@ -292,18 +308,13 @@ class _LyricsSlide extends StatelessWidget {
                 opacity: animation,
                 child: child,
               ),
-              child: showChords
-                  ? _buildChordProContent(
-                      contenido,
-                      projectionWidth,
-                      lyricStyle,
-                      chordStyle,
-                    )
-                  : _buildPlainContent(
-                      contenido,
-                      projectionWidth,
-                      lyricStyle,
-                    ),
+              child: _buildScrollableContent(
+                projectionWidth: projectionWidth,
+                lyricStyle: lyricStyle,
+                chordStyle: chordStyle,
+                showChords: showChords,
+                needsScroll: needsScroll,
+              ),
             ),
           ),
         ),
@@ -438,6 +449,114 @@ class _LyricsSlide extends StatelessWidget {
         );
       }),
     );
+  }
+
+  /// Construye el contenido del slide, con scroll si desborda verticalmente.
+  Widget _buildScrollableContent({
+    required double projectionWidth,
+    required TextStyle lyricStyle,
+    required TextStyle chordStyle,
+    required bool showChords,
+    required bool needsScroll,
+  }) {
+    final content = showChords
+        ? _buildChordProContent(
+            contenido,
+            projectionWidth,
+            lyricStyle,
+            chordStyle,
+          )
+        : _buildPlainContent(
+            contenido,
+            projectionWidth,
+            lyricStyle,
+          );
+
+    if (needsScroll) {
+      return SingleChildScrollView(
+        key: const ValueKey('scroll'),
+        child: content,
+      );
+    }
+    return content;
+  }
+
+  /// Mide la altura total del contenido para detectar desbordamiento.
+  double _measureContentHeight({
+    required String contenido,
+    required double projectionWidth,
+    required TextStyle lyricStyle,
+    required TextStyle chordStyle,
+    required bool showChords,
+  }) {
+    if (showChords) {
+      return _measureChordContentHeight(
+        text: contenido,
+        style: lyricStyle,
+        chordStyle: chordStyle,
+        maxWidth: projectionWidth,
+      );
+    }
+    return _measurePlainContentHeight(
+      text: contenido,
+      style: lyricStyle,
+      maxWidth: projectionWidth,
+    );
+  }
+
+  double _measurePlainContentHeight({
+    required String text,
+    required TextStyle style,
+    required double maxWidth,
+  }) {
+    final stripped = stripChords(text);
+    final processed = StanzaLayoutEngine.processStanza(
+      stripped,
+      maxWidth: maxWidth,
+      style: style,
+    );
+    final tp = TextPainter(
+      text: TextSpan(text: processed, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+    return tp.height;
+  }
+
+  double _measureChordContentHeight({
+    required String text,
+    required TextStyle style,
+    required TextStyle chordStyle,
+    required double maxWidth,
+  }) {
+    final lines = text.split('\n');
+    final fontSize = style.fontSize ?? 14;
+    final effectiveLineHeight = (style.height ?? 1.0) * fontSize;
+    double totalHeight = 0;
+
+    for (final line in lines) {
+      if (line.trim().isEmpty) {
+        totalHeight += fontSize * 0.8;
+        continue;
+      }
+      final hasChordsInLine = chordRegex.hasMatch(line);
+      final plainText = stripChords(line);
+      final tp = TextPainter(
+        text: TextSpan(text: plainText, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: maxWidth);
+
+      final numVisualLines =
+          (tp.height / effectiveLineHeight).ceil().clamp(1, 100);
+      final textHeight = numVisualLines * effectiveLineHeight;
+
+      if (!hasChordsInLine) {
+        totalHeight += textHeight + 4;
+      } else {
+        final chordAreaHeight = (chordStyle.fontSize ?? 14) * 1.0 + 6;
+        totalHeight += chordAreaHeight + textHeight + 8;
+      }
+    }
+    return totalHeight;
   }
 }
 
