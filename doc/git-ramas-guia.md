@@ -2,7 +2,7 @@
 ### Para flujo de trabajo en equipo pequeño (1 persona) con Flutter/Dart en Linux
 
 > **Propósito:** Referencia rápida para el desarrollo de HimnarioID 2.0
-> **Fecha:** 18 de mayo de 2026
+> **Fecha:** 19 de mayo de 2026
 
 ---
 
@@ -239,7 +239,11 @@ flutter test
 
 # 3. (Opcional) Build de prueba
 flutter build apk --debug
+
+# 4. (Recomendado) Verificar conteo de tests
+flutter test --reporter expanded | grep -E "All tests passed|Some tests failed"
 ```
+> Estado actual del proyecto: **274 tests** (263 unit/widget + 11 integración), `dart analyze lib/` → **0 errors, 0 warnings**.
 
 ### Mantener la rama feature actualizada con `main`
 
@@ -297,6 +301,10 @@ git merge --no-ff feature/login
 | `feature/flujo-presentacion-slides` | Slides Title→Lyrics→Amen | ✅ Mergeada a main |
 | `feature/busqueda-android-tabla-plana` | Tabla pre-normalizada para búsqueda | ✅ Mergeada a main |
 | `feature/proyeccion-estrofa-visibilidad` | Stack overlay + labels en proyección | ✅ Mergeada a main |
+| `feature/acordes-sobre-texto` | ChordParser + ChordPainter + ChordOverlayText con LRU cache | ✅ Mergeada a main |
+| `feature/acordes-toggle-global` | Toggle showChords persistente, botón Solfa funcional | ✅ Mergeada a main |
+| `feature/proyeccion-auto-fit` | Scroll condicional, medición de contenido | ✅ Mergeada a main |
+| `feature/proyeccion-line-breaking` | Reflow de acordes con StanzaLayoutEngine | ✅ Mergeada a main |
 
 ---
 

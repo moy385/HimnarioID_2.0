@@ -241,6 +241,9 @@ flutter build apk --debug
 ```
 APK: `build/app/outputs/flutter-apk/app-debug.apk`
 
+Para APK release (fat): `flutter build apk` → **64.6MB**
+Para APK más pequeño: `flutter build apk --split-per-abi` → ~20-30MB por arquitectura
+
 ### Pistas de Audio
 - Alojadas en GitHub Releases: `v1.0-audio`
 - URL base: `https://github.com/moy385/HimnarioID_2.0/releases/download/v1.0-audio/`
@@ -249,5 +252,7 @@ APK: `build/app/outputs/flutter-apk/app-debug.apk`
 ### Documentación adicional
 - `doc/CONTEXTO_PROYECTO.md` — Contexto completo del proyecto
 - `doc/ANDROID_BUILD.md` — Guía de build para Android
+- `doc/git-ramas-guia.md` — Guía de ramas y flujo Git
 - `doc/PLAN_DE_DELEGACION.md` — Plan de trabajo con agentes
 - `doc/TAREAS_DIFERIDAS.md` — Tareas pendientes
+- `TASKS_FASE4.md` — Plan de Fase 4 (histórico)

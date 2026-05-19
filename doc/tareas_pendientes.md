@@ -1,7 +1,7 @@
 # Tareas Pendientes — HimnarioID 2.0
 
-> **Fecha:** 18 de mayo de 2026
-> **Propósito:** Estado actual del proyecto después de múltiples sprints de proyección y búsqueda.
+> **Fecha:** 19 de mayo de 2026
+> **Propósito:** Estado actual del proyecto después de features de acordes y reflow en proyección.
 
 ---
 
@@ -12,46 +12,49 @@
 | **Base de datos** | ✅ Funcional | 400 himnos, SQLite **v4**, 13 tablas + `Himno_Busqueda` |
 | **Home / Búsqueda** | ✅ Funcional | Búsqueda acento-insensible, filtros, scroll A-Z |
 | **Búsqueda Android** | ✅ Optimizada | Debounce 400ms, N+1 eliminado, tabla pre-normalizada |
-| **Detalle de himno** | 🟡 Parcial | Chords inline (regresión), sin posicionamiento sobre texto |
+| **Detalle de himno** | ✅ Funcional | Acordes sobre texto con ChordOverlayText (Stack + Positioned + TextPainter) |
+| **Acordes sobre texto** | ✅ Funcional | ChordParser + ChordPainter con caché LRU + ChordOverlayText |
+| **Toggle acordes (Solfa)** | ✅ Funcional | showChords persistente en DB, botón Solfa funcional en PresentControlBar |
 | **Admin CRUD** | ✅ Funcional | Himnos, categorías, países, pistas de audio |
 | **Audio** | ✅ Funcional | Descarga, reproducción, bottom player |
 | **Autenticación** | ✅ Funcional | Login admin/admin123, logout |
 | **Brocha (apariencia)** | ✅ Funcional | Fuente, tamaño, color, fondos, negritas |
 | **Brocha conectada** | ✅ Funcional | IPC SET_CONFIG a ventana de proyección |
 | **Escalado proyección** | ✅ Funcional | `projectionFontScale` independiente (0.5–3.0) |
+| **Scroll proyección** | ✅ Funcional | Condicional, auto-fit eliminado, SingleChildScrollView si desborda |
+| **Reflow acordes proyección** | ✅ Funcional | StanzaLayoutEngine.processStanza, reduce líneas preservando acordes |
 | **Flujo presentación slides** | ✅ Funcional | Title → Lyrics → Amen con etiquetas |
 | **Ventana de proyección** | ✅ Funcional | SubprocessWindowService + IPC JSON |
 | **Modo Dual PC/Celular** | ✅ Funcional | Switch debug, rutas, botón Presentar |
 | **Conexión Emisor/Receptor** | ❌ No funcional | Infraestructura lista, flujo incompleto |
 | **gRPC** | ❌ No implementado | Proto compilado, servidor no creado |
-| **Tests** | ✅ ✅ 267 tests | Unitarios + widget + integración |
+| **Tests** | ✅ ✅ 274 tests | 263 unit/widget + 11 integración (~11 fallos conocidos por tabla Pais) |
 | **APK Android** | ✅ Funcional | Build release, 64.6MB (fat APK) |
 
 ---
 
 ## Prioridades
 
-### 🔴 P0 — Bloqueante / Core (PENDIENTE)
+### 🔴 P0 — Bloqueante / Core
 
-#### P0.1 — Acordes sobre el texto (RE-IMPLEMENTAR)
-**Archivos**: `hymn_detail_screen.dart`, `stanza_layout_engine.dart`, nuevo widget de acordes
-**Descripción**: El usuario pidió originalmente que los acordes se muestren SOBRE el texto (no inline). Por el revert perdimos toda la lógica de posicionamiento.
-**Tiempo estimado**: ~2-4h
+#### ✅ P0.1 — Acordes sobre el texto (COMPLETADO)
+**Archivos**: `chord_parser.dart`, `chord_painter.dart`, `chord_overlay_text.dart`
+**Descripción**: Implementado ChordParser (función pura), ChordPainter con caché LRU (64 entradas), ChordOverlayText (Stack + Positioned). 21 tests unitarios. 200+ líneas eliminadas de hymn_detail_screen.
+**Estado**: ✅ Completado (feature mergeado a main)
 
-#### P0.2 — Transposición funcional con UI de acordes
+#### ✅ P0.2 — Transposición funcional con UI de acordes
 **Archivos**: `transpose_providers.dart`, `chord_transposer.dart`
-**Descripción**: La transposición funciona a nivel de datos pero los acordes inline se ven mal.
-**Dependencias**: P0.1
-**Tiempo estimado**: ~1h
+**Descripción**: La transposición funciona correctamente con los acordes overlay. Dependencia de P0.1 resuelta.
+**Estado**: ✅ Completado
 
 ---
 
 ### 🟡 P1 — Alta prioridad
 
-#### P1.1 — Probar flujo Presentar end-to-end en Linux
+#### ✅ P1.1 — Probar flujo Presentar end-to-end en Linux
 **Archivos**: `home_screen.dart`, `present_control_bar.dart`, `live_projection_screen.dart`
-**Descripción**: Verificar que al presionar "Presentar" + himno se abre ventana de proyección con slides y control overlay.
-**Tiempo estimado**: ~1h
+**Descripción**: El flujo Presentar abre ventana de proyección con slides. Toggle de acordes funcional. Scroll condicional + reflow probados.
+**Estado**: ✅ Probado
 
 #### P1.2 — Reducir tamaño APK (split-per-abi)
 **Archivos**: `android/`, comando build
@@ -114,15 +117,15 @@
 ## Dependencias entre tareas
 
 ```
-P0.1 Acordes ─── sin dependencias ───→ [PRIMERO]
-  └── P0.2 Transposición ─── depende de P0.1
-       └── P2.4 Cleanup ─── después de acordes
+P0.1 Acordes ─── [COMPLETADO] ✓
+  └── P0.2 Transposición ─── [COMPLETADO] ✓
+       └── P2.4 Cleanup ─── AHORA EJECUTABLE
 
-P1.1 Probar Present ─── sin dependencias
+P1.1 Probar Present ─── [COMPLETADO] ✓
 P1.2 Split APK ─── sin dependencias
 ```
 
-**Nota:** P2.1, P3.5 (tests) ya están parcialmente completos (267 tests existentes).
+**Nota:** P2.1, P3.5 (tests) ya están parcialmente completos (274 tests existentes: 263 unit/widget + 11 integración).
 **Nota:** P3.3 (detección plataforma) ya no aplica — el modo dual funciona con switch debug.
 
 ---
@@ -148,13 +151,13 @@ Razón: Eran documentos de planificación interna generados por agentes. Su cont
 
 ## Notas importantes
 
-1. **Acordes inline vs overlay**: El usuario pidió originalmente acordes SOBRE el texto. Pendiente de decisión tras múltiples sprints de proyección y búsqueda.
+1. **Acordes overlay implementados**: ChordOverlayText usa Stack + Positioned + TextPainter con caché LRU. Toggle global con `showChords` persistente en DB.
 2. **La proyección ya es funcional**: WindowService, SubprocessWindowService, slides, brocha conectada, escalado independiente — todo probado en Linux.
-3. **267 tests existentes**: Cobertura sólida en datasource, proyección, utilidades y providers.
-4. **APK release**: ~64MB (fat APK). Con `--split-per-abi` bajaría a ~25MB.
+3. **274 tests existentes**: 263 unit/widget (incluyendo 21 tests nuevos de ChordParser) + 11 tests de integración (~11 fallos conocidos por tabla Pais).
+4. **APK release**: 64.6MB (fat APK). Con `--split-per-abi` bajaría a ~25MB.
 5. **JDK 17 obligatorio** para build Android (JDK 25 no compatible con Gradle 8.14).
 6. **Búsqueda Android optimizada**: tabla `Himno_Busqueda` con texto pre-normalizado + debounce + batch queries.
 
 ---
 
-*Documento actualizado por @orquestador — 18 de mayo de 2026*
+*Documento actualizado por @orquestador — 19 de mayo de 2026*

@@ -62,11 +62,15 @@ lib/
 
 ## Características implementadas
 - Modo personal: búsqueda, filtros (tipo, A-Z, Z-A, categoría), scroll alfabético
-- Acordes sobre el texto (Stack + Positioned con TextPainter)
+- Acordes sobre el texto (ChordParser + ChordPainter con caché LRU + ChordOverlayText)
+- Toggle global de acordes (`showChords` persistente en DB, botón Solfa funcional)
 - Transposición de tonos con tonalidad detectada del primer acorde
 - Brocha: tamaño fuente, color letra, color acordes, fondos desde BD, selector de fuente, negritas
 - Brocha conectada: cambios de apariencia se sincronizan vía IPC a ventana de proyección
 - Escalado independiente de fuente en modo proyección (`projectionFontScale`)
+- Proyección con scroll condicional (auto-fit eliminado, SingleChildScrollView si texto no cabe)
+- Reflow de acordes en proyección (StanzaLayoutEngine.processStanza para contenido ChordPro)
+- Padding horizontal reducido en proyección: 80px → 40px (50 %)
 - Pistas de audio: reproducción local, barra de progreso, seek, pausa/reanudar
 - Panel admin: CRUD himnos, categorías, países, fondos, pistas
 - Login/logout con persistencia de preferencias en BD
@@ -79,6 +83,12 @@ lib/
 - Modo proyección con ventana secundaria (SubprocessWindowService + IPC JSON)
 - Conexión Emisor/Receptor vía mDNS + gRPC (infraestructura)
 - Build Android funcional (APK release con JDK 17)
+
+## Estado de Tests
+- **Unit + Widget**: 263 tests (242 pre-existentes + 21 nuevos de ChordParser)
+- **Integración**: 11 tests pre-existentes (~11 fallan por NOT NULL en tabla Pais)
+- **Total**: 274 tests (~11 fallos conocidos)
+- **`dart analyze lib/`**: 0 errors, 0 warnings (9–10 info pre-existentes)
 
 ## Plataformas Soportadas
 - **Linux** (desarrollo principal) ✅
@@ -98,3 +108,8 @@ lib/
 - `feature/escalado-proyeccion` — Font scale independiente en proyección
 - `feature/flujo-presentacion-slides` — Slides Title→Lyrics→Amen
 - `feature/busqueda-android-tabla-plana` — Tabla pre-normalizada para Android
+- `feature/proyeccion-estrofa-visibilidad` — Stack overlay + labels en proyección
+- `feature/acordes-sobre-texto` — ChordParser + ChordPainter + ChordOverlayText con caché LRU
+- `feature/acordes-toggle-global` — Toggle showChords persistente, botón Solfa funcional
+- `feature/proyeccion-auto-fit` — Scroll condicional en proyección
+- `feature/proyeccion-line-breaking` — Reflow de acordes con StanzaLayoutEngine

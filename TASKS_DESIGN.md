@@ -1,3 +1,8 @@
+> ⚠️ **DOCUMENTO HISTÓRICO** — Sprint 5 (mayo 2026)
+> Las tareas de diseño descritas aquí fueron implementadas en sprints anteriores.
+> Para el estado actual del proyecto, consultar `doc/tareas_pendientes.md`.
+> Fecha de archivo: 19 de mayo de 2026
+
 # Tareas para @design
 
 ## TAREA-002-DESIGN: UI Selector Emisor/Receptor

@@ -1,3 +1,9 @@
+> ⚠️ **DOCUMENTO HISTÓRICO** — Fase 4 (mayo 2026)
+> Las tareas descritas aquí fueron ejecutadas. El estado actual del proyecto
+> incluye las mejoras de SET_CONFIG (showChords), proyección con scroll,
+> y reflow de acordes. Ver `doc/CONTEXTO_PROYECTO.md` para estado actual.
+> Fecha de archivo: 19 de mayo de 2026
+
 # Fase 4: Probar `SubprocessWindowService` en Linux
 
 > ⚠️ **LEE TODO EL DOCUMENTO** antes de comenzar. Hay diagnóstico crítico en la Sección 1.
@@ -298,24 +304,19 @@ Si la Tarea F4.5 descubre bugs, crear tests de integración que aíslen el flujo
 
 ---
 
-### Tarea F4.7: Implementar SET_CONFIG (mejora)
+### ✅ Tarea F4.7: SET_CONFIG implementado
 
 | Campo | Valor |
 |-------|-------|
 | **Archivos** | `projection_app.dart`, `live_control_providers.dart` |
 | **Tiempo** | 30min |
-| **Prioridad** | 🟢 P2 (opcional, solo si sobra tiempo) |
+| **Prioridad** | 🟢 P2 (opcional) |
 
-#### Qué hacer
+#### Qué se hizo
 
-Completar el case `SET_CONFIG` en `ProjectionApp._handleMessage()`:
-```dart
-case 'SET_CONFIG':
-  if (message['fontSize'] != null) {
-    notifier.updateConfig(fontSize: message['fontSize']);
-  }
-  // backgroundColor, transitionSpeed, etc.
-```
+SET_CONFIG se implementó y expandió: ahora soporta `showChords` junto con `fontSize`, `backgroundColor`, `transitionSpeed`, etc. El toggle global de acordes (`showChords`) se sincroniza vía IPC desde `control_sheets.dart` hasta `projection_app.dart`.
+
+> **Actualización (19 mayo 2026):** SET_CONFIG ahora soporta `showChords` para el toggle global de acordes. Ver `feature/acordes-toggle-global`.
 
 ---
 

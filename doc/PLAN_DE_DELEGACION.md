@@ -1,8 +1,12 @@
+> ⚠️ **DOCUMENTO HISTÓRICO** — Plan de delegación del 13 de mayo de 2026
+> Las tareas aquí descritas (I4, I3, M6, M7, M2, M3) fueron ejecutadas.
+> Ver `doc/tareas_pendientes.md` para estado actual.
+
 # Plan de Delegación — HimnarioID 2.0
 
 **Arquitecto:** @arqui
 **Fecha:** 2026-05-13
-**Estado:** Revisión de priorización y delegación
+**Estado:** Histórico — tareas ejecutadas
 
 ---
 
