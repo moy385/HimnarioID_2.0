@@ -234,6 +234,10 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
         // Ignorar color inválido
       }
     }
+
+    if (message.containsKey('showChords') && message['showChords'] != null) {
+      appearanceNotifier.setShowChords(message['showChords'] as bool);
+    }
   }
 
   @override

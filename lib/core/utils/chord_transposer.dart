@@ -1,8 +1,5 @@
+import '../chords/chord_parser.dart';
 import '../constants/musical_constants.dart';
-
-// ExpReg para extraer acordes de formato ChordPro: [G] [Am7] [C#m]
-final _chordPattern =
-    RegExp(r'\[([A-G][#b]?[a-zA-Z0-9+#b]*(?:/[A-G][#b]?)?)\]');
 
 /// Transpone acordes en contenido ChordPro.
 ///
@@ -13,7 +10,7 @@ final _chordPattern =
 String transposeChordPro(String content, int semitones) {
   if (semitones == 0) return content;
 
-  return content.replaceAllMapped(_chordPattern, (match) {
+  return content.replaceAllMapped(chordRegex, (match) {
     final chord = match.group(1)!;
     final transposed = _transposeChord(chord, semitones);
     return '[$transposed]';

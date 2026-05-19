@@ -230,8 +230,6 @@ class PresentControlBar extends ConsumerWidget {
           onPressed: () => showSolfaSheet(
             context,
             ref: ref,
-            showChords: true,
-            onShowChordsChanged: (_) {},
           ),
         ),
         _FuncButton(

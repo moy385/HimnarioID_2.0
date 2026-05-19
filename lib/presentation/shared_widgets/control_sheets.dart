@@ -150,6 +150,7 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'fontScale': appearance.fontScale,
     'projectionFontScale': appearance.projectionFontScale,
     'bgColor': _colorToHex(appearance.bgColor),
+    'showChords': appearance.showChords,
     // Campos legacy (retrocompatibilidad)
     'backgroundColor': _colorToHex(appearance.bgColor),
     'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
@@ -865,8 +866,6 @@ String _formatDuration(double seconds) {
 void showSolfaSheet(
   BuildContext context, {
   required WidgetRef ref,
-  required bool showChords,
-  required ValueChanged<bool> onShowChordsChanged,
   VoidCallback? onCreateArrangement,
 }) {
   final isDesktop = ref.read(isDesktopModeProvider);
@@ -882,6 +881,7 @@ void showSolfaSheet(
             final textTheme = Theme.of(context).textTheme;
             final currentTranspose = ref.watch(transposeValueProvider);
             final currentKey = ref.watch(transposedKeyProvider);
+            final showChords = ref.watch(hymnAppearanceProvider).showChords;
 
             return Dialog(
               child: ConstrainedBox(
@@ -895,7 +895,6 @@ void showSolfaSheet(
                     currentTranspose: currentTranspose,
                     currentKey: currentKey,
                     showChords: showChords,
-                    onShowChordsChanged: onShowChordsChanged,
                     onCreateArrangement: onCreateArrangement,
                     ref: ref,
                     setSheetState: setSheetState,
@@ -918,6 +917,7 @@ void showSolfaSheet(
             final textTheme = Theme.of(context).textTheme;
             final currentTranspose = ref.watch(transposeValueProvider);
             final currentKey = ref.watch(transposedKeyProvider);
+            final showChords = ref.watch(hymnAppearanceProvider).showChords;
 
             return Container(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -945,7 +945,6 @@ void showSolfaSheet(
                     currentTranspose: currentTranspose,
                     currentKey: currentKey,
                     showChords: showChords,
-                    onShowChordsChanged: onShowChordsChanged,
                     onCreateArrangement: onCreateArrangement,
                     ref: ref,
                     setSheetState: setSheetState,
@@ -968,7 +967,6 @@ Widget _solfaSheetContent({
   required int currentTranspose,
   required String currentKey,
   required bool showChords,
-  required ValueChanged<bool> onShowChordsChanged,
   VoidCallback? onCreateArrangement,
   required WidgetRef ref,
   required void Function(void Function()) setSheetState,
@@ -1010,7 +1008,8 @@ Widget _solfaSheetContent({
         value: showChords,
         onChanged: (bool value) {
           setSheetState(() {
-            onShowChordsChanged(value);
+            ref.read(hymnAppearanceProvider.notifier).setShowChords(value);
+            _syncAppearanceToProjection(ref);
           });
         },
       ),

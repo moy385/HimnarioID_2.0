@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database_helper.dart';
 
 /// Estado global de apariencia para el modo personal.
-/// Controla fondo, colores de texto/acordes y tamaño de fuente.
+/// Controla fondo, colores de texto/acordes, tamaño de fuente y toggle de acordes.
 class HymnAppearanceState {
   final Color bgColor;
   final Color textColor;
@@ -13,6 +13,7 @@ class HymnAppearanceState {
   final String fontFamily;
   final bool isBold;
   final double projectionFontScale;
+  final bool showChords;
 
   const HymnAppearanceState({
     this.bgColor = Colors.transparent,
@@ -22,6 +23,7 @@ class HymnAppearanceState {
     this.fontFamily = 'Merriweather',
     this.isBold = false,
     this.projectionFontScale = 1.0,
+    this.showChords = true,
   });
 
   HymnAppearanceState copyWith({
@@ -32,6 +34,7 @@ class HymnAppearanceState {
     String? fontFamily,
     bool? isBold,
     double? projectionFontScale,
+    bool? showChords,
   }) {
     return HymnAppearanceState(
       bgColor: bgColor ?? this.bgColor,
@@ -41,6 +44,7 @@ class HymnAppearanceState {
       fontFamily: fontFamily ?? this.fontFamily,
       isBold: isBold ?? this.isBold,
       projectionFontScale: projectionFontScale ?? this.projectionFontScale,
+      showChords: showChords ?? this.showChords,
     );
   }
 }
@@ -64,6 +68,8 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
       final projectionFontScale =
           await _dbHelper.getConfig('projection_font_scale');
 
+      final showChordsStr = await _dbHelper.getConfig('show_chords');
+
       state = state.copyWith(
         fontFamily: fontFamily ?? 'Merriweather',
         isBold: isBold == 'true',
@@ -74,6 +80,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         projectionFontScale: projectionFontScale != null
             ? double.tryParse(projectionFontScale)?.clamp(0.5, 3.0) ?? 1.0
             : 1.0,
+        showChords: showChordsStr == 'true',
       );
     } catch (e) {
       // Si falla la carga, usar valores por defecto
@@ -93,6 +100,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         'projection_font_scale',
         state.projectionFontScale.toString(),
       );
+      await _dbHelper.setConfig('show_chords', state.showChords.toString());
     } catch (e) {
       // Silent fail en escritura
     }
@@ -147,6 +155,16 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
 
   void toggleBold() {
     state = state.copyWith(isBold: !state.isBold);
+    _saveToDb();
+  }
+
+  void setShowChords(bool value) {
+    state = state.copyWith(showChords: value);
+    _saveToDb();
+  }
+
+  void toggleShowChords() {
+    state = state.copyWith(showChords: !state.showChords);
     _saveToDb();
   }
 

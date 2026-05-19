@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/chords/chord_parser.dart';
 import '../../../core/enums/estrofa_tipo.dart';
+import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
+import '../../shared_widgets/chord_overlay_text.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
 import 'receptor_binding.dart';
-import '../../shared_widgets/providers/appearance_provider.dart';
-import '../../../core/utils/stanza_layout_engine.dart';
 
 /// Pantalla de Proyección en Vivo (Live Projection).
 ///
@@ -227,6 +229,10 @@ class _TitleSlide extends StatelessWidget {
 /// [StanzaLayoutEngine.processStanza] para el formateo inteligente,
 /// y progress indicator (dots) que refleja el total de slides.
 ///
+/// Cuando [appearance.showChords] es `true`, renderiza cada línea con
+/// [ChordOverlayText] para superponer acordes sobre el texto.
+/// Cuando es `false`, usa el comportamiento original (texto limpio sin acordes).
+///
 /// Sin scroll, sin título ni número arriba.
 class _LyricsSlide extends StatelessWidget {
   final Estrofa estrofa;
@@ -254,16 +260,24 @@ class _LyricsSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final double projectionWidth =
         MediaQuery.of(context).size.width - 160; // 80px padding each side
+    final showChords = appearance.showChords;
 
-    final processedContent = StanzaLayoutEngine.processStanza(
-      contenido,
-      maxWidth: projectionWidth,
-      style: textTheme.bodyLarge?.copyWith(
-        fontFamily: appearance.fontFamily,
-        fontSize: baseFontSize * 3.5,
-        height: 1.8,
-        fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
-      ),
+    // Estilo base del texto de la letra (proyección)
+    final TextStyle lyricStyle =
+        (textTheme.bodyLarge ?? const TextStyle()).copyWith(
+      fontFamily: appearance.fontFamily,
+      color: appearance.textColor,
+      fontSize: baseFontSize * 3.5,
+      height: 1.8,
+      fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
+    );
+
+    // Estilo de acordes para proyección (50% del fontSize de la letra)
+    final TextStyle chordStyle = TextStyle(
+      fontFamily: appearance.fontFamily,
+      color: appearance.chordColor,
+      fontWeight: FontWeight.bold,
+      fontSize: (baseFontSize * 3.5 * 0.5).clamp(24.0, 80.0),
     );
 
     return Stack(
@@ -272,18 +286,24 @@ class _LyricsSlide extends StatelessWidget {
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 24),
-            child: Text(
-              processedContent,
-              key: ValueKey(contenido),
-              style: textTheme.bodyLarge?.copyWith(
-                fontFamily: appearance.fontFamily,
-                color: appearance.textColor,
-                fontSize: baseFontSize * 3.5,
-                height: 1.8,
-                fontWeight:
-                    appearance.isBold ? FontWeight.bold : FontWeight.normal,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: child,
               ),
-              textAlign: TextAlign.center,
+              child: showChords
+                  ? _buildChordProContent(
+                      contenido,
+                      projectionWidth,
+                      lyricStyle,
+                      chordStyle,
+                    )
+                  : _buildPlainContent(
+                      contenido,
+                      projectionWidth,
+                      lyricStyle,
+                    ),
             ),
           ),
         ),
@@ -306,6 +326,74 @@ class _LyricsSlide extends StatelessWidget {
                 _buildProgressIndicatorDots(totalSlides, currentSlideIndex),
           ),
       ],
+    );
+  }
+
+  /// Renderiza el contenido procesado sin acordes (comportamiento original).
+  Widget _buildPlainContent(
+    String content,
+    double width,
+    TextStyle style,
+  ) {
+    final processed = StanzaLayoutEngine.processStanza(
+      stripChords(content),
+      maxWidth: width,
+      style: style,
+    );
+
+    return Text(
+      processed,
+      key: const ValueKey('plain'),
+      style: style,
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// Renderiza el contenido ChordPro línea por línea con [ChordOverlayText].
+  ///
+  /// Cada línea se renderiza con alineación izquierda para que los acordes
+  /// se posicionen correctamente. El [Column] se centra como bloque gracias
+  /// al [Center] + [MainAxisAlignment.center] del padre.
+  Widget _buildChordProContent(
+    String content,
+    double width,
+    TextStyle lyricStyle,
+    TextStyle chordStyle,
+  ) {
+    // Dividir por líneas directamente (no se usa processStanza porque los
+    // marcadores [G] distorsionarían la medición de ancho)
+    final lines = content.split('\n');
+
+    return Column(
+      key: const ValueKey('chords'),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: lines.map((line) {
+        if (line.trim().isEmpty) {
+          return SizedBox(height: lyricStyle.fontSize! * 0.8);
+        }
+        // Verificar si la línea tiene acordes
+        final hasChords = chordRegex.hasMatch(line);
+        if (!hasChords) {
+          // Línea sin acordes → texto plano (alineación izquierda para
+          // consistencia visual con las líneas que SÍ tienen acordes)
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              line,
+              style: lyricStyle,
+              textAlign: TextAlign.left,
+            ),
+          );
+        }
+        return ChordOverlayText(
+          chordProLine: line,
+          textStyle: lyricStyle,
+          chordStyle: chordStyle,
+          maxWidth: width,
+          textAlign: TextAlign.left,
+          minChordGap: 12.0,
+        );
+      }).toList(),
     );
   }
 

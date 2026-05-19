@@ -92,6 +92,7 @@ Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
     'isBold': appearance.isBold,
     'fontScale': appearance.fontScale,
     'bgColor': _colorToHex(appearance.bgColor),
+    'showChords': appearance.showChords,
     // Campos legacy (retrocompatibilidad)
     'backgroundColor': _colorToHex(appearance.bgColor),
     'fontSize': _fontScaleToFontSizeName(appearance.fontScale),

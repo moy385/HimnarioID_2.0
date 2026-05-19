@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/chords/chord_parser.dart';
 import '../../../core/utils/chord_transposer.dart';
 import '../../../core/utils/stanza_layout_engine.dart';
+import '../../shared_widgets/chord_overlay_text.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
@@ -39,7 +41,6 @@ class HymnDetailScreen extends ConsumerStatefulWidget {
 
 class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   bool _isPlaying = false;
-  bool _showChords = true;
   int? _currentPistaId;
   late final ScrollController _scrollController;
 
@@ -412,20 +413,17 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     TextTheme textTheme,
     HymnAppearanceState appearance,
   ) {
-    final chordRegex =
-        RegExp(r'\[([A-G][#b]?m?\d*(?:sus|dim|aug|Maj|maj)?[0-9]*)\]');
-
     // Transponer usando el utility ChordTransposer
     final transposedLyric = transposeChordPro(lyric, transposeValue);
 
     final double baseFontSize =
         (textTheme.bodyLarge?.fontSize ?? 16) * appearance.fontScale;
 
-    // Escala base para texto y acordes (ambos escalan proporcionalmente con fontScale)
+    // Escala base para texto y acordes
     final double chordFontSize = (baseFontSize * 0.6).clamp(8.0, 13.0);
 
-    // Estilo de línea base para medición y renderizado
-    final TextStyle? lyricStyle = textTheme.bodyLarge?.copyWith(
+    // Estilo base de la letra
+    final TextStyle lyricStyle = (textTheme.bodyLarge ?? const TextStyle()).copyWith(
       fontFamily: appearance.fontFamily,
       color: appearance.textColor,
       fontSize: baseFontSize,
@@ -433,8 +431,14 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
     );
 
-    // Usamos LayoutBuilder para que availableWidth refleje el ancho real
-    // del contenedor (útil en desktop con SizedBox(width: 800)).
+    // Estilo de los acordes
+    final TextStyle chordStyle = TextStyle(
+      fontFamily: appearance.fontFamily,
+      color: appearance.chordColor,
+      fontWeight: FontWeight.bold,
+      fontSize: chordFontSize,
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final double availableWidth = constraints.maxWidth;
@@ -442,13 +446,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         final processedLyric = StanzaLayoutEngine.processStanza(
           transposedLyric,
           maxWidth: availableWidth,
-          style: textTheme.bodyLarge?.copyWith(
-            fontFamily: appearance.fontFamily,
-            fontSize: baseFontSize,
-            fontWeight: appearance.isBold
-                ? FontWeight.bold
-                : FontWeight.normal,
-          ),
+          style: lyricStyle,
         );
 
         final parts = processedLyric.split('\n');
@@ -456,154 +454,26 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: parts.map((line) {
-            if (!_showChords) {
-              // ── Sin acordes: solo texto plano ──
-              final plainLine = line.replaceAll(chordRegex, '');
+            if (!appearance.showChords) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  plainLine,
+                  stripChords(line),
                   textAlign: TextAlign.justify,
                   style: lyricStyle,
                 ),
               );
             }
 
-            final matches = chordRegex.allMatches(line).toList();
-
-            if (matches.isEmpty) {
-              // ── Línea sin acordes ──
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  line,
-                  textAlign: TextAlign.justify,
-                  style: lyricStyle,
-                ),
-              );
-            }
-
-            // ── Línea CON acordes → Stack: acordes arriba, texto abajo ──
-            return _buildChordLineStacked(
-              line: line,
-              matches: matches,
-              chordRegex: chordRegex,
-              lyricStyle: lyricStyle,
-              chordFontSize: chordFontSize,
-              chordColor: appearance.chordColor,
-              fontFamily: appearance.fontFamily,
-              availableWidth: availableWidth,
+            return ChordOverlayText(
+              chordProLine: line,
+              textStyle: lyricStyle,
+              chordStyle: chordStyle,
+              maxWidth: availableWidth,
             );
           }).toList(),
         );
       },
-    );
-  }
-
-  /// Renderiza una línea con acordes usando [Stack] + [Positioned]:
-  /// los acordes aparecen SOBRE el texto, en la posición horizontal exacta
-  /// donde corresponde cada sílaba. Usa [TextPainter] para medir el texto
-  /// previo a cada acorde y así calcular su posición horizontal.
-  ///
-  /// Garantiza un espaciado mínimo entre acordes consecutivos para evitar
-  /// solapamiento visual (ej: `[G]A[Am]le`).
-  Widget _buildChordLineStacked({
-    required String line,
-    required List<RegExpMatch> matches,
-    required RegExp chordRegex,
-    required TextStyle? lyricStyle,
-    required double chordFontSize,
-    required Color chordColor,
-    required String fontFamily,
-    required double availableWidth,
-  }) {
-    // Texto plano (sin marcadores [Acorde])
-    final String plainText = line.replaceAll(chordRegex, '');
-
-    // Espacio vertical reservado arriba para los acordes
-    // (altura del acorde + gap de 6px antes del texto)
-    final double chordAreaHeight = chordFontSize + 6;
-
-    // Construir los Positioned hijos para cada acorde
-    final List<Widget> chordWidgets = [];
-    double lastChordRight = double.negativeInfinity;
-    const double minChordGap = 6.0; // px mínimos entre acordes
-
-    for (final match in matches) {
-      // Texto antes de este acorde en la línea original, sin marcadores
-      final String textBefore = line.substring(0, match.start);
-      final String textBeforePlain = textBefore.replaceAll(chordRegex, '');
-
-      // Medir el ancho del texto previo para saber dónde colocar el acorde
-      final TextPainter tp = TextPainter(
-        text: TextSpan(text: textBeforePlain, style: lyricStyle),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: availableWidth);
-
-      final String chord = match.group(1) ?? '';
-
-      // Medir el ancho del acorde para control de solapamiento
-      final TextPainter chordTp = TextPainter(
-        text: TextSpan(
-          text: chord,
-          style: TextStyle(
-            fontFamily: fontFamily,
-            fontSize: chordFontSize,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-      )..layout(maxWidth: availableWidth);
-      final double chordWidth = chordTp.width;
-
-      // Clamp contra bounds para evitar que el acorde se salga de la pantalla
-      double left = tp.width.clamp(0.0, availableWidth - chordWidth);
-
-      // Si este acorde caería muy cerca del anterior → desplazar a la derecha
-      if (left < lastChordRight + minChordGap) {
-        left = lastChordRight + minChordGap;
-      }
-
-      lastChordRight = left + chordWidth;
-
-      chordWidgets.add(
-        Positioned(
-          top: 0,
-          left: left,
-          child: Text(
-            chord,
-            style: TextStyle(
-              fontFamily: fontFamily,
-              color: chordColor,
-              fontWeight: FontWeight.bold,
-              fontSize: chordFontSize,
-              height: 1.0,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 4),
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          // Child NO positionado → define el tamaño del Stack
-          Padding(
-            padding: EdgeInsets.only(top: chordAreaHeight),
-            child: Text(
-              plainText,
-              textAlign: TextAlign.justify,
-              style: lyricStyle,
-              softWrap: true,
-            ),
-          ),
-          // Acordes positionados arriba
-          ...chordWidgets,
-        ],
-      ),
     );
   }
 
@@ -808,12 +678,6 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     showSolfaSheet(
       context,
       ref: ref,
-      showChords: _showChords,
-      onShowChordsChanged: (bool value) {
-        setState(() {
-          _showChords = value;
-        });
-      },
       onCreateArrangement: () {
         Navigator.push(
           context,
