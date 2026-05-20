@@ -1,7 +1,7 @@
 # Tareas Pendientes — HimnarioID 2.0
 
-> **Fecha:** 20 de mayo de 2026
-> **Propósito:** Estado actual del proyecto tras mejoras de brocha, fondos, admin directo y fix de eliminación.
+> **Fecha:** 20 de mayo de 2026 — 2ª revisión
+> **Propósito:** Estado actual del proyecto tras FileStorageService, copia local de fondos y APK build.
 
 ---
 
@@ -22,6 +22,7 @@
 | **Brocha conectada** | ✅ Funcional | IPC SET_CONFIG a ventana de proyección |
 | **Fondos de pantalla** | ✅ Funcional | Color + imagen (file_picker), CRUD completo |
 | **Eliminación de fondos** | ✅ Funcional | Invalida brocha/vista himno + borra archivo físico |
+| **Almacenamiento local de fondos** | ✅ Implementado | FileStorageService copia a `{appDocs}/himnario_id/fondos/` al seleccionar, solo borra copia local |
 | **Escalado proyección** | ✅ Funcional | `projectionFontScale` independiente (0.5–3.0) |
 | **Scroll proyección** | ✅ Funcional | Condicional, SingleChildScrollView si desborda |
 | **Reflow acordes proyección** | ✅ Funcional | StanzaLayoutEngine.processStanza |
@@ -32,7 +33,7 @@
 | **gRPC** | ❌ No implementado | Proto compilado, servidor no creado |
 | **Fondos de video** | ❌ Revertido | Crash irrecuperable en Linux (libmpv 0.41.0). Pendiente para futuro. |
 | **Tests** | ✅ 274 tests | 263 unit/widget + 11 integración (~11 fallos conocidos) |
-| **APK Android** | ✅ Funcional | Build release con JDK 17 |
+| **APK Android** | ✅ Funcional | Build release 62MB (fat APK) con JDK 17 en `/home/melquisedec/jdk17` |
 
 ---
 
@@ -121,12 +122,13 @@ P2.1 Tests core ───→ P3.5 Tests widgets
 ## Notas importantes
 
 1. **Brocha mejorada**: Consumer reemplazó StatefulBuilder, fondos se refrescan automáticamente tras crear/editar/eliminar. Selector HSV + paleta 22 colores.
-2. **Eliminación de fondos**: Al borrar un fondo, se invalida `fondosActivosProvider` (brocha + vista himno se actualizan) y se borra el archivo físico del disco.
-3. **Fondos de video REVERTIDOS**: Se implementó con `video_player_media_kit` pero se descartó por crash en Linux. Todo el código fue revertido. La rama `main` está limpia.
-4. **274 tests existentes**: 263 unit/widget + 11 integración (~11 fallos conocidos por tabla Pais).
-5. **APK release**: 64.6MB (fat APK). Con `--split-per-abi` bajaría a ~25MB.
-6. **JDK 17 obligatorio** para build Android (JDK 25 no compatible con Gradle 8.14).
+2. **Eliminación de fondos**: Al borrar un fondo, se invalida `fondosActivosProvider` (brocha + vista himno se actualizan). `DeleteFondoUseCase` usa `FileStorageService.deleteIfAppFile()` que solo borra si está dentro del directorio app.
+3. **Fondos copiados a directorio local**: `FileStorageService` en `lib/core/utils/`. Al seleccionar imagen con file_picker, se copia a `{appDocs}/himnario_id/fondos/` con nombre único. Al eliminar el fondo, solo se borra la copia local, nunca el original del usuario.
+4. **Fondos de video REVERTIDOS**: Se implementó con `video_player_media_kit` pero se descartó por crash en Linux. Todo el código fue revertido. La rama `main` está limpia.
+5. **274 tests existentes**: 263 unit/widget + 11 integración (~11 fallos conocidos por tabla Pais).
+6. **APK release**: 62MB (fat APK). Con `--split-per-abi` bajaría a ~25MB cada uno.
+7. **JDK 17 obligatorio** para build Android (JDK 25 no compatible con Gradle 8.14). Ubicación: `/home/melquisedec/jdk17`.
 
 ---
 
-*Documento actualizado por @orquestador — 20 de mayo de 2026*
+*Documento actualizado por @orquestador — 20 de mayo de 2026 (2ª revisión)*

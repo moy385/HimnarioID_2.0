@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 20 de mayo de 2026
+> **Última actualización:** 20 de mayo de 2026 — 2ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -26,7 +26,7 @@
 lib/
 ├── core/
 │   ├── database/          → database_helper.dart, schema.sql
-│   ├── utils/             → chord_transposer, flag_utils, string_utils, stanza_layout_engine, audio_file_service
+│   ├── utils/             → chord_transposer, flag_utils, string_utils, stanza_layout_engine, audio_file_service, file_storage_service
 │   ├── constants/         → musical_constants
 │   ├── enums/             → estrofa_tipo, himno_tipo, fondo_pantalla_tipo, usuario_rol
 │   ├── errors/            → auth_exception, exceptions, failures
@@ -82,6 +82,8 @@ lib/
 - Panel admin: CRUD himnos, categorías, países, fondos (color/imagen), pistas
 - Admin directo (icono de ajustes en lugar de candado + login)
 - Al eliminar fondo: se refresca la brocha/vista del himno, se borra el archivo físico
+- Fondos de imagen se copian automáticamente a `{appDocs}/himnario_id/fondos/` al seleccionarlos
+- Al eliminar fondo, solo se borra la copia local de la app, nunca el archivo original del usuario
 - Filtros A-Z, Z-A por título (inteligente: ignora acentos y puntuación)
 - Scroll alfabético lateral (tipo Xiaomi)
 - Búsqueda inteligente (en estrofas, ranking por relevancia, tabla pre-normalizada)
@@ -124,8 +126,9 @@ lib/
 - `feature/proyeccion-line-breaking` — Reflow de acordes con StanzaLayoutEngine
 - `feature/settings-panel-sin-login` — Admin directo (icono de ajustes sin login forzoso)
 - `feature/agregar-himnos-convenciones` — 25 himnos de convenciones + mejoras brocha + fondos + fix delete
+- `feature/copiar-fondos-a-local-storage` — FileStorageService, copia de fondos a directorio local de la app
 
 ## Notas técnicas importantes
 - **Fondos de video**: Se intentó implementar con `video_player_media_kit` / `media_kit` + libmpv, pero se descartó por crash irrecuperable en Linux (assertion `group_index >= 0` en libmpv 0.41.0). Todo el código de video fue revertido. Pendiente para cuando Ubuntu actualice libmpv.
-- **File Picker**: Los archivos de fondo (imagen) se seleccionan con `file_picker` y se guarda la ruta absoluta. No se copian al almacenamiento local de la app. Al eliminar un fondo, se intenta borrar el archivo físico.
+- **File Picker**: Los archivos de fondo (imagen) se seleccionan con `file_picker`. Se copian automáticamente a `{appDocs}/himnario_id/fondos/` con nombre único. Al eliminar un fondo, `FileStorageService.deleteIfAppFile()` solo borra si está dentro del directorio app, nunca el archivo original del usuario.
 - **Riverpod caching**: Los `FutureProvider` cachean su resultado hasta invalidación explícita. Es crítico invalidar `fondosActivosProvider` tras crear/editar/eliminar fondos.
