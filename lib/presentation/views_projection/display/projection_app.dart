@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/enums/estrofa_tipo.dart';
+import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/enums/himno_tipo.dart';
+import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
@@ -237,6 +239,20 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
 
     if (message.containsKey('showChords') && message['showChords'] != null) {
       appearanceNotifier.setShowChords(message['showChords'] as bool);
+    }
+
+    // ── Fondo seleccionado (imagen, video o color) ──
+    if (message.containsKey('bgFondoId') && message['bgFondoId'] != null) {
+      final fondoId = message['bgFondoId'] as int;
+      final tipoStr = message['bgTipo'] as String? ?? 'color_solido';
+      final ruta = message['bgRuta'] as String?;
+      final fondo = FondoPantalla(
+        id: fondoId,
+        nombre: '',
+        tipo: FondoPantallaTipo.fromValue(tipoStr),
+        rutaArchivo: ruta,
+      );
+      appearanceNotifier.setFondo(fondo);
     }
   }
 

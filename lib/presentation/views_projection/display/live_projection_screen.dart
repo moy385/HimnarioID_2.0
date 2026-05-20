@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/chords/chord_parser.dart';
 import '../../../core/enums/estrofa_tipo.dart';
+import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
@@ -49,22 +52,22 @@ class LiveProjectionScreen extends ConsumerWidget {
       );
     }
 
+    final slideContent = _buildSlideContent(
+      context,
+      ref,
+      liveState,
+      baseFontSize,
+      config,
+      appearance,
+      textTheme,
+      colors,
+    );
+
     return Scaffold(
       backgroundColor: bgColor,
-      body: Stack(
+      body: _buildFondo(appearance, Stack(
         children: [
-          // ── Contenido del slide según su tipo ──
-          _buildSlideContent(
-            context,
-            ref,
-            liveState,
-            baseFontSize,
-            config,
-            appearance,
-            textTheme,
-            colors,
-          ),
-
+          slideContent,
           // ── Indicador de conexión (esquina inferior derecha) ──
           Positioned(
             right: 24,
@@ -72,8 +75,39 @@ class LiveProjectionScreen extends ConsumerWidget {
             child: _buildConnectionChip(colors, textTheme, serverInfo),
           ),
         ],
-      ),
+      )),
     );
+  }
+
+  /// Envuelve el contenido con el fondo apropiado (imagen, video o color sólido).
+  Widget _buildFondo(HymnAppearanceState appearance, Widget slideContent) {
+    final fondo = appearance.selectedFondo;
+    if (fondo == null) {
+      return slideContent;
+    }
+    return switch (fondo.tipo) {
+      FondoPantallaTipo.colorSolido => slideContent,
+      FondoPantallaTipo.imagen => Stack(
+          children: [
+            if (fondo.rutaArchivo != null)
+              Positioned.fill(
+                child: Image.file(
+                  File(fondo.rutaArchivo!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            slideContent,
+          ],
+        ),
+      FondoPantallaTipo.video => Stack(
+          children: [
+            Container(color: Colors.black87),
+            Container(color: Colors.black26),
+            slideContent,
+          ],
+        ),
+    };
   }
 
   /// Delega la renderización al widget especializado según el tipo de slide.

@@ -1,15 +1,19 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/chords/chord_parser.dart';
+import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/utils/chord_transposer.dart';
 import '../../../core/utils/stanza_layout_engine.dart';
-import '../../shared_widgets/chord_overlay_text.dart';
-import '../../../core/window_manager/window_providers.dart';
+import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/audio_repository.dart';
+import '../../shared_widgets/chord_overlay_text.dart';
+import '../../../core/window_manager/window_providers.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
@@ -275,8 +279,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
         children: [
           // Contenido scrollable
           Expanded(
-            child: Container(
-              color: appearance.bgColor,
+            child: _FondoBackground(
+              fondo: appearance.selectedFondo,
+              bgColor: appearance.bgColor,
               child: bodyContent,
             ),
           ),
@@ -815,5 +820,48 @@ class _AudioPlayerBarState extends State<_AudioPlayerBar> {
   String _fmt(double sec) {
     final t = sec.round();
     return '${(t ~/ 60).toString().padLeft(2, '0')}:${(t % 60).toString().padLeft(2, '0')}';
+  }
+}
+
+/// Renderiza el fondo según el tipo seleccionado (color, imagen o video).
+class _FondoBackground extends StatelessWidget {
+  final FondoPantalla? fondo;
+  final Color bgColor;
+  final Widget child;
+
+  const _FondoBackground({
+    required this.fondo,
+    required this.bgColor,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (fondo == null) {
+      return Container(color: bgColor, child: child);
+    }
+    return switch (fondo!.tipo) {
+      FondoPantallaTipo.colorSolido => Container(color: bgColor, child: child),
+      FondoPantallaTipo.imagen => Stack(
+          children: [
+            if (fondo!.rutaArchivo != null)
+              Positioned.fill(
+                child: Image.file(
+                  File(fondo!.rutaArchivo!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(color: bgColor),
+                ),
+              ),
+            child,
+          ],
+        ),
+      FondoPantallaTipo.video => Stack(
+          children: [
+            Container(color: Colors.black87),
+            Container(color: Colors.black26),
+            child,
+          ],
+        ),
+    };
   }
 }

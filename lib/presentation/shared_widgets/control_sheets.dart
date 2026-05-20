@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/flag_utils.dart';
 import '../../../core/window_manager/window_providers.dart';
+import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
@@ -55,70 +58,36 @@ Color? _parseHexColor(String? hex) {
 class _ColorCircle extends StatelessWidget {
   final Color color;
   final bool isSelected;
-  final bool isTransparent;
-  final String? label;
   final VoidCallback onTap;
 
   const _ColorCircle({
     required this.color,
     required this.isSelected,
     required this.onTap,
-    this.isTransparent = false,
-    this.label,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final circle = GestureDetector(
+    return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: isTransparent ? colorScheme.surfaceContainerHighest : color,
+          color: color,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
             width: isSelected ? 2.5 : 1,
           ),
         ),
-        child: isTransparent
-            ? Icon(
-                Icons.block,
-                size: 20,
-                color: colorScheme.onSurfaceVariant,
-              )
-            : (isSelected
-                ? Icon(
-                    Icons.check,
-                    size: 20,
-                    color: colorScheme.primary,
-                  )
-                : null),
+        child: isSelected
+            ? Icon(Icons.check, size: 20, color: colorScheme.primary)
+            : null,
       ),
     );
-
-    if (label != null) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          circle,
-          const SizedBox(height: 4),
-          Text(
-            label!,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      );
-    }
-
-    return circle;
   }
 }
 
@@ -179,7 +148,7 @@ void showBrushSheet(
             final colorScheme = Theme.of(context).colorScheme;
             final textTheme = Theme.of(context).textTheme;
             final appearance = ref.watch(hymnAppearanceProvider);
-            final fondosAsync = ref.watch(fondosColorSolidoProvider);
+            final fondosAsync = ref.watch(fondosActivosProvider);
 
             return Dialog(
               child: ConstrainedBox(
@@ -212,7 +181,7 @@ void showBrushSheet(
             final colorScheme = Theme.of(context).colorScheme;
             final textTheme = Theme.of(context).textTheme;
             final appearance = ref.watch(hymnAppearanceProvider);
-            final fondosAsync = ref.watch(fondosColorSolidoProvider);
+            final fondosAsync = ref.watch(fondosActivosProvider);
 
             return DraggableScrollableSheet(
               initialChildSize: 0.85,
@@ -347,19 +316,12 @@ List<Widget> _brushSheetChildren({
           spacing: 16,
           runSpacing: 12,
           children: fondos.map((FondoPantalla fondo) {
-            final color = _parseHexColor(fondo.colorHex) ??
-                colorScheme.surfaceContainerHighest;
-            final isSelected =
-                appearance.bgColor.toARGB32() == color.toARGB32();
-            return _ColorCircle(
-              color: color,
+            final isSelected = appearance.selectedFondo?.id == fondo.id;
+            return _FondoItem(
+              fondo: fondo,
               isSelected: isSelected,
-              isTransparent: false,
-              label: fondo.nombre,
               onTap: () {
-                ref
-                    .read(hymnAppearanceProvider.notifier)
-                    .setBgColor(color);
+                ref.read(hymnAppearanceProvider.notifier).setFondo(fondo);
                 _syncAppearanceToProjection(ref);
                 setSheetState(() {});
               },
@@ -1261,7 +1223,138 @@ class HymnSearchDelegate extends SearchDelegate<int> {
 }
 
 // =============================================================================
-// 5. _FontOption — Selector visual de fuente tipográfica
+// 5. _FondoItem — Preview de fondo según su tipo (color, imagen, video)
+// =============================================================================
+
+/// Widget que muestra preview de un fondo según su tipo.
+class _FondoItem extends StatelessWidget {
+  final FondoPantalla fondo;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FondoItem({
+    required this.fondo,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          switch (fondo.tipo) {
+            FondoPantallaTipo.colorSolido => _buildColorPreview(colorScheme),
+            FondoPantallaTipo.imagen => _buildImagePreview(colorScheme),
+            FondoPantallaTipo.video => _buildVideoPreview(colorScheme),
+          },
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 60,
+            child: Text(
+              fondo.nombre,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorPreview(ColorScheme colorScheme) {
+    final color = _parseHexColor(fondo.colorHex) ?? colorScheme.surfaceContainerHighest;
+    return _previewContainer(
+      colorScheme: colorScheme,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: isSelected
+            ? Icon(Icons.check, size: 20, color: colorScheme.primary)
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildImagePreview(ColorScheme colorScheme) {
+    return _previewContainer(
+      colorScheme: colorScheme,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          image: fondo.rutaArchivo != null
+              ? DecorationImage(
+                  image: FileImage(File(fondo.rutaArchivo!)),
+                  fit: BoxFit.cover,
+                  onError: (_, __) {},
+                )
+              : null,
+        ),
+        child: Center(
+          child: Icon(
+            Icons.image,
+            size: 24,
+            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoPreview(ColorScheme colorScheme) {
+    return _previewContainer(
+      colorScheme: colorScheme,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.videocam,
+            size: 24,
+            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _previewContainer({
+    required ColorScheme colorScheme,
+    required Widget child,
+  }) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
+          width: isSelected ? 2.5 : 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: child,
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 6. _FontOption — Selector visual de fuente tipográfica
 // =============================================================================
 
 /// Widget reutilizable para seleccionar una fuente tipográfica.

@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_helper.dart';
+import '../../../data/datasources/local/catalog_local_datasource.dart';
+import '../../../data/repositories/fondo_repository_impl.dart';
+import '../../../domain/entities/fondo_pantalla.dart';
+import '../../../core/enums/fondo_pantalla_tipo.dart';
 
 /// Estado global de apariencia para el modo personal.
 /// Controla fondo, colores de texto/acordes, tamaño de fuente y toggle de acordes.
 class HymnAppearanceState {
   final Color bgColor;
+  final FondoPantalla? selectedFondo; // fondo seleccionado (imagen, video o color)
   final Color textColor;
   final Color chordColor;
   final double fontScale;
@@ -17,6 +22,7 @@ class HymnAppearanceState {
 
   const HymnAppearanceState({
     this.bgColor = Colors.transparent,
+    this.selectedFondo,
     this.textColor = const Color(0xFF1C1B1F),
     this.chordColor = const Color(0xFF6750A4),
     this.fontScale = 1.0,
@@ -26,8 +32,11 @@ class HymnAppearanceState {
     this.showChords = true,
   });
 
+  static const _fondoSentinel = Object();
+
   HymnAppearanceState copyWith({
     Color? bgColor,
+    Object? selectedFondo = _fondoSentinel,
     Color? textColor,
     Color? chordColor,
     double? fontScale,
@@ -38,6 +47,9 @@ class HymnAppearanceState {
   }) {
     return HymnAppearanceState(
       bgColor: bgColor ?? this.bgColor,
+      selectedFondo: selectedFondo == _fondoSentinel
+          ? this.selectedFondo
+          : selectedFondo as FondoPantalla?,
       textColor: textColor ?? this.textColor,
       chordColor: chordColor ?? this.chordColor,
       fontScale: fontScale ?? this.fontScale,
@@ -82,6 +94,23 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
             : 1.0,
         showChords: showChordsStr == 'true',
       );
+      // Cargar fondo seleccionado
+      final fondoIdStr = await _dbHelper.getConfig('bg_fondo_id');
+      if (fondoIdStr != null && fondoIdStr.isNotEmpty) {
+        final fondoId = int.tryParse(fondoIdStr);
+        if (fondoId != null) {
+          try {
+            final dataSource = CatalogLocalDataSource(dbHelper: _dbHelper);
+            final repo = FondoRepositoryImpl(dataSource);
+            final fondo = await repo.getById(fondoId);
+            if (fondo != null) {
+              state = state.copyWith(selectedFondo: fondo);
+            }
+          } catch (_) {
+            // Ignorar error al cargar fondo individual
+          }
+        }
+      }
     } catch (e) {
       // Si falla la carga, usar valores por defecto
     }
@@ -101,6 +130,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         state.projectionFontScale.toString(),
       );
       await _dbHelper.setConfig('show_chords', state.showChords.toString());
+      await _dbHelper.setConfig('bg_fondo_id', state.selectedFondo?.id.toString() ?? '');
     } catch (e) {
       // Silent fail en escritura
     }
@@ -119,7 +149,26 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
 
   // ─── Setters (todos guardan después de cambiar) ───
   void setBgColor(Color color) {
-    state = state.copyWith(bgColor: color);
+    state = state.copyWith(bgColor: color, selectedFondo: null);
+    _saveToDb();
+  }
+
+  void setFondo(FondoPantalla fondo) {
+    Color resolvedColor;
+    switch (fondo.tipo) {
+      case FondoPantallaTipo.colorSolido:
+        resolvedColor = fondo.colorHex != null
+            ? _hexToColor(fondo.colorHex!)
+            : Colors.transparent;
+        break;
+      case FondoPantallaTipo.imagen:
+      case FondoPantallaTipo.video:
+        resolvedColor = Colors.transparent;
+    }
+    state = state.copyWith(
+      bgColor: resolvedColor,
+      selectedFondo: fondo,
+    );
     _saveToDb();
   }
 
