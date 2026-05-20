@@ -10,7 +10,6 @@ import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
 import '../../shared_widgets/chord_overlay_text.dart';
-import '../../shared_widgets/fondo_video_background.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -101,18 +100,13 @@ class LiveProjectionScreen extends ConsumerWidget {
             slideContent,
           ],
         ),
-      FondoPantallaTipo.video => fondo.rutaArchivo != null
-          ? FondoVideoBackground(
-              key: ValueKey('video_proj_${fondo.rutaArchivo}'),
-              rutaArchivo: fondo.rutaArchivo!,
-              child: slideContent,
-            )
-          : Stack(
-              children: [
-                Container(color: Colors.black87),
-                Positioned.fill(child: slideContent),
-              ],
-            ),
+      FondoPantallaTipo.video => Stack(
+          children: [
+            Container(color: Colors.black87),
+            Container(color: Colors.black26),
+            slideContent,
+          ],
+        ),
     };
   }
 
