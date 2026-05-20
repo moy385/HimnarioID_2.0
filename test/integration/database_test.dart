@@ -626,6 +626,16 @@ void main() {
           }),
           throwsA(isA<DatabaseException>()),
         );
+
+        // 'video' ya no es un tipo válido
+        expect(
+          () => db.insert('Fondo_Pantalla', {
+            'nombre': 'Video Legacy',
+            'tipo': 'video',
+            'activo': 1,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
       } finally {
         await db.close();
       }

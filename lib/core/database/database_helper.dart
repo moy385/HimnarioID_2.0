@@ -51,7 +51,7 @@ class DatabaseHelper {
       // Usar sqflite (plugin nativo) en móvil
       return await mobile.openDatabase(
         path,
-        version: 5,
+          version: 6,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -61,7 +61,7 @@ class DatabaseHelper {
       return await desktop.databaseFactoryFfi.openDatabase(
         path,
         options: OpenDatabaseOptions(
-          version: 5,
+        version: 6,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
         ),
@@ -194,7 +194,7 @@ class DatabaseHelper {
       CREATE TABLE Fondo_Pantalla (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
-        tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'video', 'color_solido')),
+        tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'color_solido')),
         ruta_archivo TEXT,
         color_hex TEXT,
         es_predeterminado INTEGER NOT NULL DEFAULT 0,
@@ -296,7 +296,7 @@ class DatabaseHelper {
         CREATE TABLE IF NOT EXISTS Fondo_Pantalla (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           nombre TEXT NOT NULL,
-          tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'video', 'color_solido')),
+          tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'color_solido')),
           ruta_archivo TEXT,
           color_hex TEXT,
           es_predeterminado INTEGER NOT NULL DEFAULT 0,
@@ -405,6 +405,30 @@ class DatabaseHelper {
       } catch (_) {
         // Si la columna ya existe (ej: BD ya modificada directamente), ignorar
       }
+    }
+
+    if (oldVersion < 6) {
+      // Migración de versión 5 a 6:
+      // Eliminar 'video' del CHECK constraint de Fondo_Pantalla.tipo
+      // (FondoPantallaTipo.video fue eliminado del enum Dart)
+      // SQLite no permite ALTER CHECK, así que se recrea la tabla.
+      await db.execute('DELETE FROM Fondo_Pantalla WHERE tipo = \'video\'');
+      await db.execute('''
+        CREATE TABLE Fondo_Pantalla_v6 (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nombre TEXT NOT NULL,
+          tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'color_solido')),
+          ruta_archivo TEXT,
+          color_hex TEXT,
+          es_predeterminado INTEGER NOT NULL DEFAULT 0,
+          activo INTEGER NOT NULL DEFAULT 1
+        );
+      ''');
+      await db.execute(
+        'INSERT INTO Fondo_Pantalla_v6 SELECT * FROM Fondo_Pantalla',
+      );
+      await db.execute('DROP TABLE Fondo_Pantalla');
+      await db.execute('ALTER TABLE Fondo_Pantalla_v6 RENAME TO Fondo_Pantalla');
     }
   }
 

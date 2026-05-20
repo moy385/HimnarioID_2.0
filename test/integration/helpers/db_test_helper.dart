@@ -140,7 +140,7 @@ Future<Database> createEmptyDatabase() async {
     CREATE TABLE Fondo_Pantalla (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL,
-      tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'video', 'color_solido')),
+      tipo TEXT NOT NULL CHECK(tipo IN ('imagen', 'color_solido')),
       ruta_archivo TEXT,
       color_hex TEXT,
       es_predeterminado INTEGER NOT NULL DEFAULT 0,
