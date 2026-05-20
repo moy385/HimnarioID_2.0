@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
@@ -21,13 +20,6 @@ void main(List<String> args) async {
 
   // ── Modo Proyección: segunda ventana ──
   if (args.contains('--projection')) {
-    VideoPlayerMediaKit.ensureInitialized(
-      android: true,
-      iOS: true,
-      macOS: true,
-      windows: true,
-      linux: true,
-    );
     final container = ProviderContainer();
     // Inicializar servicios necesarios para la ventana de proyección
     AppContainer().init(container);
@@ -52,14 +44,6 @@ void main(List<String> args) async {
       // window_manager no está disponible en esta plataforma
     }
   }
-
-  VideoPlayerMediaKit.ensureInitialized(
-    android: true,
-    iOS: true,
-    macOS: true,
-    windows: true,
-    linux: true,
-  );
 
   // Crear el ProviderContainer antes de runApp
   final container = ProviderContainer();
