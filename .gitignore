@@ -60,3 +60,6 @@ assets/audio/*
 assets/images/backgrounds/*
 !assets/audio/.gitkeep
 !assets/images/backgrounds/.gitkeep
+
+# Windows build artifacts
+*.zip
