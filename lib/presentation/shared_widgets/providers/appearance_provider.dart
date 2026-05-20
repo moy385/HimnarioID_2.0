@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 
 import '../../../core/database/database_helper.dart';
 import '../../../data/datasources/local/catalog_local_datasource.dart';
@@ -66,6 +67,8 @@ class HymnAppearanceState {
 }
 
 class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
+  static final _log = Logger('HymnAppearanceNotifier');
+
   final DatabaseHelper _dbHelper;
 
   HymnAppearanceNotifier(this._dbHelper) : super(const HymnAppearanceState()) {
@@ -111,9 +114,22 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
             final fondo = await repo.getById(fondoId);
             if (fondo != null) {
               state = state.copyWith(selectedFondo: fondo);
+              // Si el fondo es video o imagen, bgColor debe ser transparente
+              if (fondo.tipo == FondoPantallaTipo.video ||
+                  fondo.tipo == FondoPantallaTipo.imagen) {
+                if (state.bgColor != Colors.transparent) {
+                  state = state.copyWith(bgColor: Colors.transparent);
+                }
+              }
+            } else {
+              // Fondo no existe en BD — limpiar referencia
+              state = state.copyWith(selectedFondo: null);
+              await _dbHelper.setConfig('bg_fondo_id', '');
+              _log.warning('Fondo #$fondoId no encontrado en BD. Referencia limpiada.');
             }
-          } catch (_) {
-            // Ignorar error al cargar fondo individual
+          } catch (e) {
+            _log.severe('Error al cargar fondo #$fondoId: $e');
+            // No mutar el estado — mantener valores anteriores
           }
         }
       }
@@ -163,6 +179,11 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
   }
 
   void setFondo(FondoPantalla fondo) {
+    if (fondo.tipo == FondoPantallaTipo.video &&
+        (fondo.rutaArchivo == null || fondo.rutaArchivo!.isEmpty)) {
+      _log.warning('Fondo de video #${fondo.id} no tiene rutaArchivo válida');
+      return; // No aplicar fondo inválido
+    }
     Color resolvedColor;
     switch (fondo.tipo) {
       case FondoPantallaTipo.colorSolido:

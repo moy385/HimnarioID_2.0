@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 
 import '../../../core/utils/flag_utils.dart';
 import '../../../core/window_manager/window_providers.dart';
@@ -132,7 +133,13 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'background': isTransparent ? 'black' : 'color',
   };
   // Fire-and-forget silencioso
-  ref.read(windowServiceProvider).sendMessage(message);
+  try {
+    ref.read(windowServiceProvider).sendMessage(message);
+  } catch (e) {
+    Logger('control_sheets').warning(
+      'Error al sincronizar apariencia con proyección: $e',
+    );
+  }
 }
 
 /// Muestra el sheet de configuración visual (fondo, tamaño fuente,
@@ -1374,12 +1381,28 @@ class _FondoItem extends StatelessWidget {
           color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Center(
-          child: Icon(
-            Icons.videocam,
-            size: 24,
-            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (fondo.rutaArchivo != null)
+              Positioned.fill(
+                child: Image.file(
+                  File(fondo.rutaArchivo!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            Container(
+              color: Colors.black26,
+              child: Center(
+                child: Icon(
+                  Icons.play_circle_fill,
+                  size: 28,
+                  color: isSelected ? colorScheme.primary : Colors.white70,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

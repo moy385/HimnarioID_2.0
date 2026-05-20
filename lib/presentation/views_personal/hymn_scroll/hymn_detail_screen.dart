@@ -13,6 +13,7 @@ import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/audio_repository.dart';
 import '../../shared_widgets/chord_overlay_text.dart';
+import '../../shared_widgets/fondo_video_background.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
@@ -856,13 +857,18 @@ class _FondoBackground extends StatelessWidget {
             child,
           ],
         ),
-      FondoPantallaTipo.video => Stack(
-          children: [
-            Container(color: Colors.black87),
-            Container(color: Colors.black26),
-            child,
-          ],
-        ),
+      FondoPantallaTipo.video => fondo!.rutaArchivo != null
+          ? FondoVideoBackground(
+              key: ValueKey('video_bg_${fondo!.rutaArchivo}'),
+              rutaArchivo: fondo!.rutaArchivo!,
+              child: child,
+            )
+          : Stack(
+              children: [
+                Container(color: Colors.black87),
+                Positioned.fill(child: child),
+              ],
+            ),
     };
   }
 }
