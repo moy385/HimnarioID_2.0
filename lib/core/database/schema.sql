@@ -13,6 +13,7 @@ CREATE TABLE Himno (
   titulo_principal TEXT NOT NULL,
   numero_oficial INTEGER,
   tipo INTEGER NOT NULL CHECK(tipo IN (1, 2, 3)), -- 1=Oficial, 2=Inspirada, 3=Convención
+  evento TEXT,  -- Evento al que pertenece (ej: "I Convención", "II Campamento Juvenil Nacional")
   activo INTEGER NOT NULL DEFAULT 1,
   fecha_creacion TEXT NOT NULL DEFAULT (datetime('now'))
 );

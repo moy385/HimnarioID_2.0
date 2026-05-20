@@ -51,7 +51,7 @@ class DatabaseHelper {
       // Usar sqflite (plugin nativo) en móvil
       return await mobile.openDatabase(
         path,
-        version: 4,
+        version: 5,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -61,7 +61,7 @@ class DatabaseHelper {
       return await desktop.databaseFactoryFfi.openDatabase(
         path,
         options: OpenDatabaseOptions(
-          version: 4,
+          version: 5,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
         ),
@@ -78,6 +78,7 @@ class DatabaseHelper {
         titulo_principal TEXT NOT NULL,
         numero_oficial INTEGER,
         tipo INTEGER NOT NULL CHECK(tipo IN (1, 2, 3)),
+        evento TEXT,
         activo INTEGER NOT NULL DEFAULT 1,
         fecha_creacion TEXT NOT NULL DEFAULT (datetime('now'))
       );
@@ -394,6 +395,16 @@ class DatabaseHelper {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_busqueda_contenido ON Himno_Busqueda(contenido_normalizado);',
       );
+    }
+
+    if (oldVersion < 5) {
+      // Migración de versión 4 a 5:
+      // Agregar columna evento a Himno (para registrar a qué evento pertenece el himno)
+      try {
+        await db.execute('ALTER TABLE Himno ADD COLUMN evento TEXT');
+      } catch (_) {
+        // Si la columna ya existe (ej: BD ya modificada directamente), ignorar
+      }
     }
   }
 
