@@ -280,6 +280,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
           // Contenido scrollable
           Expanded(
             child: _FondoBackground(
+              key: ValueKey('fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
               fondo: appearance.selectedFondo,
               bgColor: appearance.bgColor,
               child: bodyContent,
@@ -364,7 +365,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withValues(alpha: appearance.cardOpacity),
         borderRadius: BorderRadius.circular(12),
         border: isChorus
             ? Border.all(
@@ -828,6 +829,7 @@ class _FondoBackground extends StatelessWidget {
   final Widget child;
 
   const _FondoBackground({
+    super.key,
     required this.fondo,
     required this.bgColor,
     required this.child,
@@ -846,6 +848,7 @@ class _FondoBackground extends StatelessWidget {
               Positioned.fill(
                 child: Image.file(
                   File(fondo!.rutaArchivo!),
+                  key: ValueKey('img_${fondo!.rutaArchivo}'),
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(color: bgColor),
                 ),

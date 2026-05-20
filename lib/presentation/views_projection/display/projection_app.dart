@@ -241,6 +241,10 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       appearanceNotifier.setShowChords(message['showChords'] as bool);
     }
 
+    if (message.containsKey('cardOpacity') && message['cardOpacity'] != null) {
+      appearanceNotifier.setCardOpacity((message['cardOpacity'] as num).toDouble());
+    }
+
     // ── Fondo seleccionado (imagen, video o color) ──
     if (message.containsKey('bgFondoId')) {
       if (message['bgFondoId'] != null) {

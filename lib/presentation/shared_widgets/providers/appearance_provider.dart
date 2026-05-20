@@ -19,6 +19,7 @@ class HymnAppearanceState {
   final bool isBold;
   final double projectionFontScale;
   final bool showChords;
+  final double cardOpacity;
 
   const HymnAppearanceState({
     this.bgColor = Colors.transparent,
@@ -30,6 +31,7 @@ class HymnAppearanceState {
     this.isBold = false,
     this.projectionFontScale = 1.0,
     this.showChords = true,
+    this.cardOpacity = 0.1,
   });
 
   static const _fondoSentinel = Object();
@@ -44,6 +46,7 @@ class HymnAppearanceState {
     bool? isBold,
     double? projectionFontScale,
     bool? showChords,
+    double? cardOpacity,
   }) {
     return HymnAppearanceState(
       bgColor: bgColor ?? this.bgColor,
@@ -57,6 +60,7 @@ class HymnAppearanceState {
       isBold: isBold ?? this.isBold,
       projectionFontScale: projectionFontScale ?? this.projectionFontScale,
       showChords: showChords ?? this.showChords,
+      cardOpacity: cardOpacity ?? this.cardOpacity,
     );
   }
 }
@@ -81,6 +85,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
           await _dbHelper.getConfig('projection_font_scale');
 
       final showChordsStr = await _dbHelper.getConfig('show_chords');
+      final cardOpacityStr = await _dbHelper.getConfig('card_opacity');
 
       state = state.copyWith(
         fontFamily: fontFamily ?? 'Merriweather',
@@ -93,6 +98,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
             ? double.tryParse(projectionFontScale)?.clamp(0.5, 3.0) ?? 1.0
             : 1.0,
         showChords: showChordsStr == 'true',
+        cardOpacity: cardOpacityStr != null ? double.tryParse(cardOpacityStr)?.clamp(0.0, 1.0) ?? 0.1 : 0.1,
       );
       // Cargar fondo seleccionado
       final fondoIdStr = await _dbHelper.getConfig('bg_fondo_id');
@@ -130,6 +136,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         state.projectionFontScale.toString(),
       );
       await _dbHelper.setConfig('show_chords', state.showChords.toString());
+      await _dbHelper.setConfig('card_opacity', state.cardOpacity.toString());
       await _dbHelper.setConfig('bg_fondo_id', state.selectedFondo?.id.toString() ?? '');
     } catch (e) {
       // Silent fail en escritura
@@ -222,6 +229,11 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
 
   void toggleShowChords() {
     state = state.copyWith(showChords: !state.showChords);
+    _saveToDb();
+  }
+
+  void setCardOpacity(double value) {
+    state = state.copyWith(cardOpacity: value.clamp(0.0, 1.0));
     _saveToDb();
   }
 

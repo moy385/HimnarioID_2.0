@@ -93,6 +93,7 @@ Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
     'fontScale': appearance.fontScale,
     'bgColor': _colorToHex(appearance.bgColor),
     'showChords': appearance.showChords,
+    'cardOpacity': appearance.cardOpacity,
     // Campos de fondo seleccionado
     'bgFondoId': appearance.selectedFondo?.id,
     'bgTipo': appearance.selectedFondo?.tipo.value,

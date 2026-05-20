@@ -120,10 +120,11 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'projectionFontScale': appearance.projectionFontScale,
     'bgColor': _colorToHex(appearance.bgColor),
     'showChords': appearance.showChords,
-      'bgFondoId': appearance.selectedFondo?.id,
-      'bgTipo': appearance.selectedFondo?.tipo.value,
-      'bgRuta': appearance.selectedFondo?.rutaArchivo,
-      'colorHex': appearance.selectedFondo?.colorHex,
+    'cardOpacity': appearance.cardOpacity,
+    'bgFondoId': appearance.selectedFondo?.id,
+    'bgTipo': appearance.selectedFondo?.tipo.value,
+    'bgRuta': appearance.selectedFondo?.rutaArchivo,
+    'colorHex': appearance.selectedFondo?.colorHex,
     // Campos legacy (retrocompatibilidad)
     'backgroundColor': _colorToHex(appearance.bgColor),
     'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
@@ -337,7 +338,59 @@ List<Widget> _brushSheetChildren({
     const SizedBox(height: 20),
 
     // ==========================================
-    // 2. Tamaño de letra
+    // 2. Opacidad de tarjetas de estrofa
+    // ==========================================
+    Text(
+      'Opacidad de tarjetas',
+      style: textTheme.labelLarge?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 4),
+    Text(
+      'Ajusta la transparencia de las tarjetas que contienen las estrofas',
+      style: textTheme.bodySmall?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    const SizedBox(height: 4),
+    Row(
+      children: <Widget>[
+        const Icon(Icons.opacity, size: 18),
+        Expanded(
+          child: Slider(
+            value: appearance.cardOpacity,
+            min: 0.0,
+            max: 1.0,
+            divisions: 20,
+            label: '${(appearance.cardOpacity * 100).round()}%',
+            onChanged: (value) {
+              ref
+                  .read(hymnAppearanceProvider.notifier)
+                  .setCardOpacity(value);
+              _syncAppearanceToProjection(ref);
+              setSheetState(() {});
+            },
+          ),
+        ),
+        SizedBox(
+          width: 40,
+          child: Text(
+            '${(appearance.cardOpacity * 100).round()}%',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface,
+            ),
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 8),
+
+    const SizedBox(height: 20),
+
+    // ==========================================
+    // 3. Tamaño de letra
     // ==========================================
     Text(
       'Tamaño de letra',
