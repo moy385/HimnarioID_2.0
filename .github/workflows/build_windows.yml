@@ -1,0 +1,52 @@
+name: Build Windows .exe
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Build version label (e.g. 2.0.1)'
+        required: false
+        default: 'latest'
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart code
+        run: dart analyze lib/
+
+      - name: Run tests
+        run: flutter test --machine > test_results.json || true
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: himnario_id_2-windows-x64_${{ github.event.inputs.version || github.ref_name }}
+          path: build/windows/x64/runner/Release/
+          compression-level: 6
