@@ -364,9 +364,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isChorus
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
-            : colorScheme.surfaceContainerLow.withValues(alpha: 0.7),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: isChorus
             ? Border.all(
