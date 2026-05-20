@@ -11,6 +11,8 @@ import '../../views_admin/providers/admin_providers.dart'
         updateFondoUseCaseProvider,
         deleteFondoUseCaseProvider;
 import '../../views_admin/providers/auth_providers.dart' show currentUserProvider;
+import '../../shared_widgets/providers/fondo_options_provider.dart'
+    show fondosActivosProvider;
 
 // ─────────────────────────────────────────────────────────────
 // Provider local: lista de fondos
@@ -139,6 +141,7 @@ class _FondoTabState extends ConsumerState<FondoTab> {
       }
       _resetForm();
       ref.invalidate(_fondoListProvider);
+      ref.invalidate(fondosActivosProvider);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -404,32 +407,271 @@ class _FondoTabState extends ConsumerState<FondoTab> {
       } catch (_) {}
     }
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: TextField(
-            controller: _colorController,
-            decoration: const InputDecoration(
-              labelText: 'Color hex',
-              hintText: '#RRGGBB',
-              isDense: true,
-              prefixText: '#',
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _colorController,
+                decoration: const InputDecoration(
+                  labelText: 'Color hex',
+                  hintText: '#RRGGBB',
+                  isDense: true,
+                  prefixText: '#',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
             ),
-            onChanged: (_) => setState(() {}),
+            if (previewColor != null) ...[
+              const SizedBox(width: 12),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: previewColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.dividerColor),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Colores rápidos',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        if (previewColor != null) ...[
-          const SizedBox(width: 12),
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: previewColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: theme.dividerColor),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ColorOption(
+              color: const Color(0xFFB71C1C),
+              hex: '#B71C1C',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#B71C1C',
+              onTap: () {
+                _colorController.text = '#B71C1C';
+                setState(() {});
+              },
             ),
-          ),
-        ],
+            _ColorOption(
+              color: const Color(0xFFD32F2F),
+              hex: '#D32F2F',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#D32F2F',
+              onTap: () {
+                _colorController.text = '#D32F2F';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFF44336),
+              hex: '#F44336',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#F44336',
+              onTap: () {
+                _colorController.text = '#F44336';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFE91E63),
+              hex: '#E91E63',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#E91E63',
+              onTap: () {
+                _colorController.text = '#E91E63';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF9C27B0),
+              hex: '#9C27B0',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#9C27B0',
+              onTap: () {
+                _colorController.text = '#9C27B0';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF673AB7),
+              hex: '#673AB7',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#673AB7',
+              onTap: () {
+                _colorController.text = '#673AB7';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF3F51B5),
+              hex: '#3F51B5',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#3F51B5',
+              onTap: () {
+                _colorController.text = '#3F51B5';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF2196F3),
+              hex: '#2196F3',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#2196F3',
+              onTap: () {
+                _colorController.text = '#2196F3';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF03A9F4),
+              hex: '#03A9F4',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#03A9F4',
+              onTap: () {
+                _colorController.text = '#03A9F4';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF009688),
+              hex: '#009688',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#009688',
+              onTap: () {
+                _colorController.text = '#009688';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF4CAF50),
+              hex: '#4CAF50',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#4CAF50',
+              onTap: () {
+                _colorController.text = '#4CAF50';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF8BC34A),
+              hex: '#8BC34A',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#8BC34A',
+              onTap: () {
+                _colorController.text = '#8BC34A';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFCDDC39),
+              hex: '#CDDC39',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#CDDC39',
+              onTap: () {
+                _colorController.text = '#CDDC39';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFFFEB3B),
+              hex: '#FFEB3B',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#FFEB3B',
+              onTap: () {
+                _colorController.text = '#FFEB3B';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFFFC107),
+              hex: '#FFC107',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#FFC107',
+              onTap: () {
+                _colorController.text = '#FFC107';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFFF9800),
+              hex: '#FF9800',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#FF9800',
+              onTap: () {
+                _colorController.text = '#FF9800';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFFF5722),
+              hex: '#FF5722',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#FF5722',
+              onTap: () {
+                _colorController.text = '#FF5722';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF795548),
+              hex: '#795548',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#795548',
+              onTap: () {
+                _colorController.text = '#795548';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF9E9E9E),
+              hex: '#9E9E9E',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#9E9E9E',
+              onTap: () {
+                _colorController.text = '#9E9E9E';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF607D8B),
+              hex: '#607D8B',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#607D8B',
+              onTap: () {
+                _colorController.text = '#607D8B';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFF000000),
+              hex: '#000000',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#000000',
+              onTap: () {
+                _colorController.text = '#000000';
+                setState(() {});
+              },
+            ),
+            _ColorOption(
+              color: const Color(0xFFFFFFFF),
+              hex: '#FFFFFF',
+              isSelected:
+                  _colorController.text.trim().toUpperCase() == '#FFFFFF',
+              onTap: () {
+                _colorController.text = '#FFFFFF';
+                setState(() {});
+              },
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -477,5 +719,50 @@ class _FondoTabState extends ConsumerState<FondoTab> {
       case FondoPantallaTipo.colorSolido:
         return 'Color sólido';
     }
+  }
+}
+
+/// Círculo de color preseleccionado para el formulario de fondos.
+class _ColorOption extends StatelessWidget {
+  final Color color;
+  final String hex;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ColorOption({
+    required this.color,
+    required this.hex,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor,
+            width: isSelected ? 2.5 : 1,
+          ),
+        ),
+        child: isSelected
+            ? Icon(
+                Icons.check,
+                size: 16,
+                color: color.computeLuminance() > 0.5
+                    ? Colors.black
+                    : Colors.white,
+              )
+            : null,
+      ),
+    );
   }
 }
