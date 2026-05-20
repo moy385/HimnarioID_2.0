@@ -172,6 +172,12 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
     _saveToDb();
   }
 
+  /// Limpia el fondo seleccionado dejando solo el color sólido.
+  void clearFondo() {
+    state = state.copyWith(selectedFondo: null);
+    _saveToDb();
+  }
+
   void setTextColor(Color color) {
     state = state.copyWith(textColor: color);
     _saveToDb();

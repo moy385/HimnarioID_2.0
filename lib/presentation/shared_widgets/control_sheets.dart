@@ -120,6 +120,9 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'projectionFontScale': appearance.projectionFontScale,
     'bgColor': _colorToHex(appearance.bgColor),
     'showChords': appearance.showChords,
+      'bgFondoId': appearance.selectedFondo?.id,
+      'bgTipo': appearance.selectedFondo?.tipo.value,
+      'bgRuta': appearance.selectedFondo?.rutaArchivo,
     // Campos legacy (retrocompatibilidad)
     'backgroundColor': _colorToHex(appearance.bgColor),
     'fontSize': _fontScaleToFontSizeName(appearance.fontScale),

@@ -242,17 +242,23 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
     }
 
     // ── Fondo seleccionado (imagen, video o color) ──
-    if (message.containsKey('bgFondoId') && message['bgFondoId'] != null) {
-      final fondoId = message['bgFondoId'] as int;
-      final tipoStr = message['bgTipo'] as String? ?? 'color_solido';
-      final ruta = message['bgRuta'] as String?;
-      final fondo = FondoPantalla(
-        id: fondoId,
-        nombre: '',
-        tipo: FondoPantallaTipo.fromValue(tipoStr),
-        rutaArchivo: ruta,
-      );
-      appearanceNotifier.setFondo(fondo);
+    if (message.containsKey('bgFondoId')) {
+      if (message['bgFondoId'] != null) {
+        final fondoId = message['bgFondoId'] as int;
+        final tipoStr = message['bgTipo'] as String? ?? 'color_solido';
+        final ruta = message['bgRuta'] as String?;
+        final fondo = FondoPantalla(
+          id: fondoId,
+          nombre: '',
+          tipo: FondoPantallaTipo.fromValue(tipoStr),
+          rutaArchivo: ruta,
+        );
+        appearanceNotifier.setFondo(fondo);
+      } else {
+        // bgFondoId es null → limpiar fondo seleccionado (cambio a color sólido)
+        final currentBgColor = ref.read(hymnAppearanceProvider).bgColor;
+        appearanceNotifier.setBgColor(currentBgColor);
+      }
     }
   }
 
