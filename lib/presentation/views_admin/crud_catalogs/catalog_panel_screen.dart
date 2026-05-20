@@ -35,28 +35,34 @@ class _CatalogPanelScreenState extends ConsumerState<CatalogPanelScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Catálogos'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Categorías'),
-            Tab(text: 'Países'),
-            Tab(text: 'Pistas'),
-            Tab(text: 'Fondos'),
-          ],
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Material(
+          color: colorScheme.surface,
+          child: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Categorías'),
+              Tab(text: 'Países'),
+              Tab(text: 'Pistas'),
+              Tab(text: 'Fondos'),
+            ],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          CategoriaTab(),
-          PaisTab(),
-          PistaTab(),
-          FondoTab(),
-        ],
-      ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: const [
+              CategoriaTab(),
+              PaisTab(),
+              PistaTab(),
+              FondoTab(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

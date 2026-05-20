@@ -114,136 +114,137 @@ class _HymnListScreenState extends ConsumerState<HymnListScreen> {
     final queryParam = HymnQueryParam(text: _searchText);
     final hymnListAsync = ref.watch(hymnListProvider(queryParam));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Administrar Himnos'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Column(
-        children: [
-          // ── Barra de búsqueda ──────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Buscar por título o número...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchText.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearchChanged('');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // ── Barra de búsqueda ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por título o número...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchText.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               ),
             ),
-          ),
 
-          // ── Lista de himnos ────────────────────────────────
-          Expanded(
-            child: hymnListAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: colorScheme.error),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Error al cargar himnos',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      error.toString(),
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.tonalIcon(
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
-                      onPressed: () => ref.invalidate(hymnListProvider),
-                    ),
-                  ],
+            // ── Lista de himnos ────────────────────────────────
+            Expanded(
+              child: hymnListAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Error al cargar himnos',
+                        style: TextStyle(color: colorScheme.error),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        error.toString(),
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.tonalIcon(
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                        onPressed: () => ref.invalidate(hymnListProvider),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              data: (hymns) {
-                if (hymns.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.library_music_outlined,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _searchText.isNotEmpty
-                              ? 'No se encontraron himnos para "$_searchText"'
-                              : 'No hay himnos registrados',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                data: (hymns) {
+                  if (hymns.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.library_music_outlined,
+                            size: 64,
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                           ),
-                        ),
-                        if (_searchText.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          TextButton.icon(
-                            icon: const Icon(Icons.clear),
-                            label: const Text('Limpiar búsqueda'),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onSearchChanged('');
-                            },
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchText.isNotEmpty
+                                ? 'No se encontraron himnos para "$_searchText"'
+                                : 'No hay himnos registrados',
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                           ),
+                          if (_searchText.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              icon: const Icon(Icons.clear),
+                              label: const Text('Limpiar búsqueda'),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(hymnListProvider);
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      itemCount: hymns.length,
+                      itemBuilder: (context, index) {
+                        final himno = hymns[index];
+                        return _HymnListTile(
+                          himno: himno,
+                          onEdit: () => _navigateToForm(himnoId: himno.id),
+                          onDelete: () => _deleteHymn(himno),
+                        );
+                      },
                     ),
                   );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(hymnListProvider);
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    itemCount: hymns.length,
-                    itemBuilder: (context, index) {
-                      final himno = hymns[index];
-                      return _HymnListTile(
-                        himno: himno,
-                        onEdit: () => _navigateToForm(himnoId: himno.id),
-                        onDelete: () => _deleteHymn(himno),
-                      );
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
+          ],
+        ),
+
+        // ── FAB reposicionado ──
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            onPressed: () => _navigateToForm(),
+            tooltip: 'Agregar himno',
+            child: const Icon(Icons.add),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToForm(),
-        tooltip: 'Agregar himno',
-        child: const Icon(Icons.add),
-      ),
+        ),
+      ],
     );
   }
 }

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../views_personal/dashboard/home_screen.dart';
-import 'providers/auth_providers.dart';
 import 'crud_hymns/hymn_list_screen.dart';
 import 'crud_catalogs/catalog_panel_screen.dart';
+import '../views_personal/dashboard/home_screen.dart';
 
-/// Pantalla principal del panel de administración con navegación tipo Drawer.
+/// Pantalla principal del panel de configuración con navegación tipo Drawer.
 ///
 /// Muestra un [NavigationDrawer] estilo hamburger menu con las opciones:
 /// - Administrar Himnos
 /// - Catálogos
-/// - Cerrar sesión (como [ListTile] independiente)
 ///
 /// El cuerpo cambia según la opción seleccionada en el drawer.
 /// Cuando no hay ninguna opción seleccionada (estado inicial) se muestra
@@ -27,33 +25,38 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   int _selectedDrawerIndex = -1;
 
   static const _titles = <String>[
-    'Panel de Administración',
+    'Panel de Configuración',
     'Administrar Himnos',
     'Catálogos',
   ];
 
   String get _title => _titles[_selectedDrawerIndex + 1];
 
+  void _goHome() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_title),
-        actions: <Widget>[
+        leading: _selectedDrawerIndex != -1
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _selectedDrawerIndex = -1),
+              )
+            : null,
+        actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
-            onPressed: () {
-              ref.read(authProvider.notifier).logout();
-              Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-            },
+            icon: const Icon(Icons.home_outlined),
+            tooltip: 'Ir al inicio',
+            onPressed: _goHome,
           ),
         ],
       ),
@@ -76,13 +79,13 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'HimnarioID Admin',
+                  'HimnarioID',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
                 Text(
-                  user?.nombre ?? 'Admin',
+                  'Admin',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                   ),
@@ -101,17 +104,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             label: Text('Catálogos'),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Cerrar sesión'),
-            onTap: () {
-              ref.read(authProvider.notifier).logout();
-              Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-            },
-          ),
         ],
       ),
       body: _selectedDrawerIndex == -1 ? _buildWelcome(theme, colorScheme) : _buildScreen(),
@@ -119,8 +111,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   }
 
   Widget _buildWelcome(ThemeData theme, ColorScheme colorScheme) {
-    final user = ref.watch(currentUserProvider);
-
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -132,7 +122,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Bienvenido, ${user?.nombre ?? "Admin"}',
+            'Bienvenido, Admin',
             style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),

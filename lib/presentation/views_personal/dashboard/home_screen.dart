@@ -18,10 +18,7 @@ import '../../views_projection/providers/connection_providers.dart';
 import '../../views_projection/providers/presentation_providers.dart';
 import '../../views_projection/providers/projection_actions.dart'
     show projectHymn;
-import '../../views_admin/login/login_screen.dart';
 import '../../views_admin/admin_panel_screen.dart';
-import '../../views_admin/providers/auth_providers.dart'
-    show isAuthenticatedProvider;
 import '../providers/hymn_providers.dart';
 import 'connected_dashboard.dart';
 import 'present_button.dart';
@@ -163,28 +160,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text('HimnarioID'),
         leading: IconButton(
-          icon: Icon(
-            ref.watch(isAuthenticatedProvider)
-                ? Icons.lock_rounded
-                : Icons.lock_open_rounded,
+          icon: const Icon(Icons.settings_rounded),
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
           ),
-          onPressed: () {
-            final isAuth = ref.read(isAuthenticatedProvider);
-            if (isAuth) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AdminPanelScreen(),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            }
-          },
-          tooltip: 'Administraci\u00f3n',
+          tooltip: 'Configuración',
         ),
         actions: [
           // Botón de conexión: abre el DiscoverDisplaySheet
