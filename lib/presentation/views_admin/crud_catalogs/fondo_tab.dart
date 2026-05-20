@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/enums/fondo_pantalla_tipo.dart';
+import '../../../core/utils/file_storage_service.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../views_admin/providers/admin_providers.dart'
     show
@@ -108,6 +109,13 @@ class _FondoTabState extends ConsumerState<FondoTab> {
 
     try {
       if (_editando != null) {
+        // Si el usuario cambió el archivo, eliminar la copia anterior
+        if (_tipo != FondoPantallaTipo.colorSolido &&
+            rutaArchivo != null &&
+            _editando!.rutaArchivo != null &&
+            _editando!.rutaArchivo != rutaArchivo) {
+          await FileStorageService.deleteIfAppFile(_editando!.rutaArchivo!);
+        }
         // Actualizar
         await ref.read(updateFondoUseCaseProvider).execute(
               id: _editando!.id,
@@ -288,13 +296,34 @@ class _FondoTabState extends ConsumerState<FondoTab> {
                         icon: const Icon(Icons.folder_open),
                         tooltip: 'Seleccionar archivo',
                         onPressed: () async {
-                          final result = await FilePicker.platform.pickFiles(
-                            type: FileType.media,
-                            allowMultiple: false,
-                          );
-                          if (result != null && result.files.isNotEmpty) {
-                            _rutaController.text =
-                                result.files.single.path ?? '';
+                          try {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.media,
+                              allowMultiple: false,
+                              withReadStream: true,
+                            );
+                            if (result != null && result.files.isNotEmpty) {
+                              final file = result.files.single;
+                              final localPath = await FileStorageService
+                                  .copyToFondos(
+                                sourcePath: file.path ?? '',
+                                fileName: file.name,
+                                readStream: file.readStream,
+                              );
+                              setState(() {
+                                _rutaController.text = localPath;
+                              });
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text('Error al copiar archivo: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           }
                         },
                       ),

@@ -1,11 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logging/logging.dart';
 
 import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/enums/usuario_rol.dart';
 import '../../../core/errors/auth_exception.dart';
+import '../../../core/utils/file_storage_service.dart';
 import '../../../data/datasources/local/catalog_local_datasource.dart';
 import '../../../data/models/fondo_pantalla_model.dart';
 import '../../entities/usuario.dart';
@@ -151,7 +149,6 @@ final updateFondoUseCaseProvider = Provider<UpdateFondoUseCase>((ref) {
 ///
 /// Requiere permisos de administrador.
 class DeleteFondoUseCase {
-  static final _log = Logger('DeleteFondoUseCase');
   final CatalogLocalDataSource _dataSource;
 
   DeleteFondoUseCase(this._dataSource);
@@ -177,19 +174,10 @@ class DeleteFondoUseCase {
     // 2. Eliminar registro de BD
     await _dataSource.deleteFondo(id);
 
-    // 3. Eliminar archivo físico si existe
+    // 3. Eliminar archivo físico si está dentro del directorio de la app.
+    //    Si el archivo está fuera (galería, etc.), no se toca.
     if (model?.ruta_archivo != null && model!.ruta_archivo!.isNotEmpty) {
-      try {
-        final file = File(model.ruta_archivo!);
-        if (await file.exists()) {
-          await file.delete();
-          _log.info('Archivo de fondo #$id eliminado: ${model.ruta_archivo}');
-        } else {
-          _log.fine('Archivo de fondo #$id no existe en disco, se omite.');
-        }
-      } catch (e) {
-        _log.warning('No se pudo eliminar archivo de fondo #$id: $e');
-      }
+      await FileStorageService.deleteIfAppFile(model.ruta_archivo!);
     }
   }
 }
