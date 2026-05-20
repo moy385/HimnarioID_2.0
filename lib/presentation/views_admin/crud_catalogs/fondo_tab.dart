@@ -13,6 +13,8 @@ import '../../views_admin/providers/admin_providers.dart'
 import '../../views_admin/providers/auth_providers.dart' show currentUserProvider;
 import '../../shared_widgets/providers/fondo_options_provider.dart'
     show fondosActivosProvider;
+import '../../shared_widgets/providers/appearance_provider.dart'
+    show hymnAppearanceProvider;
 
 // ─────────────────────────────────────────────────────────────
 // Provider local: lista de fondos
@@ -180,7 +182,13 @@ class _FondoTabState extends ConsumerState<FondoTab> {
             admin: admin,
           );
       if (_editando?.id == fondo.id) _resetForm();
+      // Limpiar selección si el fondo eliminado era el activo
+      final currentFondo = ref.read(hymnAppearanceProvider).selectedFondo;
+      if (currentFondo?.id == fondo.id) {
+        ref.read(hymnAppearanceProvider.notifier).clearFondo();
+      }
       ref.invalidate(_fondoListProvider);
+      ref.invalidate(fondosActivosProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Fondo "${fondo.nombre}" eliminado')),
