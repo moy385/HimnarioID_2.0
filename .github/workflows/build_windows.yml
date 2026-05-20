@@ -35,8 +35,12 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Analyze Dart (debug step)
+        run: dart analyze lib/ 2>&1; exit 0
+        continue-on-error: true
+
       - name: Build Windows release
-        run: flutter build windows --release
+        run: flutter build windows --release 2>&1
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
