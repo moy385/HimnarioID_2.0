@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 20 de mayo de 2026 — 2ª revisión
+> **Última actualización:** 20 de mayo de 2026 — 3ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -54,12 +54,10 @@ lib/
 │   │   ├── display/       → live_projection, simple_projection, standby, projection_app, receptor_binding
 │   │   └── providers/     → connection, live_control, discovery, presentation, projection
 │   ├── views_admin/
-│   │   ├── login/         → login_screen
 │   │   ├── crud_hymns/    → hymn_form, hymn_list, stanza_block_editor, categoria_selector
 │   │   ├── crud_catalogs/ → pais_tab, categoria_tab, pista_tab, fondo_tab, catalog_panel
 │   │   └── providers/     → admin_providers, auth_providers
-│   ├── dual_mode_wrapper/ → himnario_dual_app, device_mode, device_switch, dual_mode_providers
-│   └── state_management/  → providers (varios)
+│   └── dual_mode_wrapper/ → himnario_dual_app, device_mode, device_switch, dual_mode_providers
 ├── bootstrap/             → app_initializer
 └── main.dart
 ```
@@ -81,9 +79,9 @@ lib/
 - Pistas de audio: reproducción local, barra de progreso, seek, pausa/reanudar
 - Panel admin: CRUD himnos, categorías, países, fondos (color/imagen), pistas
 - Admin directo (icono de ajustes en lugar de candado + login)
-- Al eliminar fondo: se refresca la brocha/vista del himno, se borra el archivo físico
-- Fondos de imagen se copian automáticamente a `{appDocs}/himnario_id/fondos/` al seleccionarlos
-- Al eliminar fondo, solo se borra la copia local de la app, nunca el archivo original del usuario
+- Al eliminar fondo: se refresca la brocha/vista del himno, se borra la copia local (nunca el original)
+- Fondos de imagen se copian automáticamente a `{appDocs}/himnario_id/fondos/` al seleccionarlos (FileStorageService)
+- Limpieza de código muerto: eliminados FondoPantallaTipo.video, 3 directorios huérfanos, login_screen, barrel files, 6 providers deprecados
 - Filtros A-Z, Z-A por título (inteligente: ignora acentos y puntuación)
 - Scroll alfabético lateral (tipo Xiaomi)
 - Búsqueda inteligente (en estrofas, ranking por relevancia, tabla pre-normalizada)
@@ -127,8 +125,10 @@ lib/
 - `feature/settings-panel-sin-login` — Admin directo (icono de ajustes sin login forzoso)
 - `feature/agregar-himnos-convenciones` — 25 himnos de convenciones + mejoras brocha + fondos + fix delete
 - `feature/copiar-fondos-a-local-storage` — FileStorageService, copia de fondos a directorio local de la app
+- `chore/limpieza-codigo-muerto` — 310 líneas eliminadas, 32 archivos. Limpieza post-revert de video
 
 ## Notas técnicas importantes
 - **Fondos de video**: Se intentó implementar con `video_player_media_kit` / `media_kit` + libmpv, pero se descartó por crash irrecuperable en Linux (assertion `group_index >= 0` en libmpv 0.41.0). Todo el código de video fue revertido. Pendiente para cuando Ubuntu actualice libmpv.
 - **File Picker**: Los archivos de fondo (imagen) se seleccionan con `file_picker`. Se copian automáticamente a `{appDocs}/himnario_id/fondos/` con nombre único. Al eliminar un fondo, `FileStorageService.deleteIfAppFile()` solo borra si está dentro del directorio app, nunca el archivo original del usuario.
 - **Riverpod caching**: Los `FutureProvider` cachean su resultado hasta invalidación explícita. Es crítico invalidar `fondosActivosProvider` tras crear/editar/eliminar fondos.
+- **Limpieza de código muerto (20 mayo 2026)**: Se eliminaron `FondoPantallaTipo.video`, 3 directorios huérfanos (`state_management/`, `app_controller/`, `app_display/`), `login_screen.dart`, barrel files (`views_admin.dart`, `views_personal.dart`, `views_projection.dart`), y 6 providers deprecados de `live_control_providers.dart`. Total: 310 líneas, 32 archivos.
