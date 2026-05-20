@@ -97,6 +97,7 @@ Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
     'bgFondoId': appearance.selectedFondo?.id,
     'bgTipo': appearance.selectedFondo?.tipo.value,
     'bgRuta': appearance.selectedFondo?.rutaArchivo,
+    'colorHex': appearance.selectedFondo?.colorHex,
     // Campos legacy (retrocompatibilidad)
     'backgroundColor': _colorToHex(appearance.bgColor),
     'fontSize': _fontScaleToFontSizeName(appearance.fontScale),

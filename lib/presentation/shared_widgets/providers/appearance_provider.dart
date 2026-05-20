@@ -144,6 +144,8 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
   /// Convierte string hex a Color
   Color _hexToColor(String hex) {
     hex = hex.replaceFirst('#', '');
+    // Si el hex es de 6 dígitos (sin alpha), agregar FF como alpha por defecto
+    if (hex.length == 6) hex = 'FF$hex';
     return Color(int.parse(hex, radix: 16));
   }
 

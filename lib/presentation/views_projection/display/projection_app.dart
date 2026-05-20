@@ -247,11 +247,13 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
         final fondoId = message['bgFondoId'] as int;
         final tipoStr = message['bgTipo'] as String? ?? 'color_solido';
         final ruta = message['bgRuta'] as String?;
+        final hex = message['colorHex'] as String?;
         final fondo = FondoPantalla(
           id: fondoId,
           nombre: '',
           tipo: FondoPantallaTipo.fromValue(tipoStr),
           rutaArchivo: ruta,
+          colorHex: hex,
         );
         appearanceNotifier.setFondo(fondo);
       } else {
