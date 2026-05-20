@@ -438,6 +438,15 @@ class _FondoTabState extends ConsumerState<FondoTab> {
             ],
           ],
         ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _showColorPicker(context, theme, _colorController.text.trim()),
+            icon: const Icon(Icons.palette, size: 18),
+            label: const Text('Selector de color'),
+          ),
+        ),
         const SizedBox(height: 12),
         Text(
           'Colores rápidos',
@@ -676,6 +685,173 @@ class _FondoTabState extends ConsumerState<FondoTab> {
     );
   }
 
+  void _showColorPicker(BuildContext context, ThemeData theme, String currentHex) {
+    // Color inicial: intentar parsear el hex actual, o negro por defecto
+    Color initialColor;
+    try {
+      final clean = currentHex.replaceFirst('#', '');
+      if (clean.length == 6) {
+        initialColor = Color(int.parse('FF$clean', radix: 16));
+      } else if (clean.length == 8) {
+        initialColor = Color(int.parse(clean, radix: 16));
+      } else {
+        initialColor = Colors.black;
+      }
+    } catch (_) {
+      initialColor = Colors.black;
+    }
+
+    HSVColor hsv = HSVColor.fromColor(initialColor);
+
+    showDialog<Color>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: const Text('Selector de color'),
+              content: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── Rectángulo Saturación × Brillo ──
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double w = constraints.maxWidth;
+                        return GestureDetector(
+                          onPanUpdate: (details) {
+                            final dx = (details.localPosition.dx / w).clamp(0.0, 1.0);
+                            final dy = (details.localPosition.dy / 200).clamp(0.0, 1.0);
+                            setDialogState(() {
+                              hsv = HSVColor.fromAHSV(1.0, hsv.hue, dx, 1.0 - dy);
+                            });
+                          },
+                          child: Container(
+                            width: w,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              gradient: LinearGradient(
+                                colors: [
+                                  HSVColor.fromAHSV(1.0, hsv.hue, 0.0, 1.0).toColor(),
+                                  HSVColor.fromAHSV(1.0, hsv.hue, 1.0, 1.0).toColor(),
+                                ],
+                                stops: const [0.0, 0.5],
+                              ),
+                              border: Border.all(color: theme.dividerColor),
+                            ),
+                            foregroundDecoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black,
+                                ],
+                                stops: const [0.0, 0.5],
+                              ),
+                            ),
+                            child: CustomPaint(
+                              painter: _CrosshairPainter(
+                                color: hsv.toColor().computeLuminance() > 0.5
+                                    ? Colors.black
+                                    : Colors.white,
+                                saturation: hsv.saturation,
+                                brightness: hsv.value,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // ── Slider de Tono (Hue) ──
+                    Container(
+                      height: 24,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFFF0000), // 0°
+                            Color(0xFFFFFF00), // 60°
+                            Color(0xFF00FF00), // 120°
+                            Color(0xFF00FFFF), // 180°
+                            Color(0xFF0000FF), // 240°
+                            Color(0xFFFF00FF), // 300°
+                            Color(0xFFFF0000), // 360°
+                          ],
+                        ),
+                      ),
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 24,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                          activeTrackColor: Colors.transparent,
+                          inactiveTrackColor: Colors.transparent,
+                        ),
+                        child: Slider(
+                          value: hsv.hue,
+                          min: 0.0,
+                          max: 360.0,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              hsv = HSVColor.fromAHSV(1.0, value, hsv.saturation, hsv.value);
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // ── Previsualización + Hex ──
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: hsv.toColor(),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          '#${hsv.toColor().toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(hsv.toColor()),
+                  child: const Text('Seleccionar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((selectedColor) {
+      if (selectedColor != null) {
+        final hex = '#${selectedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+        _colorController.text = hex;
+        setState(() {});
+      }
+    });
+  }
+
   Widget _buildFondoPreview(FondoPantalla fondo) {
     if (fondo.tipo == FondoPantallaTipo.colorSolido && fondo.colorHex != null) {
       Color? color;
@@ -765,4 +941,43 @@ class _ColorOption extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Pinta un crosshair en la posición saturación/brillo del selector de color.
+class _CrosshairPainter extends CustomPainter {
+  final Color color;
+  final double saturation;
+  final double brightness;
+
+  _CrosshairPainter({
+    required this.color,
+    required this.saturation,
+    required this.brightness,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = saturation * size.width;
+    final cy = (1.0 - brightness) * size.height;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    // Círculo
+    canvas.drawCircle(Offset(cx, cy), 8, paint);
+
+    // Líneas de crosshair
+    canvas.drawLine(Offset(cx - 14, cy), Offset(cx - 5, cy), paint);
+    canvas.drawLine(Offset(cx + 5, cy), Offset(cx + 14, cy), paint);
+    canvas.drawLine(Offset(cx, cy - 14), Offset(cx, cy - 5), paint);
+    canvas.drawLine(Offset(cx, cy + 5), Offset(cx, cy + 14), paint);
+  }
+
+  @override
+  bool shouldRepaint(_CrosshairPainter oldDelegate) =>
+      oldDelegate.saturation != saturation ||
+      oldDelegate.brightness != brightness ||
+      oldDelegate.color != color;
 }

@@ -148,8 +148,8 @@ void showBrushSheet(
     showDialog<void>(
       context: context,
       builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
+        return Consumer(
+          builder: (context, ref, _) {
             final colorScheme = Theme.of(context).colorScheme;
             final textTheme = Theme.of(context).textTheme;
             final appearance = ref.watch(hymnAppearanceProvider);
@@ -166,7 +166,6 @@ void showBrushSheet(
                     appearance: appearance,
                     fondosAsync: fondosAsync,
                     ref: ref,
-                    setSheetState: setSheetState,
                   ),
                 ),
               ),
@@ -181,8 +180,8 @@ void showBrushSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
+        return Consumer(
+          builder: (context, ref, _) {
             final colorScheme = Theme.of(context).colorScheme;
             final textTheme = Theme.of(context).textTheme;
             final appearance = ref.watch(hymnAppearanceProvider);
@@ -218,7 +217,6 @@ void showBrushSheet(
                         appearance: appearance,
                         fondosAsync: fondosAsync,
                         ref: ref,
-                        setSheetState: setSheetState,
                       ),
                     ],
                   ),
@@ -239,7 +237,6 @@ List<Widget> _brushSheetChildren({
   required HymnAppearanceState appearance,
   required AsyncValue<List<FondoPantalla>> fondosAsync,
   required WidgetRef ref,
-  required void Function(void Function()) setSheetState,
 }) {
   return [
     // ---- Title ----
@@ -328,7 +325,7 @@ List<Widget> _brushSheetChildren({
               onTap: () {
                 ref.read(hymnAppearanceProvider.notifier).setFondo(fondo);
                 _syncAppearanceToProjection(ref);
-                setSheetState(() {});
+                
               },
             );
           }).toList(),
@@ -369,7 +366,7 @@ List<Widget> _brushSheetChildren({
                   .read(hymnAppearanceProvider.notifier)
                   .setCardOpacity(value);
               _syncAppearanceToProjection(ref);
-              setSheetState(() {});
+              
             },
           ),
         ),
@@ -415,7 +412,7 @@ List<Widget> _brushSheetChildren({
                   .read(hymnAppearanceProvider.notifier)
                   .setFontScale(value);
               _syncAppearanceToProjection(ref);
-              setSheetState(() {});
+              
             },
           ),
         ),
@@ -452,7 +449,7 @@ List<Widget> _brushSheetChildren({
                     .read(hymnAppearanceProvider.notifier)
                     .setProjectionFontScale(value);
                 _syncAppearanceToProjection(ref);
-                setSheetState(() {});
+                
               },
             ),
           ),
@@ -492,7 +489,7 @@ List<Widget> _brushSheetChildren({
                 .read(hymnAppearanceProvider.notifier)
                 .setTextColor(color);
             _syncAppearanceToProjection(ref);
-            setSheetState(() {});
+            
           },
         );
       }).toList(),
@@ -523,7 +520,7 @@ List<Widget> _brushSheetChildren({
                 .read(hymnAppearanceProvider.notifier)
                 .setChordColor(color);
             _syncAppearanceToProjection(ref);
-            setSheetState(() {});
+            
           },
         );
       }).toList(),
@@ -561,7 +558,7 @@ List<Widget> _brushSheetChildren({
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Merriweather');
             _syncAppearanceToProjection(ref);
-            setSheetState(() {});
+            
           },
         ),
         _FontOption(
@@ -572,7 +569,7 @@ List<Widget> _brushSheetChildren({
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Lora');
             _syncAppearanceToProjection(ref);
-            setSheetState(() {});
+            
           },
         ),
         _FontOption(
@@ -583,7 +580,7 @@ List<Widget> _brushSheetChildren({
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Playfair Display');
             _syncAppearanceToProjection(ref);
-            setSheetState(() {});
+            
           },
         ),
         _FontOption(
@@ -594,7 +591,7 @@ List<Widget> _brushSheetChildren({
           onTap: () {
             ref.read(hymnAppearanceProvider.notifier).setFontFamily('Cinzel');
             _syncAppearanceToProjection(ref);
-            setSheetState(() {});
+            
           },
         ),
       ],
@@ -618,7 +615,7 @@ List<Widget> _brushSheetChildren({
       onChanged: (bool value) {
         ref.read(hymnAppearanceProvider.notifier).setIsBold(value);
         _syncAppearanceToProjection(ref);
-        setSheetState(() {});
+        
       },
     ),
     const SizedBox(height: 24),
@@ -633,7 +630,7 @@ List<Widget> _brushSheetChildren({
               .read(hymnAppearanceProvider.notifier)
               .reset();
           _syncAppearanceToProjection(ref);
-          setSheetState(() {});
+          
         },
         icon: const Icon(Icons.restart_alt),
         label: const Text('Restablecer valores'),
