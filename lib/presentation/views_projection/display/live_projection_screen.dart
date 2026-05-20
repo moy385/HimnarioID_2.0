@@ -79,7 +79,7 @@ class LiveProjectionScreen extends ConsumerWidget {
     );
   }
 
-  /// Envuelve el contenido con el fondo apropiado (imagen, video o color sólido).
+  /// Envuelve el contenido con el fondo apropiado (imagen o color sólido).
   Widget _buildFondo(HymnAppearanceState appearance, Widget slideContent) {
     final fondo = appearance.selectedFondo;
     if (fondo == null) {
@@ -97,13 +97,6 @@ class LiveProjectionScreen extends ConsumerWidget {
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
-            slideContent,
-          ],
-        ),
-      FondoPantallaTipo.video => Stack(
-          children: [
-            Container(color: Colors.black87),
-            Container(color: Colors.black26),
             slideContent,
           ],
         ),
@@ -296,7 +289,7 @@ class _LyricsSlide extends StatelessWidget {
     final double projectionWidth =
         MediaQuery.of(context).size.width - 80; // 40px padding each side
     final double screenHeight = MediaQuery.of(context).size.height;
-    final double estrofaLabelHeight = 40.0;
+    const double estrofaLabelHeight = 40.0;
     final double progressDotsHeight = totalSlides > 1 ? 32.0 : 0.0;
     final double availableHeight =
         screenHeight - 48 - estrofaLabelHeight - progressDotsHeight;

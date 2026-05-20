@@ -5,54 +5,14 @@ import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/projection_slide.dart';
 
 // ═══════════════════════════════════════════════════════════════
-// Providers independientes (infraestructura / legacy)
+// Providers independientes
 // ═══════════════════════════════════════════════════════════════
 
 /// Provider del himno activo actualmente en proyección.
 final activeHymnProvider = StateProvider<Himno?>((ref) => null);
 
-/// Provider de la lista completa de estrofas del himno activo.
-///
-/// Deriva del [liveControlProvider] para mantenerse sincronizado.
-/// @Deprecated('Usar liveControlProvider en lugar de providers sueltos')
-final estrofasProvider = Provider<List<Estrofa>>((ref) {
-  return ref.watch(liveControlProvider).estrofas;
-});
-
-/// Provider del índice de la estrofa actual en la proyección.
-///
-/// Deriva del [liveControlProvider] para mantenerse sincronizado.
-/// @Deprecated('Usar currentSlideIndex de LiveControlState')
-final currentStanzaIndexProvider = Provider<int>((ref) {
-  return ref.watch(liveControlProvider).currentIndex;
-});
-
 /// Provider que indica si la pantalla está en modo blackout.
 final isBlackoutProvider = StateProvider<bool>((ref) => false);
-
-/// Provider que retorna la estrofa actual.
-/// @Deprecated('Usar currentSlide de LiveControlState')
-final currentStanzaProvider = Provider<Estrofa?>((ref) {
-  return ref.watch(liveControlProvider).currentStanza;
-});
-
-/// Provider que retorna la siguiente estrofa (si existe).
-/// @Deprecated('Usar nextSlide de LiveControlState')
-final nextStanzaProvider = Provider<Estrofa?>((ref) {
-  return ref.watch(liveControlProvider).nextStanza;
-});
-
-/// Provider que retorna true si hay una estrofa siguiente.
-/// @Deprecated('Usar hasNextSlide de LiveControlState')
-final hasNextStanzaProvider = Provider<bool>((ref) {
-  return ref.watch(liveControlProvider).hasNextSlide;
-});
-
-/// Provider que retorna true si hay una estrofa anterior.
-/// @Deprecated('Usar hasPrevSlide de LiveControlState')
-final hasPrevStanzaProvider = Provider<bool>((ref) {
-  return ref.watch(liveControlProvider).hasPrevSlide;
-});
 
 /// Provider que retorna el slide actual de la proyección.
 final currentSlideProvider = Provider<ProjectionSlide?>((ref) {
@@ -119,48 +79,6 @@ class LiveControlState {
   /// Slide anterior (si existe).
   ProjectionSlide? get prevSlide =>
       hasPrevSlide ? slides[currentSlideIndex - 1] : null;
-
-  // ── Getters backward compat (@Deprecated) ──────────────────
-
-  /// @Deprecated('Usar slides en su lugar')
-  @Deprecated('Usar slides y whereType<LyricsSlide>()')
-  List<Estrofa> get estrofas =>
-      slides.whereType<LyricsSlide>().map((s) => s.estrofa).toList();
-
-  /// @Deprecated('Usar currentSlideIndex en su lugar')
-  @Deprecated('Usar currentSlideIndex en su lugar')
-  int get currentIndex {
-    if (!slides.any((s) => s is LyricsSlide)) return 0;
-    if (currentSlideIndex <= 0) return 0;
-    if (currentSlideIndex >= slides.length - 1) {
-      return slides.whereType<LyricsSlide>().length - 1;
-    }
-    return currentSlideIndex - 1;
-  }
-
-  /// @Deprecated('Usar hasNextSlide en su lugar')
-  @Deprecated('Usar hasNextSlide en su lugar')
-  bool get hasNext => hasNextSlide;
-
-  /// @Deprecated('Usar hasPrevSlide en su lugar')
-  @Deprecated('Usar hasPrevSlide en su lugar')
-  bool get hasPrev => hasPrevSlide;
-
-  /// @Deprecated('Usar currentSlide en su lugar')
-  @Deprecated('Usar currentSlide y pattern matching')
-  Estrofa? get currentStanza {
-    final slide = currentSlide;
-    if (slide is LyricsSlide) return slide.estrofa;
-    return null;
-  }
-
-  /// @Deprecated('Usar nextSlide en su lugar')
-  @Deprecated('Usar nextSlide y pattern matching')
-  Estrofa? get nextStanza {
-    final next = nextSlide;
-    if (next is LyricsSlide) return next.estrofa;
-    return null;
-  }
 
   // ── copyWith ───────────────────────────────────────────────
 
@@ -276,20 +194,6 @@ class LiveControlNotifier extends StateNotifier<LiveControlState> {
       );
     }
   }
-
-  // ── Métodos backward compat (@Deprecated) ──────────────────
-
-  /// @Deprecated('Usar nextSlide() en su lugar')
-  @Deprecated('Usar nextSlide() en su lugar')
-  void nextStanza() => nextSlide();
-
-  /// @Deprecated('Usar prevSlide() en su lugar')
-  @Deprecated('Usar prevSlide() en su lugar')
-  void prevStanza() => prevSlide();
-
-  /// @Deprecated('Usar goToSlide(index + 1) en su lugar')
-  @Deprecated('Usar goToSlide(int index) en su lugar (nota: +1 por TitleSlide)')
-  void goToStanza(int index) => goToSlide(index + 1);
 
   // ── Blackout ───────────────────────────────────────────────
 

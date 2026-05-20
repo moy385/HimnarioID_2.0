@@ -245,7 +245,7 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       appearanceNotifier.setCardOpacity((message['cardOpacity'] as num).toDouble());
     }
 
-    // ── Fondo seleccionado (imagen, video o color) ──
+    // ── Fondo seleccionado (imagen o color) ──
     if (message.containsKey('bgFondoId')) {
       if (message['bgFondoId'] != null) {
         final fondoId = message['bgFondoId'] as int;

@@ -11,7 +11,7 @@ import '../../../core/enums/fondo_pantalla_tipo.dart';
 /// Controla fondo, colores de texto/acordes, tamaño de fuente y toggle de acordes.
 class HymnAppearanceState {
   final Color bgColor;
-  final FondoPantalla? selectedFondo; // fondo seleccionado (imagen, video o color)
+  final FondoPantalla? selectedFondo; // fondo seleccionado (imagen o color)
   final Color textColor;
   final Color chordColor;
   final double fontScale;
@@ -171,7 +171,6 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
             : Colors.transparent;
         break;
       case FondoPantallaTipo.imagen:
-      case FondoPantallaTipo.video:
         resolvedColor = Colors.transparent;
     }
     state = state.copyWith(

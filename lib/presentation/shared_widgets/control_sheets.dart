@@ -1277,7 +1277,7 @@ class HymnSearchDelegate extends SearchDelegate<int> {
 }
 
 // =============================================================================
-// 5. _FondoItem — Preview de fondo según su tipo (color, imagen, video)
+// 5. _FondoItem — Preview de fondo según su tipo (color o imagen)
 // =============================================================================
 
 /// Widget que muestra preview de un fondo según su tipo.
@@ -1304,7 +1304,6 @@ class _FondoItem extends StatelessWidget {
           switch (fondo.tipo) {
             FondoPantallaTipo.colorSolido => _buildColorPreview(colorScheme),
             FondoPantallaTipo.imagen => _buildImagePreview(colorScheme),
-            FondoPantallaTipo.video => _buildVideoPreview(colorScheme),
           },
           const SizedBox(height: 4),
           SizedBox(
@@ -1358,25 +1357,6 @@ class _FondoItem extends StatelessWidget {
         child: Center(
           child: Icon(
             Icons.image,
-            size: 24,
-            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVideoPreview(ColorScheme colorScheme) {
-    return _previewContainer(
-      colorScheme: colorScheme,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Icon(
-            Icons.videocam,
             size: 24,
             color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
           ),

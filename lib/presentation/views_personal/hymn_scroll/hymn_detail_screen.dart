@@ -822,7 +822,7 @@ class _AudioPlayerBarState extends State<_AudioPlayerBar> {
   }
 }
 
-/// Renderiza el fondo según el tipo seleccionado (color, imagen o video).
+/// Renderiza el fondo según el tipo seleccionado (color o imagen).
 class _FondoBackground extends StatelessWidget {
   final FondoPantalla? fondo;
   final Color bgColor;
@@ -853,13 +853,6 @@ class _FondoBackground extends StatelessWidget {
                   errorBuilder: (_, __, ___) => Container(color: bgColor),
                 ),
               ),
-            child,
-          ],
-        ),
-      FondoPantallaTipo.video => Stack(
-          children: [
-            Container(color: Colors.black87),
-            Container(color: Colors.black26),
             child,
           ],
         ),

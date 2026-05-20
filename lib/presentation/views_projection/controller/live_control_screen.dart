@@ -233,8 +233,10 @@ class LiveControlScreen extends ConsumerWidget {
 
   /// Encuentra el índice del primer coro en la lista de estrofas.
   int _findChorusIndex(WidgetRef ref) {
-    final estrofas = ref.read(estrofasProvider);
-    final chorusIndex = estrofas.indexWhere((e) => e.isChorus);
+    final liveState = ref.read(liveControlProvider);
+    final chorusIndex = liveState.slides.indexWhere(
+      (s) => s is LyricsSlide && s.estrofa.isChorus,
+    );
     return chorusIndex >= 0 ? chorusIndex : 0;
   }
 

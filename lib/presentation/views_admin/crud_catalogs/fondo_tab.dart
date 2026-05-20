@@ -32,7 +32,7 @@ final _fondoListProvider =
 ///
 /// Permite crear, editar y eliminar fondos. El formulario es condicional:
 /// - Si tipo = color_solido → campo color_hex con vista previa
-/// - Si tipo = imagen/video → campo ruta_archivo
+/// - Si tipo = imagen → campo ruta_archivo
 /// Incluye checkbox "Predeterminado".
 class FondoTab extends ConsumerStatefulWidget {
   const FondoTab({super.key});
@@ -260,10 +260,6 @@ class _FondoTabState extends ConsumerState<FondoTab> {
                       child: Text('Imagen'),
                     ),
                     DropdownMenuItem(
-                      value: FondoPantallaTipo.video,
-                      child: Text('Video'),
-                    ),
-                    DropdownMenuItem(
                       value: FondoPantallaTipo.colorSolido,
                       child: Text('Color sólido'),
                     ),
@@ -283,9 +279,7 @@ class _FondoTabState extends ConsumerState<FondoTab> {
                         child: TextField(
                           controller: _rutaController,
                           decoration: InputDecoration(
-                            labelText: _tipo == FondoPantallaTipo.imagen
-                                ? 'Ruta de imagen'
-                                : 'Ruta de video',
+                            labelText: 'Ruta de imagen',
                             hintText: 'Selecciona un archivo...',
                             isDense: true,
                           ),
@@ -909,16 +903,10 @@ class _FondoTabState extends ConsumerState<FondoTab> {
       );
     }
     return CircleAvatar(
-      backgroundColor: fondo.tipo == FondoPantallaTipo.video
-          ? Colors.blue.shade100
-          : Colors.green.shade100,
+      backgroundColor: Colors.green.shade100,
       child: Icon(
-        fondo.tipo == FondoPantallaTipo.video
-            ? Icons.videocam
-            : Icons.image,
-        color: fondo.tipo == FondoPantallaTipo.video
-            ? Colors.blue.shade700
-            : Colors.green.shade700,
+        Icons.image,
+        color: Colors.green.shade700,
       ),
     );
   }
@@ -927,8 +915,6 @@ class _FondoTabState extends ConsumerState<FondoTab> {
     switch (tipo) {
       case FondoPantallaTipo.imagen:
         return 'Imagen';
-      case FondoPantallaTipo.video:
-        return 'Video';
       case FondoPantallaTipo.colorSolido:
         return 'Color sólido';
     }

@@ -1,7 +1,6 @@
 /// Tipos de fondo de pantalla disponibles en el sistema.
 enum FondoPantallaTipo {
   imagen('imagen'),
-  video('video'),
   colorSolido('color_solido');
 
   final String value;
