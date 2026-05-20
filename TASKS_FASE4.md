@@ -2,7 +2,7 @@
 > Las tareas descritas aquí fueron ejecutadas. El estado actual del proyecto
 > incluye las mejoras de SET_CONFIG (showChords), proyección con scroll,
 > y reflow de acordes. Ver `doc/CONTEXTO_PROYECTO.md` para estado actual.
-> Fecha de archivo: 19 de mayo de 2026
+> Fecha de archivo: 20 de mayo de 2026
 
 # Fase 4: Probar `SubprocessWindowService` en Linux
 

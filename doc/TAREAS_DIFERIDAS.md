@@ -1,6 +1,6 @@
 # Tareas Diferidas — Próximos Sprints
 
-> **Actualización (19 mayo 2026):** Se agregaron 21 tests de ChordParser (263 unit/widget total). El proyecto tiene 274 tests contando integración.
+> **Actualización (20 mayo 2026):** Proyecto estable con 274 tests. Pendiente: split APK, tests, gRPC, fondos de video (pospuesto).
 > 
 > Este documento registra las tareas identificadas por @documentador que fueron diferidas por exceder ~1h de trabajo o requerir infraestructura nueva. Se planificarán en sprints posteriores.
 

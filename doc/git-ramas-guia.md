@@ -2,7 +2,7 @@
 ### Para flujo de trabajo en equipo pequeño (1 persona) con Flutter/Dart en Linux
 
 > **Propósito:** Referencia rápida para el desarrollo de HimnarioID 2.0
-> **Fecha:** 19 de mayo de 2026
+> **Fecha:** 20 de mayo de 2026
 
 ---
 
@@ -305,6 +305,8 @@ git merge --no-ff feature/login
 | `feature/acordes-toggle-global` | Toggle showChords persistente, botón Solfa funcional | ✅ Mergeada a main |
 | `feature/proyeccion-auto-fit` | Scroll condicional, medición de contenido | ✅ Mergeada a main |
 | `feature/proyeccion-line-breaking` | Reflow de acordes con StanzaLayoutEngine | ✅ Mergeada a main |
+| `feature/settings-panel-sin-login` | Admin directo (icono ajustes sin login forzoso) | ✅ Mergeada a main |
+| `feature/agregar-himnos-convenciones` | 25 himnos + brocha mejorada + fondos + fix delete | ✅ Mergeada a main |
 
 ---
 

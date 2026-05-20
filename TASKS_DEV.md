@@ -1,7 +1,7 @@
 > ⚠️ **DOCUMENTO HISTÓRICO** — Sprint 5 (mayo 2026)
 > La mayoría de las tareas aquí descritas fueron implementadas en sprints anteriores.
 > Para el estado actual del proyecto, consultar `doc/tareas_pendientes.md`.
-> Fecha de archivo: 19 de mayo de 2026
+> Fecha de archivo: 20 de mayo de 2026
 
 # Tareas para @dev
 
