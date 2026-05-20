@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logging/logging.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
@@ -43,8 +39,6 @@ class FondoTab extends ConsumerStatefulWidget {
 }
 
 class _FondoTabState extends ConsumerState<FondoTab> {
-  static final _log = Logger('FondoTab');
-
   // Formulario
   final _nombreController = TextEditingController();
   final _rutaController = TextEditingController();
@@ -289,65 +283,10 @@ class _FondoTabState extends ConsumerState<FondoTab> {
                           final result = await FilePicker.platform.pickFiles(
                             type: FileType.media,
                             allowMultiple: false,
-                            withReadStream: true,
                           );
                           if (result != null && result.files.isNotEmpty) {
-                            final file = result.files.single;
-                            final originalPath = file.path ?? '';
-                            _log.info('Archivo seleccionado: $originalPath');
-
-                            // Copiar a almacenamiento local de la app
-                            // para evitar permisos de content:// URI
-                            try {
-                              final dir = await getApplicationDocumentsDirectory();
-                              final fondosDir = Directory(
-                                '${dir.path}/fondos',
-                              );
-                              await fondosDir.create(recursive: true);
-                              final ext = originalPath.contains('.')
-                                  ? '.${originalPath.split('.').last}'
-                                  : _tipo == FondoPantallaTipo.video
-                                      ? '.mp4'
-                                      : '.jpg';
-                              final targetPath =
-                                  '${fondosDir.path}/${_tipo.name}_${DateTime.now().millisecondsSinceEpoch}$ext';
-
-                              final uri = Uri.tryParse(originalPath);
-                              if (uri != null && uri.scheme == 'content') {
-                                // content:// URI → copiar vía readStream
-                                final stream = file.readStream;
-                                if (stream != null) {
-                                  _log.info(
-                                    'Copiando desde content URI a $targetPath',
-                                  );
-                                  final sink = File(targetPath).openWrite();
-                                  await stream.pipe(sink);
-                                  await sink.flush();
-                                  await sink.close();
-                                  _rutaController.text = targetPath;
-                                  _log.info('Video copiado a: $targetPath');
-                                } else {
-                                  _log.warning(
-                                    'readStream es null para content URI, usando ruta original',
-                                  );
-                                  _rutaController.text = originalPath;
-                                }
-                              } else {
-                                // Ruta de sistema regular
-                                _log.info(
-                                  'Copiando desde $originalPath a $targetPath',
-                                );
-                                await File(originalPath).copy(targetPath);
-                                _rutaController.text = targetPath;
-                                _log.info('Archivo copiado a: $targetPath');
-                              }
-                            } catch (e) {
-                              _log.severe(
-                                'Error copiando archivo: $e',
-                              );
-                              // Fallback: usar ruta original
-                              _rutaController.text = originalPath;
-                            }
+                            _rutaController.text =
+                                result.files.single.path ?? '';
                           }
                         },
                       ),

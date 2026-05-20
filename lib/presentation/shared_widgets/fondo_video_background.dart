@@ -39,43 +39,24 @@ class _FondoVideoBackgroundState extends State<FondoVideoBackground> {
   }
 
   void _initVideo() {
-    final rawPath = widget.rutaArchivo;
-    _log.info('Inicializando video desde: "$rawPath"');
+    final uri = Uri.tryParse(widget.rutaArchivo);
 
-    final uri = Uri.tryParse(rawPath);
-
+    // ── Detectar si es content:// URI (Android scoped storage) ──
     if (uri != null && uri.scheme == 'content') {
-      // ── content:// URI (Android scoped storage) ──
-      _log.info('Usando VideoPlayerController.contentUri()');
+      _log.info('Inicializando video desde content URI: ${widget.rutaArchivo}');
       _controller = VideoPlayerController.contentUri(uri);
-    } else if (uri != null && uri.scheme == 'file') {
-      // ── file:// URI → convertir a ruta de sistema ──
-      final filePath = uri.toFilePath();
-      _log.info('file:// URI convertido a ruta: $filePath');
-      final file = File(filePath);
-      if (!file.existsSync()) {
-        _log.warning('Archivo no encontrado: $filePath');
-        if (mounted) setState(() => _hasError = true);
-        return;
-      }
-      _controller = VideoPlayerController.file(file);
     } else {
-      // ── Ruta absoluta de sistema (o relativa) ──
-      final file = File(rawPath);
+      final file = File(widget.rutaArchivo);
       if (!file.existsSync()) {
-        _log.warning('Archivo no encontrado: $rawPath');
+        _log.warning('Archivo de video no encontrado: ${widget.rutaArchivo}');
         if (mounted) setState(() => _hasError = true);
         return;
       }
-      _log.info('Usando VideoPlayerController.file(): $rawPath');
       _controller = VideoPlayerController.file(file);
     }
 
-    if (_controller == null) return;
-
     _controller!.initialize().then((_) {
       if (mounted) {
-        _log.info('Video inicializado correctamente: ${_controller!.value.size}');
         _controller!.setLooping(true);
         _controller!.setVolume(0);
         _controller!.play();
