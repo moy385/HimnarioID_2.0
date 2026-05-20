@@ -39,22 +39,14 @@ class _FondoVideoBackgroundState extends State<FondoVideoBackground> {
   }
 
   void _initVideo() {
-    final uri = Uri.tryParse(widget.rutaArchivo);
-
-    // ── Detectar si es content:// URI (Android scoped storage) ──
-    if (uri != null && uri.scheme == 'content') {
-      _log.info('Inicializando video desde content URI: ${widget.rutaArchivo}');
-      _controller = VideoPlayerController.contentUri(uri);
-    } else {
-      final file = File(widget.rutaArchivo);
-      if (!file.existsSync()) {
-        _log.warning('Archivo de video no encontrado: ${widget.rutaArchivo}');
-        if (mounted) setState(() => _hasError = true);
-        return;
-      }
-      _controller = VideoPlayerController.file(file);
+    final file = File(widget.rutaArchivo);
+    if (!file.existsSync()) {
+      _log.warning('Archivo de video no encontrado: ${widget.rutaArchivo}');
+      if (mounted) setState(() => _hasError = true);
+      return;
     }
 
+    _controller = VideoPlayerController.file(file);
     _controller!.initialize().then((_) {
       if (mounted) {
         _controller!.setLooping(true);
@@ -97,52 +89,23 @@ class _FondoVideoBackgroundState extends State<FondoVideoBackground> {
       );
     }
 
-    return _VideoBackground(
-      controller: _controller!,
-      child: Stack(
-        children: [
-          // Overlay oscuro sutil para legibilidad
-          Container(color: Colors.black26),
-          // Contenido centrado
-          Positioned.fill(child: widget.child),
-        ],
-      ),
-    );
-  }
-}
-
-/// Renderiza el [VideoPlayer] cubriendo todo el espacio disponible
-/// con [BoxFit.cover], manteniendo la relación de aspecto original.
-class _VideoBackground extends StatelessWidget {
-  final VideoPlayerController controller;
-  final Widget child;
-
-  const _VideoBackground({
-    required this.controller,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final videoSize = controller.value.size;
-    if (videoSize == Size.zero) return child;
-
     return Stack(
       children: [
-        // Video escalado para cubrir toda el area
+        // Video como fondo
         Positioned.fill(
           child: FittedBox(
             fit: BoxFit.cover,
-            clipBehavior: Clip.hardEdge,
             child: SizedBox(
-              width: videoSize.width,
-              height: videoSize.height,
-              child: VideoPlayer(controller),
+              width: _controller!.value.size.width,
+              height: _controller!.value.size.height,
+              child: VideoPlayer(_controller!),
             ),
           ),
         ),
-        // Contenido encima
-        Positioned.fill(child: child),
+        // Overlay oscuro sutil para legibilidad
+        Container(color: Colors.black26),
+        // Contenido centrado
+        Positioned.fill(child: widget.child),
       ],
     );
   }
