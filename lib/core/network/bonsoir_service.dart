@@ -40,24 +40,12 @@ class BonsoirService {
 
   void _onDiscoveryEvent(BonsoirDiscoveryEvent event) {
     switch (event) {
-      case BonsoirDiscoveryServiceFoundEvent(service: final service):
-        _log.info('Servicio encontrado: ${service.name}, resolviendo...');
-        // En v7, se necesita resolver explícitamente para obtener IP/puerto
-        _discovery?.serviceResolver.resolveService(service);
-
-      case BonsoirDiscoveryServiceResolveFailedEvent():
-        _log.warning('Resolución de servicio falló');
-
       case BonsoirDiscoveryServiceResolvedEvent(service: final service):
-        _log.info('Servicio RESUELTO: ${service.name}');
-        // En v7: usar hostname para mostrar, hostAddresses para conectar
-        final ip = service.hostAddresses.isNotEmpty
-            ? service.hostAddresses.first
-            : '0.0.0.0';
+        _log.info('Servicio RESUELTO: ${service.name} en ${service.host}');
         _serviceController.add(
           BonsoirDiscoveredService(
             name: service.name,
-            ip: ip,
+            ip: service.host ?? '0.0.0.0',
             port: service.port,
             attributes: Map<String, String>.from(service.attributes),
             isNew: true,
@@ -67,13 +55,10 @@ class BonsoirService {
 
       case BonsoirDiscoveryServiceLostEvent(service: final service):
         _log.info('Servicio perdido: ${service.name}');
-        final ip = service.hostAddresses.isNotEmpty
-            ? service.hostAddresses.first
-            : '0.0.0.0';
         _serviceController.add(
           BonsoirDiscoveredService(
             name: service.name,
-            ip: ip,
+            ip: service.host ?? '0.0.0.0',
             port: service.port,
             attributes: Map<String, String>.from(service.attributes),
             isNew: false,
@@ -82,6 +67,7 @@ class BonsoirService {
         );
 
       default:
+        _log.fine('Evento Bonsoir ignorado: ${event.runtimeType}');
         break;
     }
   }
