@@ -13,6 +13,7 @@ dependencies:
   # Comunicación LAN (gRPC + mDNS)
   grpc: ^5.1.0
   multicast_dns: ^0.3.3
+  bonsoir: ^6.1.0
 
   # Base de datos local (SQLite)
   sqflite: ^2.4.1

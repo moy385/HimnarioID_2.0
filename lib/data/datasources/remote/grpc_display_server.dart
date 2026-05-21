@@ -30,8 +30,8 @@ class GrpcDisplayServer extends HymnControlServiceBase {
   /// Identificador único de la sesión actual.
   final String sessionId;
 
-  /// Puerto en el que escucha el servidor.
-  final int port;
+  /// Puerto real en el que escucha el servidor (se asigna dinámicamente).
+  int _actualPort = defaultPort;
 
   /// Callback para propagar comandos a los providers.
   /// Recibe una función de actualización del [LiveControlState].
@@ -51,37 +51,68 @@ class GrpcDisplayServer extends HymnControlServiceBase {
   /// Indica si el servidor está ejecutándose.
   bool get isRunning => _isRunning;
 
+  /// Puerto en el que escucha el servidor (se asigna dinámicamente al iniciar).
+  int get port => _actualPort;
+
   GrpcDisplayServer({
     this.displayName = 'Display Principal',
     int? port,
     String? sessionId,
     ProviderContainer? container,
-  })  : port = port ?? defaultPort,
+  })  : _actualPort = port ?? defaultPort,
         sessionId = sessionId ?? const Uuid().v4(),
         _container = container;
 
-  /// Inicia el servidor gRPC en [port] escuchando en todas las interfaces.
+  /// Inicia el servidor gRPC escuchando en todas las interfaces.
+  ///
+  /// Intenta puertos desde [defaultPort] hasta [defaultPort + 9] (50051-50060)
+  /// en caso de que el puerto esté ocupado.
   Future<void> start() async {
     if (_isRunning) {
       _log.warning('El servidor ya está en ejecución.');
       return;
     }
 
-    try {
-      _server = Server.create(services: [this]);
-      await _server!.serve(
-        address: InternetAddress.anyIPv4,
-        port: port,
-      );
-      _isRunning = true;
-      _log.info(
-        'Servidor gRPC iniciado en 0.0.0.0:$port '
-        '(displayName: $displayName, sessionId: $sessionId)',
-      );
-    } catch (e) {
-      _log.severe('Error al iniciar servidor gRPC: $e');
-      rethrow;
+    final maxAttempts = 10;
+    int lastError = 0;
+
+    for (int i = 0; i < maxAttempts; i++) {
+      final tryPort = defaultPort + i;
+      try {
+        _server = Server.create(
+          services: [this],
+          keepAliveOptions: ServerKeepAliveOptions(
+            minIntervalBetweenPingsWithoutData: Duration(seconds: 10),
+            maxBadPings: 3,
+          ),
+        );
+        await _server!.serve(
+          address: InternetAddress.anyIPv4,
+          port: tryPort,
+        );
+        _actualPort = tryPort;
+        _isRunning = true;
+        _log.info(
+          'Servidor gRPC iniciado en 0.0.0.0:$tryPort '
+          '(displayName: $displayName, sessionId: $sessionId)',
+        );
+        return;
+      } catch (e) {
+        lastError = tryPort;
+        _log.warning('Puerto $tryPort no disponible ($e), intentando siguiente...');
+        _server = null;
+      }
     }
+
+    _log.severe(
+      'No se pudo iniciar servidor en ningún puerto entre '
+      '$defaultPort-${defaultPort + maxAttempts - 1}. '
+      'Último error: puerto $lastError',
+    );
+    throw Exception(
+      'No hay puertos disponibles en rango '
+      '$defaultPort-${defaultPort + maxAttempts - 1}',
+    );
   }
 
   /// Detiene el servidor gRPC.

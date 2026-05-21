@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../core/database/database_helper.dart';
+import '../core/network/bonsoir_broadcast_service.dart';
+import '../core/network/bonsoir_service.dart';
 import '../core/network/mdns_discovery.dart';
 import '../data/datasources/remote/grpc_display_server.dart';
 import '../presentation/views_personal/providers/hymn_providers.dart';
@@ -17,6 +19,8 @@ class AppInitializer {
 
   static GrpcDisplayServer? _displayServer;
   static MdnsDiscovery? _mdnsDiscovery;
+  static BonsoirBroadcastService? _bonsoirBroadcast;
+  static BonsoirService? _bonsoirService;
 
   /// El servidor gRPC en ejecución (solo en modo Display).
   static GrpcDisplayServer? get displayServer => _displayServer;
@@ -52,6 +56,11 @@ class AppInitializer {
     // 4. Inicializar servicios de red (mDNS/gRPC) — se salta en subproceso
     if (!skipNetwork) {
       await _initNetworkServices(container);
+    }
+
+    // 5. Iniciar descubrimiento Bonsoir (todas las plataformas)
+    if (!skipNetwork) {
+      await _initBonsoirDiscovery();
     }
 
     _log.info('Inicialización completada.');
@@ -170,6 +179,17 @@ class AppInitializer {
       _log.info(
         'Servidor gRPC iniciado en puerto ${_displayServer!.port}',
       );
+
+      // Iniciar broadcast Bonsoir solo en Windows
+      if (_platform == TargetPlatform.windows) {
+        _bonsoirBroadcast = BonsoirBroadcastService();
+        await _bonsoirBroadcast!.start(
+          name: 'HimnarioID-${_displayServer!.displayName}',
+          port: _displayServer!.port,
+          sessionId: _displayServer!.sessionId,
+          displayName: _displayServer!.displayName,
+        );
+      }
     } catch (e) {
       _log.severe('Error al iniciar servidor gRPC: $e');
       // No relanzar — la app puede funcionar sin servidor gRPC
@@ -196,9 +216,24 @@ class AppInitializer {
     }
   }
 
+  /// Inicia el descubrimiento Bonsoir (todas las plataformas).
+  static Future<void> _initBonsoirDiscovery() async {
+    try {
+      _bonsoirService = BonsoirService();
+      await _bonsoirService!.start();
+      _log.info('Descubrimiento Bonsoir iniciado.');
+    } catch (e) {
+      _log.severe('Error al iniciar BonsoirService: $e');
+    }
+  }
+
   /// Detiene todos los servicios de red.
   static Future<void> dispose() async {
     await _displayServer?.stop();
+    await _bonsoirBroadcast?.stop();
+    _bonsoirBroadcast = null;
+    await _bonsoirService?.stop();
+    _bonsoirService = null;
     await _mdnsDiscovery?.stopDiscovery();
     _mdnsDiscovery?.dispose();
     _log.info('Servicios de red detenidos.');

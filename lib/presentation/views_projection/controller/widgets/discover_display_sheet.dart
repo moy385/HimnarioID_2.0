@@ -1,23 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/connection_state.dart';
+import '../../../../core/network/domain/discovered_display.dart';
+import '../../../../domain/entities/fondo_pantalla.dart';
+import '../../../../domain/repositories/control_repository.dart' as domain;
+import '../../../shared_widgets/providers/fondo_options_provider.dart';
 import '../../display/receptor_binding.dart';
 import '../../providers/connection_providers.dart';
 import '../../providers/discovery_providers.dart';
 
-/// BottomSheet modal para descubrir y conectar displays en la red vía mDNS.
+/// BottomSheet modal para descubrir displays en la red vía mDNS,
+/// conectar y controlar remotamente el display seleccionado.
 ///
-/// Muestra primero la selección de rol (Emisor/Receptor) y, al elegir
-/// Emisor, la vista de escaneo con la lista de dispositivos encontrados.
+/// ## Flujo
+/// 1. Selección de rol (Emisor / Receptor)
+/// 2. Escaneo automático con autorefresco cada 10s
+/// 3. Conexión a un display
+/// 4. Panel de control remoto (fondo, fuente, transposición)
 ///
-/// ## Estados manejados
-/// - Selección de rol: dos cards grandes (Emisor / Receptor)
-/// - Escaneando: indicador de progreso con texto "Buscando displays..."
-/// - Dispositivos encontrados: lista con nombre, IP y puerto
-/// - Conectado: indicador verde y opción de desconectar
-/// - Error: mensaje de error con opción de reintentar
-/// - Vacío: mensaje informativo cuando no hay resultados
+/// Todos los widgets usan [colorScheme] / [textTheme] de Material 3.
 class DiscoverDisplaySheet extends ConsumerStatefulWidget {
   const DiscoverDisplaySheet({super.key});
 
@@ -27,50 +31,70 @@ class DiscoverDisplaySheet extends ConsumerStatefulWidget {
 }
 
 class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
+  // ── D1.1: Timer de autorefresco ────────────────────────────────
+  Timer? _refreshTimer;
+
   /// IP del dispositivo al que se está conectando actualmente.
-  /// Se mantiene tras un error para que el tile muestre "Reintentar".
   String? _connectingIp;
 
-  /// Intenta conectar con el dispositivo seleccionado.
+  /// Clave para el [AnimatedList] de dispositivos.
+  final GlobalKey<AnimatedListState> _listKey =
+      GlobalKey<AnimatedListState>();
+
+  /// Lista actual de dispositivos mostrados (para diff con AnimatedList).
+  List<DeviceInfo> _previousDevices = const [];
+
+  /// Marca temporal del último escaneo completo para controlar el
+  /// mensaje de "no encontrados" tras 10s sin resultados.
+  DateTime? _lastScanCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoRefresh();
+  }
+
+  /// Inicia el timer que invalida [displayScannerProvider] cada 10s.
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted) return;
+      ref.invalidate(displayScannerProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    super.dispose();
+  }
+
+  // ── Acciones ─────────────────────────────────────────────────
+
   Future<void> _connectToDevice(DeviceInfo device) async {
     setState(() {
       _connectingIp = device.ip;
     });
-
     final success = await ref
         .read(connectionStateProvider.notifier)
         .connectToDevice(device);
-
     if (!mounted) return;
-
     if (success) {
-      setState(() {
-        _connectingIp = null;
-      });
+      setState(() => _connectingIp = null);
     }
-    // Si falla, _connectingIp se mantiene para que el tile muestre
-    // "Reintentar" en lugar de "Conectar".
   }
 
-  /// Desconecta del dispositivo actual.
   Future<void> _disconnect() async {
     await ref.read(connectionStateProvider.notifier).disconnect();
     if (!mounted) return;
-    setState(() {
-      _connectingIp = null;
-    });
+    setState(() => _connectingIp = null);
   }
 
-  /// Maneja la selección del rol Emisor.
   void _selectEmitter() {
     ref.read(connectionRoleProvider.notifier).state = ConnectionRole.emitter;
   }
 
-  /// Maneja la selección del rol Receptor.
-  ///
-  /// Valida que el servidor gRPC esté disponible antes de activar el modo
-  /// Receptor. Si no hay servidor (web, móvil, o servidor detenido), muestra
-  /// un mensaje informativo en un SnackBar.
   void _selectReceiver() {
     final server = ref.read(grpcDisplayServerProvider);
     if (server == null || !server.isRunning) {
@@ -88,16 +112,15 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     if (context.mounted) Navigator.pop(context);
   }
 
+  // ── Build ────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final discoveryState = ref.watch(discoveredDevicesProvider);
     final connectionState = ref.watch(connectionStateProvider);
-    final role = ref.watch(connectionRoleProvider);
-
     final isConnected = connectionState is Connected;
-    final connectedDevice = isConnected ? connectionState.device : null;
+    final role = ref.watch(connectionRoleProvider);
     final showScanView = role == ConnectionRole.emitter || isConnected;
 
     return DraggableScrollableSheet(
@@ -116,100 +139,21 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle de arrastre
-              Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 4),
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Conectar Display',
-                        style: textTheme.titleLarge,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded),
-                      style: IconButton.styleFrom(
-                        foregroundColor: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
+              _buildHandle(colorScheme),
+              _buildHeader(colorScheme, textTheme, isConnected),
               const Divider(height: 1),
-
-              // Contenido
+              // ── D1.2: Indicador de carga ──
+              _buildScannerLoadingIndicator(colorScheme),
+              // Contenido principal
               Expanded(
                 child: showScanView
-                    ? ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(24),
-                        children: [
-                          // Sección de escaneo
-                          _buildScanSection(
-                            colorScheme,
-                            textTheme,
-                            discoveryState,
-                          ),
-
-                          // Lista de dispositivos encontrados
-                          if (discoveryState.devices.isNotEmpty) ...[
-                            const SizedBox(height: 24),
-                            Text(
-                              'Dispositivos encontrados',
-                              style: textTheme.titleSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            ...discoveryState.devices.map(
-                              (device) => _buildDeviceTile(
-                                colorScheme,
-                                textTheme,
-                                device,
-                                connectedDevice,
-                                connectionState,
-                              ),
-                            ),
-                          ],
-
-                          // Estado vacío sin escaneo activo ni error
-                          if (!discoveryState.isScanning &&
-                              discoveryState.devices.isEmpty &&
-                              discoveryState.error == null)
-                            _buildEmptyState(colorScheme, textTheme),
-
-                          // Banner de error
-                          if (discoveryState.error != null)
-                            _buildErrorBanner(
-                              colorScheme,
-                              textTheme,
-                              discoveryState.error!,
-                            ),
-                        ],
-                      )
-                    : _buildRoleSelection(
+                    ? _buildScanContent(
                         colorScheme,
                         textTheme,
-                      ),
+                        connectionState,
+                        scrollController,
+                      )
+                    : _buildRoleSelection(colorScheme, textTheme),
               ),
             ],
           ),
@@ -218,48 +162,226 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  /// Pantalla de selección de rol (Emisor / Receptor).
-  ///
-  /// Muestra dos cards grandes con iconos y descripciones. Al seleccionar
-  /// Emisor se transiciona a la vista de escaneo; al seleccionar Receptor
-  /// se cierra el sheet y se activa el modo receptor.
-  Widget _buildRoleSelection(
+  // ── Handle ───────────────────────────────────────────────────
+
+  Widget _buildHandle(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+
+  // ── Header ───────────────────────────────────────────────────
+
+  Widget _buildHeader(
     ColorScheme colorScheme,
     TextTheme textTheme,
+    bool isConnected,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(
         children: [
-          // Card: Soy Emisor
-          _roleCard(
-            icon: Icons.cast_rounded,
-            title: 'Soy Emisor',
-            description: 'Controlar la proyección\ndesde mi dispositivo',
-            backgroundColor: colorScheme.primaryContainer,
-            foregroundColor: colorScheme.onPrimaryContainer,
-            textTheme: textTheme,
-            onTap: _selectEmitter,
+          Expanded(
+            child: Text(
+              isConnected ? 'Panel de Control' : 'Conectar Display',
+              style: textTheme.titleLarge,
+            ),
           ),
-          const SizedBox(height: 16),
-
-          // Card: Soy Receptor
-          _roleCard(
-            icon: Icons.tv_rounded,
-            title: 'Soy Receptor',
-            description: 'Mostrar en esta pantalla\nlo que el emisor envía',
-            backgroundColor: colorScheme.secondaryContainer,
-            foregroundColor: colorScheme.onSecondaryContainer,
-            textTheme: textTheme,
-            onTap: _selectReceiver,
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
+            style: IconButton.styleFrom(
+              foregroundColor: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Sección superior: botón "Buscar displays" o indicador de escaneo.
+  // ── D1.2: Indicador visual de carga/refresh ──────────────────
+
+  Widget _buildScannerLoadingIndicator(ColorScheme colorScheme) {
+    final scannerAsync = ref.watch(displayScannerProvider);
+    return scannerAsync.isLoading
+        ? LinearProgressIndicator(
+            backgroundColor: colorScheme.surfaceContainerHighest,
+            color: colorScheme.primary,
+          )
+        : const SizedBox.shrink();
+  }
+
+  // ── Contenido de escaneo ─────────────────────────────────────
+
+  Widget _buildScanContent(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    ConnectionState connectionState,
+    ScrollController scrollController,
+  ) {
+    final discoveryState = ref.watch(discoveredDevicesProvider);
+    final scannerAsync = ref.watch(displayScannerProvider);
+    final isConnected = connectionState is Connected;
+    final connectedDevice = isConnected ? connectionState.device : null;
+
+    // Si hay conexión activa, mostrar panel de control remoto (D2).
+    if (isConnected) {
+      return _buildRemoteControlPanel(colorScheme, textTheme, connectionState);
+    }
+
+    // Sincronizar dispositivos del scanner Bonsoir con el estado local.
+    final bonsoirDevices = scannerAsync.valueOrNull ?? <DiscoveredDisplay>[];
+    final allDevices = <DeviceInfo>{
+      ...discoveryState.devices,
+      ...bonsoirDevices.map(
+        (d) => DeviceInfo(name: d.name, ip: d.host, port: d.port, id: d.sessionId),
+      ),
+    }.toList()
+      // Ordenar: primero los conectados, luego por nombre.
+      ..sort((a, b) {
+        final aConnected =
+            connectedDevice != null && a.ip == connectedDevice.ip;
+        final bConnected =
+            connectedDevice != null && b.ip == connectedDevice.ip;
+        if (aConnected && !bConnected) return -1;
+        if (!aConnected && bConnected) return 1;
+        return a.name.compareTo(b.name);
+      });
+
+    // Registrar cuándo termina un escaneo para el estado vacío.
+    if (!discoveryState.isScanning &&
+        !scannerAsync.isLoading &&
+        _lastScanCompleted == null) {
+      _lastScanCompleted = DateTime.now();
+    }
+
+    final showEmptyState = allDevices.isEmpty &&
+        !discoveryState.isScanning &&
+        !scannerAsync.isLoading &&
+        _lastScanCompleted != null &&
+        DateTime.now().difference(_lastScanCompleted!) >= const Duration(seconds: 10);
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.all(24),
+      children: [
+        _buildScanSection(colorScheme, textTheme, discoveryState),
+
+        // Lista de dispositivos con AnimatedList
+        if (allDevices.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Text(
+            'Dispositivos encontrados',
+            style: textTheme.titleSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildAnimatedDeviceList(
+            colorScheme, textTheme, allDevices, connectedDevice, connectionState,
+          ),
+        ],
+
+        // ── D1.5: Estado vacío tras 10s sin resultados ──
+        if (showEmptyState)
+          _buildEmptyState(colorScheme, textTheme),
+
+        // Banner de error
+        if (discoveryState.error != null)
+          _buildErrorBanner(colorScheme, textTheme, discoveryState.error!),
+      ],
+    );
+  }
+
+  // ── D1.4: AnimatedList ───────────────────────────────────────
+
+  Widget _buildAnimatedDeviceList(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    List<DeviceInfo> devices,
+    DeviceInfo? connectedDevice,
+    ConnectionState connectionState,
+  ) {
+    // Diff con la lista anterior para animar inserciones/remociones.
+    final oldSet = _previousDevices.map((d) => '${d.ip}:${d.port}').toSet();
+    final newSet = devices.map((d) => '${d.ip}:${d.port}').toSet();
+
+    final removed = oldSet.difference(newSet);
+    final added = newSet.difference(oldSet);
+
+    for (final key in removed) {
+      final idx = _previousDevices.indexWhere(
+        (d) => '${d.ip}:${d.port}' == key,
+      );
+      if (idx >= 0) {
+        _listKey.currentState?.removeItem(
+          idx,
+          (context, animation) => _buildDeviceTileAnimated(
+            colorScheme, textTheme, _previousDevices[idx],
+            connectedDevice, connectionState, animation,
+          ),
+          duration: const Duration(milliseconds: 300),
+        );
+      }
+    }
+
+    for (final key in added) {
+      final idx = devices.indexWhere((d) => '${d.ip}:${d.port}' == key);
+      if (idx >= 0) {
+        _listKey.currentState?.insertItem(
+          idx,
+          duration: const Duration(milliseconds: 300),
+        );
+      }
+    }
+
+    _previousDevices = List.of(devices);
+
+    return AnimatedList(
+      key: _listKey,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      initialItemCount: devices.length,
+      itemBuilder: (context, index, animation) {
+        if (index >= devices.length) return const SizedBox.shrink();
+        return _buildDeviceTileAnimated(
+          colorScheme, textTheme, devices[index],
+          connectedDevice, connectionState, animation,
+        );
+      },
+    );
+  }
+
+  /// Tile animado para cada dispositivo en [AnimatedList].
+  Widget _buildDeviceTileAnimated(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    DeviceInfo device,
+    DeviceInfo? connectedDevice,
+    ConnectionState connectionState,
+    Animation<double> animation,
+  ) {
+    return SizeTransition(
+      sizeFactor: animation,
+      child: FadeTransition(
+        opacity: animation,
+        child: _buildDeviceTile(
+          colorScheme, textTheme, device, connectedDevice, connectionState,
+        ),
+      ),
+    );
+  }
+
+  // ── Sección de escaneo ───────────────────────────────────────
+
   Widget _buildScanSection(
     ColorScheme colorScheme,
     TextTheme textTheme,
@@ -307,10 +429,8 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  /// Tile individual para un dispositivo descubierto.
-  ///
-  /// Muestra icono, nombre, IP:puerto y un botón de acción contextual
-  /// (Conectar / Conectado / Reintentar).
+  // ── Device Tile ──────────────────────────────────────────────
+
   Widget _buildDeviceTile(
     ColorScheme colorScheme,
     TextTheme textTheme,
@@ -329,16 +449,14 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
         _connectingIp == device.ip && connectionState is ConnectionError;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: isThisConnected
             ? colorScheme.primaryContainer.withValues(alpha: 0.3)
             : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: isThisConnected
-            ? Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.5),
-              )
+            ? Border.all(color: colorScheme.primary.withValues(alpha: 0.5))
             : null,
       ),
       child: Material(
@@ -378,13 +496,51 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        device.name,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              device.name,
+                              style: textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // ── D1.3: Badge "Conectado" ──
+                          if (isThisConnected) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.link_rounded,
+                                    size: 12,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Conectado',
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -414,13 +570,6 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  /// Botón de acción para el tile del dispositivo.
-  ///
-  /// Retorna el widget apropiado según el estado:
-  /// - Conectado: "Desconectar" (rojo)
-  /// - Conectando: spinner
-  /// - Error: "Reintentar" (rojo)
-  /// - Default: "Conectar" (tonal)
   Widget _buildDeviceAction(
     ColorScheme colorScheme,
     bool isThisConnected,
@@ -471,7 +620,8 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  /// Estado vacío: no hay dispositivos y no hay escaneo activo.
+  // ── D1.5: Estado vacío ───────────────────────────────────────
+
   Widget _buildEmptyState(ColorScheme colorScheme, TextTheme textTheme) {
     return Padding(
       padding: const EdgeInsets.only(top: 48),
@@ -484,26 +634,66 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No se encontraron displays',
+            'No se encontraron displays en la red',
             style: textTheme.bodyLarge?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Aseg\u00farate de que el display est\u00e9 encendido\n'
-            'y conectado a la misma red.',
+            'Aseg\u00farate de que la PC est\u00e9 encendida\ny en la misma red WiFi.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () {
+              _lastScanCompleted = null;
+              ref.invalidate(displayScannerProvider);
+              ref.read(discoveredDevicesProvider.notifier).startScanning();
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Reintentar'),
           ),
         ],
       ),
     );
   }
 
-  /// Card de selección de rol para el sheet de conexión.
+  // ── Rol selection ────────────────────────────────────────────
+
+  Widget _buildRoleSelection(ColorScheme colorScheme, TextTheme textTheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _roleCard(
+            icon: Icons.cast_rounded,
+            title: 'Soy Emisor',
+            description: 'Controlar la proyecci\u00f3n\ndesde mi dispositivo',
+            backgroundColor: colorScheme.primaryContainer,
+            foregroundColor: colorScheme.onPrimaryContainer,
+            textTheme: textTheme,
+            onTap: _selectEmitter,
+          ),
+          const SizedBox(height: 16),
+          _roleCard(
+            icon: Icons.tv_rounded,
+            title: 'Soy Receptor',
+            description: 'Mostrar en esta pantalla\nlo que el emisor env\u00eda',
+            backgroundColor: colorScheme.secondaryContainer,
+            foregroundColor: colorScheme.onSecondaryContainer,
+            textTheme: textTheme,
+            onTap: _selectReceiver,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _roleCard({
     required IconData icon,
     required String title,
@@ -532,11 +722,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
                     color: foregroundColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(
-                    icon,
-                    color: foregroundColor,
-                    size: 28,
-                  ),
+                  child: Icon(icon, color: foregroundColor, size: 28),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -573,7 +759,8 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  /// Banner de error con opción de reintentar escaneo.
+  // ── Error banner ─────────────────────────────────────────────
+
   Widget _buildErrorBanner(
     ColorScheme colorScheme,
     TextTheme textTheme,
@@ -616,9 +803,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {
-                    ref
-                        .read(discoveredDevicesProvider.notifier)
-                        .clearError();
+                    ref.read(discoveredDevicesProvider.notifier).clearError();
                     ref
                         .read(discoveredDevicesProvider.notifier)
                         .startScanning();
@@ -634,6 +819,474 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // D2: PANEL DE CONTROL REMOTO
+  // ═══════════════════════════════════════════════════════════════
+
+  /// Panel de control remoto que se muestra cuando hay una conexión
+  /// activa con un display. Organizado en secciones dentro de [Card]s.
+  ///
+  /// Usa [liveDisplayStatusProvider] para el estado en vivo y
+  /// [controlDataSourceProvider]/[controlRepositoryProvider] para enviar
+  /// comandos.
+  Widget _buildRemoteControlPanel(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    ConnectionState connectionState,
+  ) {
+    final device = (connectionState as Connected).device;
+    final liveStatus = ref.watch(liveDisplayStatusProvider);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Header del dispositivo conectado
+        _buildConnectedHeader(colorScheme, textTheme, device, liveStatus),
+        const SizedBox(height: 16),
+
+        // ── D2.2: Selector de fondo ──
+        _buildBackgroundSection(colorScheme, textTheme, liveStatus),
+        const SizedBox(height: 12),
+
+        // ── D2.3: Control de fuente ──
+        _buildFontSection(colorScheme, textTheme, liveStatus),
+        const SizedBox(height: 12),
+
+        // ── D2.4: Control de transposición ──
+        _buildTransposeSection(colorScheme, textTheme, liveStatus),
+        const SizedBox(height: 12),
+
+        // ── D2.5: Botón desconectar ──
+        _buildDisconnectButton(colorScheme, textTheme),
+      ],
+    );
+  }
+
+  /// Cabecera del dispositivo conectado (nombre, ip, estado).
+  Widget _buildConnectedHeader(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    DeviceInfo device,
+    AsyncValue<domain.DisplayStatus?> liveStatus,
+  ) {
+    final status = liveStatus.valueOrNull;
+    return Card(
+      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.cast_connected_rounded,
+                color: colorScheme.onPrimary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    device.name,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${device.ip}:${device.port}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (status != null && status.displayName.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      status.displayName,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (liveStatus.isLoading)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(
+                Icons.check_circle_rounded,
+                color: colorScheme.primary,
+                size: 20,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── D2.2: Selector de fondo ──────────────────────────────────
+
+  /// Sección de fondo: muestra los fondos activos del móvil en un
+  /// grid horizontal de [FilterChip]s. Al seleccionar uno, envía
+  /// [ControlRepository.sendSetConfig] con el id del fondo.
+  Widget _buildBackgroundSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    AsyncValue<domain.DisplayStatus?> liveStatus,
+  ) {
+    final fondosAsync = ref.watch(fondosActivosProvider);
+    final currentBgId = liveStatus.valueOrNull?.currentBackgroundId;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.image_rounded,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Fondo',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            fondosAsync.when(
+              loading: () => const SizedBox(
+                height: 40,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (_, __) => Text(
+                'Error al cargar fondos',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error,
+                ),
+              ),
+              data: (fondos) {
+                if (fondos.isEmpty) {
+                  return Text(
+                    'No hay fondos disponibles',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                }
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: fondos.map((fondo) {
+                    final isSelected = currentBgId == fondo.id.toString();
+                    return FilterChip(
+                      label: Text(
+                        fondo.nombre,
+                        style: textTheme.labelSmall,
+                      ),
+                      selected: isSelected,
+                      onSelected: (_) => _selectBackground(fondo, currentBgId),
+                      showCheckmark: true,
+                      visualDensity: VisualDensity.compact,
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Envía el comando para cambiar el fondo del display remoto.
+  Future<void> _selectBackground(
+    FondoPantalla fondo,
+    String? currentBgId,
+  ) async {
+    if (currentBgId == fondo.id.toString()) return;
+    try {
+      await ref
+          .read(controlRepositoryProvider)
+          .sendSetConfig(fondo: fondo.id.toString());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cambiar fondo: $e')),
+      );
+    }
+  }
+
+  // ── D2.3: Control de fuente y brillo ─────────────────────────
+
+  /// Sección de fuente: slider de tamaño (12-48) y slider de brillo
+  /// (0.0-1.0). Cada slider actualiza el display remoto en tiempo real.
+  Widget _buildFontSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    AsyncValue<domain.DisplayStatus?> liveStatus,
+  ) {
+    final currentFontSize = liveStatus.valueOrNull?.fontSize ?? 48.0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.text_fields_rounded,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Fuente',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Tamaño de fuente
+            Row(
+              children: [
+                Text(
+                  'Tama\u00f1o',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Slider(
+                    value: currentFontSize.clamp(12.0, 48.0),
+                    min: 12,
+                    max: 48,
+                    divisions: 36,
+                    label: '${currentFontSize.round()}',
+                    onChanged: (value) {
+                      // Debounce implícito: envía solo al soltar.
+                    },
+                    onChangeEnd: (value) => _setFontSize(value),
+                  ),
+                ),
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    '${currentFontSize.round()}',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Envía el tamaño de fuente al display remoto.
+  Future<void> _setFontSize(double size) async {
+    try {
+      await ref.read(controlDataSourceProvider).sendSetFontSize(size);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cambiar tama\u00f1o: $e')),
+      );
+    }
+  }
+
+  // ── D2.4: Control de transposición ───────────────────────────
+
+  /// Sección de transposición: botones -/+ con indicador del valor
+  /// actual (ej: "+2", "-1", "0"). Rango -6 a +6 semitonos.
+  Widget _buildTransposeSection(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    AsyncValue<domain.DisplayStatus?> liveStatus,
+  ) {
+    final currentTranspose =
+        liveStatus.valueOrNull?.transpositionSemitones ?? 0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.music_note_rounded,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Transposici\u00f3n',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Botón bajar tono
+                  _transposeButton(
+                    icon: Icons.remove_rounded,
+                    onPressed: currentTranspose > -6
+                        ? () => _changeTranspose(currentTranspose - 1)
+                        : null,
+                    colorScheme: colorScheme,
+                  ),
+                  const SizedBox(width: 16),
+                  // Indicador
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          currentTranspose >= 0
+                              ? '+$currentTranspose'
+                              : '$currentTranspose',
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                        Text(
+                          'semitono(s)',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSecondaryContainer
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Botón subir tono
+                  _transposeButton(
+                    icon: Icons.add_rounded,
+                    onPressed: currentTranspose < 6
+                        ? () => _changeTranspose(currentTranspose + 1)
+                        : null,
+                    colorScheme: colorScheme,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Botón circular para los controles de transposición.
+  Widget _transposeButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required ColorScheme colorScheme,
+  }) {
+    return Material(
+      color: onPressed != null
+          ? colorScheme.primary
+          : colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            color: onPressed != null
+                ? colorScheme.onPrimary
+                : colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+            size: 28,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Envía el comando de transposición al display remoto.
+  Future<void> _changeTranspose(int semitones) async {
+    try {
+      await ref.read(controlDataSourceProvider).sendTransposition(semitones);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al transponer: $e')),
+      );
+    }
+  }
+
+  // ── D2.5: Botón desconectar ──────────────────────────────────
+
+  Widget _buildDisconnectButton(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          _disconnect();
+          Navigator.pop(context);
+        },
+        icon: const Icon(Icons.link_off_rounded),
+        label: const Text('Desconectar'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.error,
+          side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
       ),
     );
   }

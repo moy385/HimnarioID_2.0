@@ -37,8 +37,14 @@ class GrpcControlDataSource {
       _channel = ClientChannel(
         host,
         port: port,
-        options: const ChannelOptions(
+        options: ChannelOptions(
           credentials: ChannelCredentials.insecure(),
+          keepAlive: ClientKeepAliveOptions(
+            pingInterval: Duration(seconds: 30),
+            timeout: Duration(seconds: 10),
+            permitWithoutCalls: true,
+          ),
+          connectTimeout: const Duration(minutes: 2),
         ),
       );
 
@@ -231,25 +237,51 @@ class GrpcControlDataSource {
   }
 
   /// Stream de estado del display en tiempo real.
+  ///
+  /// Detecta cierres silenciosos del stream emitiendo un error para que
+  /// quien lo escuche pueda reconectar.
   Stream<domain.DisplayStatus> watchStatus() {
     _ensureConnected();
 
     try {
       final stream = _client!.watchStatus(Empty());
 
-      return stream.map(
-        (status) => domain.DisplayStatus(
-          currentHymnId: status.currentHymnId,
-          currentHymnTitle: status.currentHymnTitle,
-          currentStanzaIndex: status.currentStanzaIndex,
-          totalStanzas: status.totalStanzas,
-          transpositionSemitones: status.transpositionSemitones,
-          isBlackout: status.isBlackout,
-          currentBackgroundId: status.currentBackgroundId,
-          fontSize: status.fontSize,
-          displayName: status.displayName,
-        ),
-      );
+      return stream
+          .map(
+            (status) => domain.DisplayStatus(
+              currentHymnId: status.currentHymnId,
+              currentHymnTitle: status.currentHymnTitle,
+              currentStanzaIndex: status.currentStanzaIndex,
+              totalStanzas: status.totalStanzas,
+              transpositionSemitones: status.transpositionSemitones,
+              isBlackout: status.isBlackout,
+              currentBackgroundId: status.currentBackgroundId,
+              fontSize: status.fontSize,
+              displayName: status.displayName,
+            ),
+          )
+          .transform(
+            StreamTransformer.fromHandlers(
+              handleData: (data, sink) => sink.add(data),
+              handleError: (error, stack, sink) {
+                _log.warning('Error en stream de estado: $error');
+                sink.addError(
+                  NetworkException(
+                    'Stream de estado interrumpido: $error',
+                  ),
+                  stack,
+                );
+              },
+              handleDone: (sink) {
+                _log.warning('Stream de estado cerrado por el servidor');
+                sink.addError(
+                  const NetworkException(
+                    'Stream de estado cerrado por el servidor',
+                  ),
+                );
+              },
+            ),
+          );
     } on GrpcError catch (e) {
       _log.severe('Error gRPC en watchStatus: $e');
       throw NetworkException(
@@ -257,6 +289,11 @@ class GrpcControlDataSource {
         statusCode: e.code,
       );
     }
+  }
+
+  /// Envía un comando PING al servidor para mantener la conexión viva.
+  Future<void> sendPing() async {
+    await _sendCommand(CommandRequest(type: CommandType.PING));
   }
 
   /// Verifica que el cliente esté conectado.
