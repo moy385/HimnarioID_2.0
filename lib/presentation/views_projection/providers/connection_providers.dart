@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/errors/exceptions.dart';
-import '../../../core/network/bonsoir_service.dart';
+import '../../../core/network/nsd_discovery_service.dart';
 import '../../../core/network/connection_state.dart';
 import '../../../core/network/domain/discovered_display.dart';
 import '../../../data/datasources/remote/grpc_control_datasource.dart';
@@ -242,9 +242,9 @@ final liveDisplayStatusProvider = StreamProvider<domain.DisplayStatus?>((ref) {
   return dataSource.watchStatus().map((status) => status);
 });
 
-/// Provider de la instancia única de [BonsoirService].
-final bonsoirServiceProvider = Provider<BonsoirService>((ref) {
-  final service = BonsoirService();
+/// Provider de la instancia única de [NsdDiscoveryService].
+final nsdDiscoveryServiceProvider = Provider<NsdDiscoveryService>((ref) {
+  final service = NsdDiscoveryService();
   ref.onDispose(() {
     service.stop();
     service.dispose();
@@ -252,20 +252,20 @@ final bonsoirServiceProvider = Provider<BonsoirService>((ref) {
   return service;
 });
 
-/// Provider que escanea la LAN en busca de displays Bonsoir.
+/// Provider que escanea la LAN en busca de displays vía nsd.
 ///
-/// Escucha [BonsoirService.onServiceChanged] durante 5 segundos y
+/// Escucha [NsdDiscoveryService.onServiceChanged] durante 5 segundos y
 /// retorna la lista de displays descubiertos.
 final displayScannerProvider =
     FutureProvider.autoDispose<List<DiscoveredDisplay>>((ref) async {
-  final bonsoir = ref.watch(bonsoirServiceProvider);
-  await bonsoir.start();
-  _log.info('Escaneando displays Bonsoir...');
+  final nsdService = ref.watch(nsdDiscoveryServiceProvider);
+  await nsdService.start();
+  _log.info('Escaneando displays nsd...');
 
   final results = <DiscoveredDisplay>[];
-  final sub = bonsoir.onServiceChanged.listen((event) {
+  final sub = nsdService.onServiceChanged.listen((event) {
     _log.info(
-      'Evento Bonsoir: ${event.name} en ${event.ip}:${event.port} '
+      'Evento nsd: ${event.name} en ${event.ip}:${event.port} '
       '(isNew=${event.isNew}, isRemoved=${event.isRemoved})',
     );
     if (event.isRemoved) {

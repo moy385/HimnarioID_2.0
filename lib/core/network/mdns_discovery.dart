@@ -2,19 +2,18 @@ import 'dart:async';
 
 import 'package:logging/logging.dart';
 
-import 'bonsoir_service.dart';
+import 'nsd_discovery_service.dart';
 import 'connection_state.dart';
 import 'domain/bonsoir_discovered_service.dart';
 
-/// Servicio de descubrimiento mDNS basado en [BonsoirService].
+/// Servicio de descubrimiento mDNS basado en [NsdDiscoveryService].
 ///
-/// Mantiene la misma API pública que el `MdnsDiscovery` anterior (que usaba
-/// `multicast_dns`), pero ahora delega internamente en Bonsoir v7 para
-/// encontrar displays en la LAN.
+/// Mantiene la misma API pública que el `MdnsDiscovery` anterior, pero
+/// ahora delega internamente en `nsd` para encontrar displays en la LAN.
 class MdnsDiscovery {
   static final _log = Logger('MdnsDiscovery');
 
-  final BonsoirService _bonsoirService = BonsoirService();
+  final NsdDiscoveryService _nsdDiscoveryService = NsdDiscoveryService();
   StreamSubscription<BonsoirDiscoveredService>? _subscription;
   final StreamController<DeviceInfo> _deviceController =
       StreamController<DeviceInfo>.broadcast();
@@ -37,10 +36,10 @@ class MdnsDiscovery {
     _isRunning = true;
 
     try {
-      _log.info('Iniciando descubrimiento mDNS (Bonsoir)...');
-      await _bonsoirService.start();
+      _log.info('Iniciando descubrimiento mDNS (nsd)...');
+      await _nsdDiscoveryService.start();
 
-      _subscription = _bonsoirService.onServiceChanged.listen((event) {
+      _subscription = _nsdDiscoveryService.onServiceChanged.listen((event) {
         if (event.isRemoved) return;
         final device = DeviceInfo(
           name: event.name,
@@ -79,13 +78,13 @@ class MdnsDiscovery {
     _isRunning = false;
     await _subscription?.cancel();
     _subscription = null;
-    await _bonsoirService.stop();
+    await _nsdDiscoveryService.stop();
     _log.info('Descubrimiento mDNS detenido.');
   }
 
   /// Libera todos los recursos.
   void dispose() {
     _deviceController.close();
-    _bonsoirService.dispose();
+    _nsdDiscoveryService.dispose();
   }
 }

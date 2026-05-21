@@ -4,8 +4,8 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
-  bonsoir_windows
   desktop_multi_window
+  nsd_windows
   permission_handler_windows
   screen_retriever_windows
   window_manager

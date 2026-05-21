@@ -72,7 +72,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
 
   /// Verifica y solicita el permiso [Permission.nearbyWifiDevices].
   ///
-  /// Este permiso es necesario en Android 13+ para que Bonsoir pueda
+  /// Este permiso es necesario en Android 13+ para que nsd pueda
   /// descubrir dispositivos en la red local mediante mDNS/NSD.
   Future<void> _checkPermission() async {
     final granted = await PermissionService.requestNearbyWifiPermission();
@@ -275,7 +275,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
 
   /// Muestra un banner si el permiso [Permission.nearbyWifiDevices]
   /// aún no ha sido concedido (Android 13+). Este permiso es necesario
-  /// para que Bonsoir pueda descubrir dispositivos en la LAN.
+  /// para que nsd pueda descubrir dispositivos en la LAN.
   Widget _buildPermissionBanner(
     ColorScheme colorScheme,
     TextTheme textTheme,
@@ -346,11 +346,11 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
       return _buildRemoteControlPanel(colorScheme, textTheme, connectionState);
     }
 
-    // Sincronizar dispositivos del scanner Bonsoir con el estado local.
-    final bonsoirDevices = scannerAsync.valueOrNull ?? <DiscoveredDisplay>[];
+    // Sincronizar dispositivos del scanner nsd con el estado local.
+    final nsdDevices = scannerAsync.valueOrNull ?? <DiscoveredDisplay>[];
     final allDevices = <DeviceInfo>{
       ...discoveryState.devices,
-      ...bonsoirDevices.map(
+      ...nsdDevices.map(
         (d) => DeviceInfo(name: d.name, ip: d.host, port: d.port, id: d.sessionId),
       ),
     }.toList()

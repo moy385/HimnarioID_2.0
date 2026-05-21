@@ -1,4 +1,4 @@
-/// Representa un servicio mDNS descubierto vía Bonsoir.
+/// Representa un servicio mDNS descubierto vía nsd.
 class BonsoirDiscoveredService {
   final String name;
   final String ip;

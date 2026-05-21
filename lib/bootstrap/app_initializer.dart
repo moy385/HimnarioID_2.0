@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../core/database/database_helper.dart';
-import '../core/network/bonsoir_broadcast_service.dart';
-import '../core/network/bonsoir_service.dart';
+import '../core/network/mdns_broadcast_service.dart';
+import '../core/network/nsd_discovery_service.dart';
 import '../core/network/mdns_discovery.dart';
 import '../data/datasources/remote/grpc_display_server.dart';
 import '../presentation/views_personal/providers/hymn_providers.dart';
@@ -19,8 +19,8 @@ class AppInitializer {
 
   static GrpcDisplayServer? _displayServer;
   static MdnsDiscovery? _mdnsDiscovery;
-  static BonsoirBroadcastService? _bonsoirBroadcast;
-  static BonsoirService? _bonsoirService;
+  static MdnsBroadcastService? _mdnsBroadcast;
+  static NsdDiscoveryService? _nsdDiscoveryService;
 
   /// El servidor gRPC en ejecución (solo en modo Display).
   static GrpcDisplayServer? get displayServer => _displayServer;
@@ -58,9 +58,9 @@ class AppInitializer {
       await _initNetworkServices(container);
     }
 
-    // 5. Iniciar descubrimiento Bonsoir (todas las plataformas)
+    // 5. Iniciar descubrimiento nsd (solo plataformas soportadas)
     if (!skipNetwork) {
-      await _initBonsoirDiscovery();
+      await _initNsdDiscovery();
     }
 
     _log.info('Inicialización completada.');
@@ -184,25 +184,29 @@ class AppInitializer {
       return;
     }
 
-    // 2. Iniciar broadcast Bonsoir (solo Windows/Linux)
-    if (_platform == TargetPlatform.windows ||
-        _platform == TargetPlatform.linux) {
+    // 2. Iniciar broadcast mDNS vía nsd (solo Windows)
+    if (_platform == TargetPlatform.windows) {
       try {
-        _bonsoirBroadcast = BonsoirBroadcastService();
-        await _bonsoirBroadcast!.start(
+        _mdnsBroadcast = MdnsBroadcastService();
+        await _mdnsBroadcast!.start(
           name: 'HimnarioID-${_displayServer!.displayName}',
           port: _displayServer!.port,
           sessionId: _displayServer!.sessionId,
           displayName: _displayServer!.displayName,
         );
-        _log.info('Broadcast Bonsoir iniciado correctamente.');
+        _log.info('Broadcast mDNS iniciado correctamente.');
       } catch (e) {
-        _log.severe('Error al iniciar broadcast Bonsoir: $e');
+        _log.severe('Error al iniciar broadcast mDNS: $e');
         _log.warning(
           'El servidor gRPC está funcionando, pero el broadcast mDNS '
           'falló. Usa conexión manual con la IP de esta máquina.',
         );
       }
+    } else if (_platform == TargetPlatform.linux) {
+      _log.info(
+        'mDNS broadcast no disponible en Linux. '
+        'Usa conexión manual con la IP de esta máquina.',
+      );
     }
   }
 
@@ -226,29 +230,29 @@ class AppInitializer {
     }
   }
 
-  /// Inicia el descubrimiento Bonsoir (solo en móvil).
-  static Future<void> _initBonsoirDiscovery() async {
+  /// Inicia el descubrimiento mDNS vía nsd (solo en móvil).
+  static Future<void> _initNsdDiscovery() async {
     // Solo iniciar en móvil; en desktop el broadcast ya publica el servicio
     if (_platform == TargetPlatform.android || _platform == TargetPlatform.iOS) {
       try {
-        _bonsoirService = BonsoirService();
-        await _bonsoirService!.start();
-        _log.info('Descubrimiento Bonsoir iniciado.');
+        _nsdDiscoveryService = NsdDiscoveryService();
+        await _nsdDiscoveryService!.start();
+        _log.info('Descubrimiento nsd iniciado.');
       } catch (e) {
-        _log.severe('Error al iniciar BonsoirService: $e');
+        _log.severe('Error al iniciar NsdDiscoveryService: $e');
       }
     } else {
-      _log.info('Bonsoir discovery omitido en plataforma no móvil.');
+      _log.info('nsd discovery omitido en plataforma no soportada.');
     }
   }
 
   /// Detiene todos los servicios de red.
   static Future<void> dispose() async {
     await _displayServer?.stop();
-    await _bonsoirBroadcast?.stop();
-    _bonsoirBroadcast = null;
-    await _bonsoirService?.stop();
-    _bonsoirService = null;
+    await _mdnsBroadcast?.stop();
+    _mdnsBroadcast = null;
+    await _nsdDiscoveryService?.stop();
+    _nsdDiscoveryService = null;
     await _mdnsDiscovery?.stopDiscovery();
     _mdnsDiscovery?.dispose();
     _log.info('Servicios de red detenidos.');

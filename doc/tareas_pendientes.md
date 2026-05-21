@@ -1,7 +1,7 @@
 # Tareas Pendientes — HimnarioID 2.0
 
-> **Fecha:** 20 de mayo de 2026 — 3ª revisión
-> **Propósito:** Estado actual tras limpieza de código muerto (310 líneas eliminadas, 32 archivos).
+> **Fecha:** 20 de mayo de 2026 — 4ª revisión
+> **Propósito:** Estado actual tras implementación de infraestructura de red (gRPC + mDNS).
 
 ---
 
@@ -30,8 +30,8 @@
 | **Flujo presentación slides** | ✅ Funcional | Title → Lyrics → Amen con etiquetas |
 | **Ventana de proyección** | ✅ Funcional | SubprocessWindowService + IPC JSON |
 | **Modo Dual PC/Celular** | ✅ Funcional | Switch debug, rutas, botón Presentar |
-| **Conexión Emisor/Receptor** | ❌ No funcional | Infraestructura lista, flujo incompleto |
-| **gRPC** | ❌ No implementado | Proto compilado, servidor no creado |
+| **Conexión Emisor/Receptor** | ✅ Infraestructura completa | gRPC server + mDNS broadcast/discovery integrados en AppInitializer |
+| **gRPC** | ✅ Implementado | GrpcDisplayServer en lib/data/datasources/remote/ (335 líneas, 7 comandos, handshake, watchStatus streaming) |
 | **Fondos de video** | ❌ Revertido | Crash irrecuperable en Linux (libmpv 0.41.0). Pendiente para futuro. |
 | **Tests** | ✅ 274 tests | 263 unit/widget + 11 integración (~11 fallos conocidos) |
 | **APK Android** | ✅ Funcional | Build release 62MB (fat APK) con JDK 17 en `/home/melquisedec/jdk17` |
@@ -92,13 +92,14 @@
 
 ### 🟢 P3 — Baja prioridad / Mejora continua
 
-#### P3.1 — Servidor gRPC (bin/server.dart)
-**Archivos**: Nuevo `bin/server.dart`, `lib/core/network/grpc_server.dart`
-**Tiempo estimado**: ~4h
+#### ✅ P3.1 — Servidor gRPC (bin/server.dart)
+**Archivos**: `lib/data/datasources/remote/grpc_display_server.dart`, `lib/bootstrap/app_initializer.dart`
+**Descripción**: Servidor gRPC creado e integrado. 335 líneas, implementa HymnControlServiceBase con 7 tipos de comando (NEXT, PREV, GO_TO_STANZA, GO_TO_CHORUS, BLACKOUT, CLEAR_BLACKOUT, JUMP_TO_HYMN, PING), handshake con versión de protocolo, y watchStatus streaming con ProviderContainer.
+**Estado**: ✅ Completado
 
 #### P3.2 — Modo Emisor completo
 **Archivos**: `connected_dashboard.dart`, `minimal_control_screen.dart`
-**Dependencias**: P3.1
+**Dependencias**: P3.1 ✅ Completado
 **Tiempo estimado**: ~3h
 
 #### P3.3 — Detección automática de plataforma en producción
@@ -122,7 +123,7 @@
 ```
 P1.2 Split APK ─── sin dependencias
 P1.3 CHECK SQL ─── migracion BD (v4→v5)
-P3.1 gRPC servidor ───→ P3.2 Modo Emisor
+~~P3.1 gRPC servidor ───→ P3.2 Modo Emisor~~ ✅ P3.1 completado
 P2.1 Tests core ───→ P3.5 Tests widgets
 ```
 
@@ -138,7 +139,9 @@ P2.1 Tests core ───→ P3.5 Tests widgets
 6. **274 tests existentes**: 263 unit/widget + 11 integración (~11 fallos conocidos por tabla Pais).
 7. **APK release**: 62MB (fat APK). Con `--split-per-abi` bajaría a ~25MB cada uno.
 8. **JDK 17 obligatorio** para build Android (JDK 25 no compatible con Gradle 8.14). Ubicación: `/home/melquisedec/jdk17`.
+9. **Infraestructura de red completada**: Servidor gRPC (GrpcDisplayServer, 335 líneas, 7 comandos), broadcast mDNS (BonsoirBroadcastService), descubrimiento (MdnsDiscovery + BonsoirService), detección de plataforma, y orquestación centralizada en AppInitializer con try/catch en cada capa.
+10. **Broadcast mDNS**: Limitado a Windows y Linux (Bonsoir no está disponible en macOS en Flutter desktop). En móvil se usa discovery Bonsoir para encontrar displays.
 
 ---
 
-*Documento actualizado por @orquestador — 20 de mayo de 2026 (3ª revisión)*
+*Documento actualizado por @orquestador — 20 de mayo de 2026 (4ª revisión)*

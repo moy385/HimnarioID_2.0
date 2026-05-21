@@ -1,4 +1,4 @@
-/// Representa un display descubierto en la LAN vía Bonsoir.
+/// Representa un display descubierto en la LAN vía mDNS/nsd.
 class DiscoveredDisplay {
   final String name;
   final String host;

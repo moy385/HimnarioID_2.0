@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 20 de mayo de 2026 — 3ª revisión
+> **Última actualización:** 20 de mayo de 2026 — 4ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -30,14 +30,15 @@ lib/
 │   ├── constants/         → musical_constants
 │   ├── enums/             → estrofa_tipo, himno_tipo, fondo_pantalla_tipo, usuario_rol
 │   ├── errors/            → auth_exception, exceptions, failures
-│   ├── network/           → mdns_discovery, connection_state
+│   ├── network/           → mdns_discovery, bonsoir_broadcast_service, bonsoir_service, permission_service, connection_state
 │   ├── theme/             → app_theme
 │   └── window_manager/    → window_service, window_providers, window_state
 ├── data/
-│   ├── datasources/local/ → hymn, catalog, user, arreglo, audio
-│   ├── models/            → himno, estrofa, categoria, usuario, version_pais, pista_audio, fondo_pantalla
-│   ├── models/mappers/    → entidad ⇄ modelo
-│   └── repositories/      → hymn, user, arreglo, audio, control, fondo
+│   ├── datasources/local/  → hymn, catalog, user, arreglo, audio
+│   ├── datasources/remote/ → grpc_control_datasource, grpc_display_server
+│   ├── models/             → himno, estrofa, categoria, usuario, version_pais, pista_audio, fondo_pantalla
+│   ├── models/mappers/     → entidad ⇄ modelo
+│   └── repositories/       → hymn, user, arreglo, audio, control, fondo
 ├── domain/
 │   ├── entities/          → himno, estrofa, categoria, usuario, version_pais, pista_audio, fondo_pantalla
 │   ├── repositories/      → interfaces
@@ -89,7 +90,13 @@ lib/
 - Flujo de presentación por slides: Title → Lyrics → Amen
 - Labels de estrofa en proyección: "Estrofa 1", "Coro", "Puente 2", etc.
 - Modo proyección con ventana secundaria (SubprocessWindowService + IPC JSON)
-- Conexión Emisor/Receptor vía mDNS + gRPC (infraestructura)
+- Conexión Emisor/Receptor vía mDNS + gRPC (infraestructura completa)
+  - Servidor gRPC funcional (GrpcDisplayServer) en lib/data/datasources/remote/
+  - Broadcast mDNS vía Bonsoir (BonsoirBroadcastService) en lib/core/network/
+  - Descubrimiento mDNS (MdnsDiscovery) en lib/core/network/
+  - Orquestación centralizada en AppInitializer (initNetworkServices)
+  - Try/catch en cada capa con logs informativos y degradación graceful
+  - Detección automática de plataforma: desktop → servidor gRPC (+ broadcast), móvil → discovery
 - Build Android funcional (APK release con JDK 17)
 - 25 himnos adicionales de convenciones/campamentos insertados desde script Python
 
@@ -132,3 +139,4 @@ lib/
 - **File Picker**: Los archivos de fondo (imagen) se seleccionan con `file_picker`. Se copian automáticamente a `{appDocs}/himnario_id/fondos/` con nombre único. Al eliminar un fondo, `FileStorageService.deleteIfAppFile()` solo borra si está dentro del directorio app, nunca el archivo original del usuario.
 - **Riverpod caching**: Los `FutureProvider` cachean su resultado hasta invalidación explícita. Es crítico invalidar `fondosActivosProvider` tras crear/editar/eliminar fondos.
 - **Limpieza de código muerto (20 mayo 2026)**: Se eliminaron `FondoPantallaTipo.video`, 3 directorios huérfanos (`state_management/`, `app_controller/`, `app_display/`), `login_screen.dart`, barrel files (`views_admin.dart`, `views_personal.dart`, `views_projection.dart`), y 6 providers deprecados de `live_control_providers.dart`. Total: 310 líneas, 32 archivos.
+- **Infraestructura de red (20 mayo 2026)**: Se implementó `GrpcDisplayServer` (servidor gRPC completo con 7 comandos, handshake y watchStatus streaming), `BonsoirBroadcastService` (publicación mDNS), detección de plataforma con TargetPlatform, y orquestación centralizada en `AppInitializer`. Desktop → gRPC + broadcast. Móvil → discovery Bonsoir. Try/catch con degradación graceful en cada capa.
