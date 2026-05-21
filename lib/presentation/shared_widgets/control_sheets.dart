@@ -135,6 +135,21 @@ void _syncAppearanceToProjection(WidgetRef ref) {
   };
   // Fire-and-forget silencioso
   ref.read(windowServiceProvider).sendMessage(message);
+
+  // NUEVO: Enviar por gRPC si estamos conectados como emisor
+  final isConnected = ref.read(isConnectedProvider);
+  if (isConnected) {
+    final dataSource = ref.read(controlDataSourceProvider);
+    dataSource.sendSetAppearance(
+      textColor: _colorToHex(appearance.textColor),
+      chordColor: _colorToHex(appearance.chordColor),
+      fontFamily: appearance.fontFamily,
+      isBold: appearance.isBold,
+      showChords: appearance.showChords,
+      cardOpacity: appearance.cardOpacity,
+      projectionFontScale: appearance.projectionFontScale,
+    ).catchError((_) => false);
+  }
 }
 
 /// Muestra el sheet de configuración visual (fondo, tamaño fuente,

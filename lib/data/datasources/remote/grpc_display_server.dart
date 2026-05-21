@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:grpc/grpc.dart';
 import 'package:logging/logging.dart';
@@ -11,6 +12,7 @@ import '../../../core/enums/himno_tipo.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/projection_slide.dart';
+import '../../../presentation/shared_widgets/providers/appearance_provider.dart';
 import '../../../presentation/views_projection/providers/live_control_providers.dart';
 import '../../../presentation/views_projection/providers/projection_providers.dart';
 import '../../../proto/generated/hymn_control.pbgrpc.dart';
@@ -222,6 +224,24 @@ class GrpcDisplayServer extends HymnControlServiceBase {
 
         case CommandType.PING:
           // No modifica estado, solo responder
+          break;
+
+        case CommandType.SET_APPEARANCE:
+          if (_container != null) {
+            try {
+              final notifier = _container.read(hymnAppearanceProvider.notifier);
+              if (request.hasTextColor()) notifier.setTextColor(_parseHexColor(request.textColor));
+              if (request.hasChordColor()) notifier.setChordColor(_parseHexColor(request.chordColor));
+              if (request.hasFontFamily()) notifier.setFontFamily(request.fontFamily);
+              if (request.hasIsBold()) notifier.setIsBold(request.isBold);
+              if (request.hasShowChords()) notifier.setShowChords(request.showChords);
+              if (request.hasCardOpacity()) notifier.setCardOpacity(request.cardOpacity);
+              if (request.hasProjectionFontScale()) notifier.setProjectionFontScale(request.projectionFontScale);
+              _log.info('Apariencia actualizada desde control remoto');
+            } catch (e) {
+              _log.severe('Error al aplicar apariencia remota: $e');
+            }
+          }
           break;
 
         default:
@@ -446,5 +466,14 @@ class GrpcDisplayServer extends HymnControlServiceBase {
       default:
         return EstrofaTipo.estrofa;
     }
+  }
+
+  /// Convierte un string hex (#AARRGGBB o #RRGGBB) a Color.
+  static Color _parseHexColor(String hex) {
+    final buffer = StringBuffer();
+    if (hex.startsWith('#')) hex = hex.substring(1);
+    if (hex.length == 6) buffer.write('FF');
+    buffer.write(hex);
+    return Color(int.parse(buffer.toString(), radix: 16));
   }
 }

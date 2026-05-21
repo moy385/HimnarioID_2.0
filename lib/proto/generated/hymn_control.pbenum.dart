@@ -37,6 +37,8 @@ class CommandType extends $pb.ProtobufEnum {
       CommandType._(9, _omitEnumNames ? '' : 'SET_FONT_SIZE');
   static const CommandType PING =
       CommandType._(10, _omitEnumNames ? '' : 'PING');
+  static const CommandType SET_APPEARANCE =
+      CommandType._(11, _omitEnumNames ? '' : 'SET_APPEARANCE');
 
   static const $core.List<CommandType> values = <CommandType>[
     NEXT_STANZA,
@@ -50,10 +52,11 @@ class CommandType extends $pb.ProtobufEnum {
     SET_BACKGROUND,
     SET_FONT_SIZE,
     PING,
+    SET_APPEARANCE,
   ];
 
   static final $core.List<CommandType?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 10);
+      $pb.ProtobufEnum.$_initByValueList(values, 11);
   static CommandType? valueOf($core.int value) =>
       value < 0 || value >= _byValue.length ? null : _byValue[value];
 

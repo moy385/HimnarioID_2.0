@@ -8,9 +8,6 @@ import '../../../domain/entities/projection_slide.dart';
 // Providers independientes
 // ═══════════════════════════════════════════════════════════════
 
-/// Provider del himno activo actualmente en proyección.
-final activeHymnProvider = StateProvider<Himno?>((ref) => null);
-
 /// Provider que indica si la pantalla está en modo blackout.
 final isBlackoutProvider = StateProvider<bool>((ref) => false);
 

@@ -407,6 +407,13 @@ class CommandRequest extends $pb.GeneratedMessage {
     $core.int? hymnId,
     $core.String? backgroundId,
     $core.double? fontSize,
+    $core.String? textColor,
+    $core.String? chordColor,
+    $core.String? fontFamily,
+    $core.bool? isBold,
+    $core.bool? showChords,
+    $core.double? cardOpacity,
+    $core.double? projectionFontScale,
   }) {
     final result = create();
     if (type != null) result.type = type;
@@ -415,6 +422,14 @@ class CommandRequest extends $pb.GeneratedMessage {
     if (hymnId != null) result.hymnId = hymnId;
     if (backgroundId != null) result.backgroundId = backgroundId;
     if (fontSize != null) result.fontSize = fontSize;
+    if (textColor != null) result.textColor = textColor;
+    if (chordColor != null) result.chordColor = chordColor;
+    if (fontFamily != null) result.fontFamily = fontFamily;
+    if (isBold != null) result.isBold = isBold;
+    if (showChords != null) result.showChords = showChords;
+    if (cardOpacity != null) result.cardOpacity = cardOpacity;
+    if (projectionFontScale != null)
+      result.projectionFontScale = projectionFontScale;
     return result;
   }
 
@@ -438,6 +453,15 @@ class CommandRequest extends $pb.GeneratedMessage {
     ..aI(4, _omitFieldNames ? '' : 'hymnId')
     ..aOS(5, _omitFieldNames ? '' : 'backgroundId')
     ..aD(6, _omitFieldNames ? '' : 'fontSize', fieldType: $pb.PbFieldType.OF)
+    ..aOS(7, _omitFieldNames ? '' : 'textColor')
+    ..aOS(8, _omitFieldNames ? '' : 'chordColor')
+    ..aOS(9, _omitFieldNames ? '' : 'fontFamily')
+    ..aOB(10, _omitFieldNames ? '' : 'isBold')
+    ..aOB(11, _omitFieldNames ? '' : 'showChords')
+    ..aD(12, _omitFieldNames ? '' : 'cardOpacity',
+        fieldType: $pb.PbFieldType.OF)
+    ..aD(13, _omitFieldNames ? '' : 'projectionFontScale',
+        fieldType: $pb.PbFieldType.OF)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -512,6 +536,70 @@ class CommandRequest extends $pb.GeneratedMessage {
   $core.bool hasFontSize() => $_has(5);
   @$pb.TagNumber(6)
   void clearFontSize() => $_clearField(6);
+
+  /// Nuevos campos para SET_APPEARANCE
+  @$pb.TagNumber(7)
+  $core.String get textColor => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set textColor($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasTextColor() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearTextColor() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get chordColor => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set chordColor($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasChordColor() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearChordColor() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get fontFamily => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set fontFamily($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasFontFamily() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearFontFamily() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.bool get isBold => $_getBF(9);
+  @$pb.TagNumber(10)
+  set isBold($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasIsBold() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearIsBold() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.bool get showChords => $_getBF(10);
+  @$pb.TagNumber(11)
+  set showChords($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasShowChords() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearShowChords() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.double get cardOpacity => $_getN(11);
+  @$pb.TagNumber(12)
+  set cardOpacity($core.double value) => $_setFloat(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasCardOpacity() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearCardOpacity() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.double get projectionFontScale => $_getN(12);
+  @$pb.TagNumber(13)
+  set projectionFontScale($core.double value) => $_setFloat(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasProjectionFontScale() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearProjectionFontScale() => $_clearField(13);
 }
 
 class CommandResponse extends $pb.GeneratedMessage {
@@ -591,6 +679,13 @@ class DisplayStatus extends $pb.GeneratedMessage {
     $core.String? currentBackgroundId,
     $core.double? fontSize,
     $core.String? displayName,
+    $core.String? textColor,
+    $core.String? chordColor,
+    $core.String? fontFamily,
+    $core.bool? isBold,
+    $core.bool? showChords,
+    $core.double? cardOpacity,
+    $core.double? projectionFontScale,
   }) {
     final result = create();
     if (currentHymnId != null) result.currentHymnId = currentHymnId;
@@ -605,6 +700,14 @@ class DisplayStatus extends $pb.GeneratedMessage {
       result.currentBackgroundId = currentBackgroundId;
     if (fontSize != null) result.fontSize = fontSize;
     if (displayName != null) result.displayName = displayName;
+    if (textColor != null) result.textColor = textColor;
+    if (chordColor != null) result.chordColor = chordColor;
+    if (fontFamily != null) result.fontFamily = fontFamily;
+    if (isBold != null) result.isBold = isBold;
+    if (showChords != null) result.showChords = showChords;
+    if (cardOpacity != null) result.cardOpacity = cardOpacity;
+    if (projectionFontScale != null)
+      result.projectionFontScale = projectionFontScale;
     return result;
   }
 
@@ -630,6 +733,15 @@ class DisplayStatus extends $pb.GeneratedMessage {
     ..aOS(7, _omitFieldNames ? '' : 'currentBackgroundId')
     ..aD(8, _omitFieldNames ? '' : 'fontSize', fieldType: $pb.PbFieldType.OF)
     ..aOS(9, _omitFieldNames ? '' : 'displayName')
+    ..aOS(10, _omitFieldNames ? '' : 'textColor')
+    ..aOS(11, _omitFieldNames ? '' : 'chordColor')
+    ..aOS(12, _omitFieldNames ? '' : 'fontFamily')
+    ..aOB(13, _omitFieldNames ? '' : 'isBold')
+    ..aOB(14, _omitFieldNames ? '' : 'showChords')
+    ..aD(15, _omitFieldNames ? '' : 'cardOpacity',
+        fieldType: $pb.PbFieldType.OF)
+    ..aD(16, _omitFieldNames ? '' : 'projectionFontScale',
+        fieldType: $pb.PbFieldType.OF)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -731,6 +843,70 @@ class DisplayStatus extends $pb.GeneratedMessage {
   $core.bool hasDisplayName() => $_has(8);
   @$pb.TagNumber(9)
   void clearDisplayName() => $_clearField(9);
+
+  /// Nuevos campos de apariencia
+  @$pb.TagNumber(10)
+  $core.String get textColor => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set textColor($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasTextColor() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearTextColor() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get chordColor => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set chordColor($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasChordColor() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearChordColor() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.String get fontFamily => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set fontFamily($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasFontFamily() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearFontFamily() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.bool get isBold => $_getBF(12);
+  @$pb.TagNumber(13)
+  set isBold($core.bool value) => $_setBool(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasIsBold() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearIsBold() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  $core.bool get showChords => $_getBF(13);
+  @$pb.TagNumber(14)
+  set showChords($core.bool value) => $_setBool(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasShowChords() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearShowChords() => $_clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.double get cardOpacity => $_getN(14);
+  @$pb.TagNumber(15)
+  set cardOpacity($core.double value) => $_setFloat(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasCardOpacity() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearCardOpacity() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  $core.double get projectionFontScale => $_getN(15);
+  @$pb.TagNumber(16)
+  set projectionFontScale($core.double value) => $_setFloat(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasProjectionFontScale() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearProjectionFontScale() => $_clearField(16);
 }
 
 class HandshakeRequest extends $pb.GeneratedMessage {

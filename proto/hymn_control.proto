@@ -80,6 +80,7 @@ enum CommandType {
   SET_BACKGROUND = 8;
   SET_FONT_SIZE = 9;
   PING = 10;
+  SET_APPEARANCE = 11;
 }
 
 message CommandRequest {
@@ -89,6 +90,14 @@ message CommandRequest {
   int32 hymn_id = 4;           // Para JUMP_TO_HYMN
   string background_id = 5;    // Para SET_BACKGROUND
   float font_size = 6;         // Para SET_FONT_SIZE
+  // Nuevos campos para SET_APPEARANCE
+  optional string text_color = 7;
+  optional string chord_color = 8;
+  optional string font_family = 9;
+  optional bool is_bold = 10;
+  optional bool show_chords = 11;
+  optional float card_opacity = 12;
+  optional float projection_font_scale = 13;
 }
 
 message CommandResponse {
@@ -106,6 +115,14 @@ message DisplayStatus {
   string current_background_id = 7;
   float font_size = 8;
   string display_name = 9;
+  // Nuevos campos de apariencia
+  optional string text_color = 10;
+  optional string chord_color = 11;
+  optional string font_family = 12;
+  optional bool is_bold = 13;
+  optional bool show_chords = 14;
+  optional float card_opacity = 15;
+  optional float projection_font_scale = 16;
 }
 
 message HandshakeRequest {

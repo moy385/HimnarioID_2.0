@@ -8,6 +8,7 @@ import '../../../core/network/connection_state.dart';
 import '../../shared_widgets/hymn_card.dart';
 import '../../shared_widgets/search_bar.dart';
 import '../../views_projection/controller/minimal_control_screen.dart';
+import '../../views_projection/providers/active_hymn_providers.dart';
 import '../../views_projection/providers/connection_providers.dart';
 import '../providers/hymn_providers.dart';
 
@@ -213,11 +214,11 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
                     return HymnCard(
                       himno: himno,
                       onTap: () {
+                        ref.read(activeHymnIdProvider.notifier).state =
+                            himno.id;
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => MinimalControlScreen(
-                              hymnId: himno.id,
-                            ),
+                            builder: (_) => const MinimalControlScreen(),
                           ),
                         );
                       },

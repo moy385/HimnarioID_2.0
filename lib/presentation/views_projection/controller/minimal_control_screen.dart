@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/control_sheets.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
+import '../providers/active_hymn_providers.dart';
 import '../providers/connection_providers.dart';
 import '../providers/live_control_providers.dart';
 import '../../views_personal/providers/audio_providers.dart';
-import '../../views_personal/providers/hymn_providers.dart';
 
 /// Panel de control minimalista para modo Emisor.
 ///
@@ -15,9 +16,7 @@ import '../../views_personal/providers/hymn_providers.dart';
 /// Sin scroll de letra, solo controles de navegación y función.
 /// Los cambios se envían al provider local y por gRPC al Receptor.
 class MinimalControlScreen extends ConsumerWidget {
-  final int hymnId;
-
-  const MinimalControlScreen({super.key, required this.hymnId});
+  const MinimalControlScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,38 +25,33 @@ class MinimalControlScreen extends ConsumerWidget {
     final textTheme = theme.textTheme;
     final isConnected = ref.watch(isConnectedProvider);
     final liveState = ref.watch(liveControlProvider);
+    final hymnId = ref.watch(activeHymnIdProvider);
 
-    // Cargar himno y disparar la carga de estrofas
-    ref.listen(hymnDetailProvider(hymnId), (prev, next) {
-      next.whenData((himno) {
-        final currentHymn = ref.read(liveControlProvider).hymn;
-        if (currentHymn == null || currentHymn.id != hymnId) {
-          // Forzar la evaluación del provider de estrofas
-          ref.read(stanzasProvider(himno.primaryVersionPaisId));
+    // Si no hay himno seleccionado, mostrar placeholder
+    if (hymnId == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Control de Proyección')),
+        body: const Center(child: Text('Selecciona un himno para proyectar')),
+      );
+    }
+
+    // Escuchar estrofas y cargar en LiveControl cuando lleguen
+    ref.listen(activeStanzasProvider, (prev, next) {
+      next.whenData((estrofas) {
+        if (estrofas == null || estrofas.isEmpty) return;
+        final himno = ref.read(activeHymnProvider).valueOrNull;
+        if (himno == null) return;
+        final currentHymn = liveState.hymn;
+        if (currentHymn == null || currentHymn.id != himno.id) {
+          ref
+              .read(liveControlProvider.notifier)
+              .loadHymn(himno, estrofas, versionPaisId: himno.primaryVersionPaisId);
+          if (isConnected) {
+            _sendHymnToDisplay(ref, himno, estrofas);
+          }
         }
       });
     });
-
-    // Escuchar estrofas — se ejecuta cuando los datos están listos
-    final himnoAsync = ref.watch(hymnDetailProvider(hymnId)).valueOrNull;
-    final currentVpId = himnoAsync?.primaryVersionPaisId;
-    if (currentVpId != null) {
-      ref.listen(stanzasProvider(currentVpId), (prev, next) {
-        next.whenData((estrofas) async {
-          final currentHymn = ref.read(liveControlProvider).hymn;
-          if (currentHymn == null || currentHymn.id != hymnId) {
-            final himno = ref.read(hymnDetailProvider(hymnId)).valueOrNull;
-            if (himno == null) return;
-            ref
-                .read(liveControlProvider.notifier)
-                .loadHymn(himno, estrofas, versionPaisId: currentVpId);
-            if (ref.read(isConnectedProvider)) {
-              await _sendHymnToDisplay(ref, himno, estrofas);
-            }
-          }
-        });
-      });
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -200,18 +194,15 @@ class MinimalControlScreen extends ConsumerWidget {
                 icon: Icons.search,
                 label: 'Lupa',
                 onPressed: () async {
+                  final currentId = ref.read(activeHymnIdProvider);
                   final result = await showSearchSheet(
                     context,
                     ref: ref,
-                    currentHimnoId: hymnId,
+                    currentHimnoId: currentId ?? -1,
                   );
-                  if (result != null && result > 0 && result != hymnId) {
-                    if (!context.mounted) return;
-                    Navigator.pushReplacementNamed(
-                      context,
-                      '/live-control',
-                      arguments: result,
-                    );
+                  if (result != null && result > 0 && result != currentId) {
+                    ref.read(activeHymnIdProvider.notifier).state = result;
+                    // No hacer Navigator — el widget reacciona solo al provider
                   }
                 },
               ),
@@ -258,7 +249,27 @@ Future<void> _sendHymnToDisplay(
               })
           .toList(),
     );
+    // NUEVO: Enviar apariencia actual al display remoto
+    final appearance = ref.read(hymnAppearanceProvider);
+    try {
+      await dataSource.sendSetAppearance(
+        textColor: _colorToHex(appearance.textColor),
+        chordColor: _colorToHex(appearance.chordColor),
+        fontFamily: appearance.fontFamily,
+        isBold: appearance.isBold,
+        showChords: appearance.showChords,
+        cardOpacity: appearance.cardOpacity,
+        projectionFontScale: appearance.projectionFontScale,
+      );
+    } catch (_) {
+      // Fallo silencioso — el estado local persiste
+    }
   }
+
+/// Convierte un Color a string hex #AARRGGBB.
+String _colorToHex(Color color) {
+  return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+}
 
 class _ControlButton extends StatelessWidget {
   final IconData icon;

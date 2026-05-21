@@ -210,6 +210,34 @@ class GrpcControlDataSource {
     return response.success;
   }
 
+  /// Envía la configuración completa de apariencia al display remoto.
+  Future<bool> sendSetAppearance({
+    String? textColor,
+    String? chordColor,
+    String? fontFamily,
+    bool? isBold,
+    bool? showChords,
+    double? cardOpacity,
+    double? projectionFontScale,
+  }) async {
+    _ensureConnected();
+    try {
+      final request = CommandRequest(type: CommandType.SET_APPEARANCE);
+      if (textColor != null) request.textColor = textColor;
+      if (chordColor != null) request.chordColor = chordColor;
+      if (fontFamily != null) request.fontFamily = fontFamily;
+      if (isBold != null) request.isBold = isBold;
+      if (showChords != null) request.showChords = showChords;
+      if (cardOpacity != null) request.cardOpacity = cardOpacity;
+      if (projectionFontScale != null) request.projectionFontScale = projectionFontScale;
+      final response = await _client!.sendCommand(request);
+      return response.success;
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC en sendSetAppearance: $e');
+      throw NetworkException('Error al enviar apariencia: ${e.message}', statusCode: e.code);
+    }
+  }
+
   /// Envía el contenido completo de un himno al display remoto.
   Future<bool> sendHymnContent({
     required int hymnId,
