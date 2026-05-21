@@ -1,13 +1,16 @@
+import 'dart:async';
+
 import 'package:bonsoir/bonsoir.dart';
 import 'package:logging/logging.dart';
 
 /// Servicio de broadcast mDNS vía Bonsoir.
 ///
-/// Publica un servicio `_himnario_grpc._tcp` en la red local para que
+/// Publica un servicio `_himnario._tcp` en la red local para que
 /// otros dispositivos puedan descubrirlo.
 class BonsoirBroadcastService {
   final _log = Logger('BonsoirBroadcastService');
   BonsoirBroadcast? _broadcast;
+  StreamSubscription<BonsoirBroadcastEvent>? _eventSubscription;
 
   /// Inicia la publicación del servicio.
   ///
@@ -25,7 +28,7 @@ class BonsoirBroadcastService {
     try {
       final service = BonsoirService(
         name: name,
-        type: '_himnario_grpc._tcp',
+        type: '_himnario._tcp',
         port: port,
         attributes: {
           'sessionId': sessionId,
@@ -34,9 +37,15 @@ class BonsoirBroadcastService {
       );
       _broadcast = BonsoirBroadcast(service: service);
       await _broadcast!.initialize();
+
+      // Escuchar eventos del broadcast para detectar errores
+      _eventSubscription = _broadcast!.eventStream?.listen((event) {
+        _log.info('Evento broadcast: ${event.runtimeType}');
+      });
+
       await _broadcast!.start();
       _log.info(
-        'BonsoirBroadcast iniciado: $name (_himnario_grpc._tcp) en puerto $port',
+        'BonsoirBroadcast iniciado: $name (_himnario._tcp) en puerto $port',
       );
     } catch (e) {
       _log.severe('Error iniciando BonsoirBroadcast: $e');
@@ -46,6 +55,8 @@ class BonsoirBroadcastService {
 
   /// Detiene la publicación del servicio.
   Future<void> stop() async {
+    await _eventSubscription?.cancel();
+    _eventSubscription = null;
     await _broadcast?.stop();
     _broadcast = null;
     _log.info('BonsoirBroadcast detenido');

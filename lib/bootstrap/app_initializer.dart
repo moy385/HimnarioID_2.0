@@ -128,6 +128,7 @@ class AppInitializer {
 
   /// Inicia el servidor gRPC para modo Display.
   static Future<void> _initDisplayServer([ProviderContainer? container]) async {
+    // 1. Iniciar servidor gRPC
     try {
       _displayServer = GrpcDisplayServer(
         displayName: 'Display Principal',
@@ -176,14 +177,17 @@ class AppInitializer {
       }
 
       await _displayServer!.start();
-      _log.info(
-        'Servidor gRPC iniciado en puerto ${_displayServer!.port}',
-      );
+      _log.info('Servidor gRPC iniciado en puerto ${_displayServer!.port}');
+    } catch (e) {
+      _log.severe('Error al iniciar servidor gRPC: $e');
+      // No relanzar — la app puede funcionar sin servidor gRPC
+      return;
+    }
 
-      // Iniciar broadcast Bonsoir en desktop (Linux, macOS, Windows)
-      if (_platform == TargetPlatform.linux ||
-          _platform == TargetPlatform.macOS ||
-          _platform == TargetPlatform.windows) {
+    // 2. Iniciar broadcast Bonsoir (solo Windows/Linux)
+    if (_platform == TargetPlatform.windows ||
+        _platform == TargetPlatform.linux) {
+      try {
         _bonsoirBroadcast = BonsoirBroadcastService();
         await _bonsoirBroadcast!.start(
           name: 'HimnarioID-${_displayServer!.displayName}',
@@ -191,10 +195,14 @@ class AppInitializer {
           sessionId: _displayServer!.sessionId,
           displayName: _displayServer!.displayName,
         );
+        _log.info('Broadcast Bonsoir iniciado correctamente.');
+      } catch (e) {
+        _log.severe('Error al iniciar broadcast Bonsoir: $e');
+        _log.warning(
+          'El servidor gRPC está funcionando, pero el broadcast mDNS '
+          'falló. Usa conexión manual con la IP de esta máquina.',
+        );
       }
-    } catch (e) {
-      _log.severe('Error al iniciar servidor gRPC: $e');
-      // No relanzar — la app puede funcionar sin servidor gRPC
     }
   }
 

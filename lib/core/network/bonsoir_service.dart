@@ -7,7 +7,7 @@ import 'domain/bonsoir_discovered_service.dart';
 
 /// Servicio de descubrimiento mDNS vía Bonsoir.
 ///
-/// Escanea servicios `_himnario_grpc._tcp` en la red local y emite
+/// Escanea servicios `_himnario._tcp` en la red local y emite
 /// [BonsoirDiscoveredService] cada vez que un servicio es descubierto
 /// o eliminado.
 class BonsoirService {
@@ -24,7 +24,7 @@ class BonsoirService {
     if (_discovery != null) return;
     try {
       _discovery = BonsoirDiscovery(
-        type: '_himnario_grpc._tcp',
+        type: '_himnario._tcp',
         printLogs: true,
       );
       await _discovery!.initialize();
