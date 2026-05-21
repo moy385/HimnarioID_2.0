@@ -8,7 +8,6 @@ import '../core/database/database_helper.dart';
 import '../core/network/bonsoir_broadcast_service.dart';
 import '../core/network/bonsoir_service.dart';
 import '../core/network/mdns_discovery.dart';
-import '../core/network/permission_service.dart';
 import '../data/datasources/remote/grpc_display_server.dart';
 import '../presentation/views_personal/providers/hymn_providers.dart';
 import '../presentation/views_projection/providers/live_control_providers.dart';
@@ -118,17 +117,6 @@ class AppInitializer {
   static Future<void> _initNetworkServices([
     ProviderContainer? container,
   ]) async {
-    // Solicitar permiso NEARBY_WIFI_DEVICES en Android 13+ antes de
-    // cualquier operación de red (broadcast o discovery).
-    if (_platform == TargetPlatform.android) {
-      final granted = await PermissionService.requestNearbyWifiPermission();
-      if (!granted) {
-        _log.warning(
-          'Continuando sin NEARBY_WIFI_DEVICES — discovery puede fallar',
-        );
-      }
-    }
-
     if (_platform == TargetPlatform.linux ||
         _platform == TargetPlatform.macOS ||
         _platform == TargetPlatform.windows) {

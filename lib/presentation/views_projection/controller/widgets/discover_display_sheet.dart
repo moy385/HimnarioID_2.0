@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/connection_state.dart';
 import '../../../../core/network/domain/discovered_display.dart';
+import '../../../../core/network/permission_service.dart';
 import '../../../../data/datasources/remote/grpc_display_server.dart';
 import '../../../../domain/entities/fondo_pantalla.dart';
 import '../../../../domain/repositories/control_repository.dart' as domain;
@@ -42,9 +43,14 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
   final _manualIpController = TextEditingController();
 
   /// Controlador para el campo de puerto de conexión manual.
-  final _manualPortController = TextEditingController(
-    text: '${GrpcDisplayServer.defaultPort}',
-  );
+  final _manualPortController =
+      TextEditingController(text: '${GrpcDisplayServer.defaultPort}');
+
+  /// Si el permiso [Permission.nearbyWifiDevices] ya fue verificado.
+  bool _permissionChecked = false;
+
+  /// Si el permiso [Permission.nearbyWifiDevices] fue concedido.
+  bool _nearbyPermissionGranted = false;
 
   /// Clave para el [AnimatedList] de dispositivos.
   final GlobalKey<AnimatedListState> _listKey =
@@ -61,6 +67,20 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
   void initState() {
     super.initState();
     _startAutoRefresh();
+    _checkPermission();
+  }
+
+  /// Verifica y solicita el permiso [Permission.nearbyWifiDevices].
+  ///
+  /// Este permiso es necesario en Android 13+ para que Bonsoir pueda
+  /// descubrir dispositivos en la red local mediante mDNS/NSD.
+  Future<void> _checkPermission() async {
+    final granted = await PermissionService.requestNearbyWifiPermission();
+    if (!mounted) return;
+    setState(() {
+      _permissionChecked = true;
+      _nearbyPermissionGranted = granted;
+    });
   }
 
   /// Inicia el timer que invalida [displayScannerProvider] cada 10s.
@@ -172,6 +192,8 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
               _buildHandle(colorScheme),
               _buildHeader(colorScheme, textTheme, isConnected),
               const Divider(height: 1),
+              // ── Banner de permiso (Android 13+) ──
+              _buildPermissionBanner(colorScheme, textTheme),
               // ── D1.2: Indicador de carga ──
               _buildScannerLoadingIndicator(colorScheme),
               // Contenido principal
@@ -247,6 +269,63 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
             color: colorScheme.primary,
           )
         : const SizedBox.shrink();
+  }
+
+  // ── Banner de permiso NEARBY_WIFI_DEVICES ─────────────────────
+
+  /// Muestra un banner si el permiso [Permission.nearbyWifiDevices]
+  /// aún no ha sido concedido (Android 13+). Este permiso es necesario
+  /// para que Bonsoir pueda descubrir dispositivos en la LAN.
+  Widget _buildPermissionBanner(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    if (_permissionChecked && _nearbyPermissionGranted) {
+      return const SizedBox.shrink();
+    }
+    if (!_permissionChecked) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text('Verificando permisos de red...'),
+            ),
+          ],
+        ),
+      );
+    }
+    // Permiso denegado
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_rounded, color: colorScheme.error),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Permiso "Dispositivos WiFi cercanos" denegado. '
+              'Actívalo en Ajustes > Himnario ID > Permisos para '
+              'descubrir displays automáticamente.',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Contenido de escaneo ─────────────────────────────────────
@@ -678,6 +757,14 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
             'Aseg\u00farate de que la PC est\u00e9 encendida\ny en la misma red WiFi.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tambi\u00e9n puedes usar "Conexi\u00f3n manual"\nm\u00e1s abajo con la IP de la PC.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.outline,
             ),
             textAlign: TextAlign.center,
           ),
