@@ -180,8 +180,10 @@ class AppInitializer {
         'Servidor gRPC iniciado en puerto ${_displayServer!.port}',
       );
 
-      // Iniciar broadcast Bonsoir solo en Windows
-      if (_platform == TargetPlatform.windows) {
+      // Iniciar broadcast Bonsoir en desktop (Linux, macOS, Windows)
+      if (_platform == TargetPlatform.linux ||
+          _platform == TargetPlatform.macOS ||
+          _platform == TargetPlatform.windows) {
         _bonsoirBroadcast = BonsoirBroadcastService();
         await _bonsoirBroadcast!.start(
           name: 'HimnarioID-${_displayServer!.displayName}',
@@ -216,14 +218,19 @@ class AppInitializer {
     }
   }
 
-  /// Inicia el descubrimiento Bonsoir (todas las plataformas).
+  /// Inicia el descubrimiento Bonsoir (solo en móvil).
   static Future<void> _initBonsoirDiscovery() async {
-    try {
-      _bonsoirService = BonsoirService();
-      await _bonsoirService!.start();
-      _log.info('Descubrimiento Bonsoir iniciado.');
-    } catch (e) {
-      _log.severe('Error al iniciar BonsoirService: $e');
+    // Solo iniciar en móvil; en desktop el broadcast ya publica el servicio
+    if (_platform == TargetPlatform.android || _platform == TargetPlatform.iOS) {
+      try {
+        _bonsoirService = BonsoirService();
+        await _bonsoirService!.start();
+        _log.info('Descubrimiento Bonsoir iniciado.');
+      } catch (e) {
+        _log.severe('Error al iniciar BonsoirService: $e');
+      }
+    } else {
+      _log.info('Bonsoir discovery omitido en plataforma no móvil.');
     }
   }
 

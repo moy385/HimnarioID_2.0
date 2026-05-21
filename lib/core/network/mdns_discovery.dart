@@ -1,22 +1,21 @@
 import 'dart:async';
 
 import 'package:logging/logging.dart';
-import 'package:multicast_dns/multicast_dns.dart';
 
+import 'bonsoir_service.dart';
 import 'connection_state.dart';
+import 'domain/bonsoir_discovered_service.dart';
 
-/// Servicio de descubrimiento mDNS para encontrar displays en la LAN.
+/// Servicio de descubrimiento mDNS basado en [BonsoirService].
 ///
-/// Escanea el servicio `_himnario._tcp.local` y emite dispositivos encontrados
-/// a través de un stream reactivo.
+/// Mantiene la misma API pública que el `MdnsDiscovery` anterior (que usaba
+/// `multicast_dns`), pero ahora delega internamente en Bonsoir v7 para
+/// encontrar displays en la LAN.
 class MdnsDiscovery {
   static final _log = Logger('MdnsDiscovery');
 
-  static const String _serviceType = '_himnario._tcp.local';
-  static const Duration _searchDuration = Duration(seconds: 5);
-
-  MDnsClient? _client;
-  StreamSubscription<PtrResourceRecord>? _ptrSubscription;
+  final BonsoirService _bonsoirService = BonsoirService();
+  StreamSubscription<BonsoirDiscoveredService>? _subscription;
   final StreamController<DeviceInfo> _deviceController =
       StreamController<DeviceInfo>.broadcast();
 
@@ -38,78 +37,23 @@ class MdnsDiscovery {
     _isRunning = true;
 
     try {
-      _client = MDnsClient();
-      await _client!.start();
+      _log.info('Iniciando descubrimiento mDNS (Bonsoir)...');
+      await _bonsoirService.start();
 
-      _log.info('Iniciando descubrimiento mDNS para $_serviceType...');
-
-      // 1. Buscar PTR records para el tipo de servicio
-      _ptrSubscription = _client!
-          .lookup<PtrResourceRecord>(
-        ResourceRecordQuery.serverPointer(_serviceType),
-      )
-          .listen((ptrRecord) {
-        _log.info('Servicio encontrado: ${ptrRecord.domainName}');
-
-        // 2. Para cada instancia, resolver SRV record
-        _resolveServiceInstance(ptrRecord.domainName);
+      _subscription = _bonsoirService.onServiceChanged.listen((event) {
+        if (event.isRemoved) return;
+        final device = DeviceInfo(
+          name: event.name,
+          ip: event.ip,
+          port: event.port,
+        );
+        _log.info('Dispositivo descubierto: $device');
+        _deviceController.add(device);
       });
-
-      // Detener automáticamente después de un tiempo
-      await Future.delayed(_searchDuration);
     } catch (e) {
       _log.severe('Error en descubrimiento mDNS: $e');
-    } finally {
-      await stopDiscovery();
-    }
-  }
-
-  /// Resuelve una instancia de servicio (SRV + Address).
-  Future<void> _resolveServiceInstance(String instanceName) async {
-    try {
-      // Resolver SRV record para obtener target y puerto
-      final srvRecords = await _client!
-          .lookup<SrvResourceRecord>(
-            ResourceRecordQuery.service(instanceName),
-          )
-          .toList();
-
-      for (final srv in srvRecords) {
-        _log.info('SRV: target=${srv.target}, port=${srv.port}');
-
-        // Resolver dirección IP del target
-        final ipRecords = await _client!
-            .lookup<IPAddressResourceRecord>(
-              ResourceRecordQuery.addressIPv4(srv.target),
-            )
-            .toList();
-
-        if (ipRecords.isEmpty) {
-          // Intentar con IPv6
-          final ipv6Records = await _client!
-              .lookup<IPAddressResourceRecord>(
-                ResourceRecordQuery.addressIPv6(srv.target),
-              )
-              .toList();
-          ipRecords.addAll(ipv6Records);
-        }
-
-        final deviceName = instanceName.contains('.')
-            ? instanceName.substring(0, instanceName.indexOf('.'))
-            : instanceName;
-
-        for (final ipRecord in ipRecords) {
-          final device = DeviceInfo(
-            name: deviceName,
-            ip: ipRecord.address.address,
-            port: srv.port,
-          );
-          _log.info('Dispositivo descubierto: $device');
-          _deviceController.add(device);
-        }
-      }
-    } catch (e) {
-      _log.warning('Error al resolver instancia $instanceName: $e');
+      _isRunning = false;
+      rethrow;
     }
   }
 
@@ -123,24 +67,25 @@ class MdnsDiscovery {
     await startDiscovery();
 
     // Dar tiempo para recoger resultados
-    await Future.delayed(_searchDuration);
+    await Future.delayed(const Duration(seconds: 5));
 
     await subscription.cancel();
+    await stopDiscovery();
     return devices;
   }
 
   /// Detiene el descubrimiento y libera recursos.
   Future<void> stopDiscovery() async {
     _isRunning = false;
-    await _ptrSubscription?.cancel();
-    _ptrSubscription = null;
-    _client?.stop();
-    _client = null;
+    await _subscription?.cancel();
+    _subscription = null;
+    await _bonsoirService.stop();
     _log.info('Descubrimiento mDNS detenido.');
   }
 
   /// Libera todos los recursos.
   void dispose() {
     _deviceController.close();
+    _bonsoirService.dispose();
   }
 }

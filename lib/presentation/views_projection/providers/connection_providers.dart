@@ -11,6 +11,8 @@ import '../../../data/datasources/remote/grpc_control_datasource.dart';
 import '../../../data/repositories/control_repository_impl.dart';
 import '../../../domain/repositories/control_repository.dart' as domain;
 
+final _log = Logger('ConnectionProviders');
+
 /// Provider del datasource de control remoto.
 final controlDataSourceProvider = Provider<GrpcControlDataSource>((ref) {
   return GrpcControlDataSource();
@@ -252,15 +254,20 @@ final bonsoirServiceProvider = Provider<BonsoirService>((ref) {
 
 /// Provider que escanea la LAN en busca de displays Bonsoir.
 ///
-/// Escucha [BonsoirService.onServiceChanged] durante 3 segundos y
+/// Escucha [BonsoirService.onServiceChanged] durante 5 segundos y
 /// retorna la lista de displays descubiertos.
 final displayScannerProvider =
     FutureProvider.autoDispose<List<DiscoveredDisplay>>((ref) async {
   final bonsoir = ref.watch(bonsoirServiceProvider);
   await bonsoir.start();
+  _log.info('Escaneando displays Bonsoir...');
 
   final results = <DiscoveredDisplay>[];
   final sub = bonsoir.onServiceChanged.listen((event) {
+    _log.info(
+      'Evento Bonsoir: ${event.name} en ${event.ip}:${event.port} '
+      '(isNew=${event.isNew}, isRemoved=${event.isRemoved})',
+    );
     if (event.isRemoved) {
       results.removeWhere((d) => d.name == event.name);
     } else {
@@ -275,9 +282,10 @@ final displayScannerProvider =
     }
   });
 
-  // Esperar 3 segundos para recopilar servicios
-  await Future.delayed(const Duration(seconds: 3));
+  // Esperar 5 segundos para recopilar servicios (más tiempo para resolver)
+  await Future.delayed(const Duration(seconds: 5));
   await sub.cancel();
 
+  _log.info('Escaneo completado: ${results.length} displays encontrados');
   return results.toList();
 });

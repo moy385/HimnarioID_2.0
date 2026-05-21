@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/connection_state.dart';
 import '../../../../core/network/domain/discovered_display.dart';
+import '../../../../data/datasources/remote/grpc_display_server.dart';
 import '../../../../domain/entities/fondo_pantalla.dart';
 import '../../../../domain/repositories/control_repository.dart' as domain;
 import '../../../shared_widgets/providers/fondo_options_provider.dart';
@@ -37,6 +38,9 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
   /// IP del dispositivo al que se está conectando actualmente.
   String? _connectingIp;
 
+  /// Controlador para el campo de IP de conexión manual.
+  final _manualIpController = TextEditingController();
+
   /// Clave para el [AnimatedList] de dispositivos.
   final GlobalKey<AnimatedListState> _listKey =
       GlobalKey<AnimatedListState>();
@@ -67,6 +71,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
   void dispose() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    _manualIpController.dispose();
     super.dispose();
   }
 
@@ -89,6 +94,22 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     await ref.read(connectionStateProvider.notifier).disconnect();
     if (!mounted) return;
     setState(() => _connectingIp = null);
+  }
+
+  /// Intenta conectar a una IP ingresada manualmente.
+  Future<void> _connectManual() async {
+    final ip = _manualIpController.text.trim();
+    if (ip.isEmpty) return;
+
+    final device = DeviceInfo(
+      name: 'Manual: $ip',
+      ip: ip,
+      port: GrpcDisplayServer.defaultPort,
+      id: '',
+    );
+
+    final notifier = ref.read(connectionStateProvider.notifier);
+    await notifier.connectToDevice(device);
   }
 
   void _selectEmitter() {
@@ -297,6 +318,10 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
         // Banner de error
         if (discoveryState.error != null)
           _buildErrorBanner(colorScheme, textTheme, discoveryState.error!),
+
+        // ── Sección de conexión manual por IP ──
+        const SizedBox(height: 24),
+        _buildManualConnection(colorScheme, textTheme),
       ],
     );
   }
@@ -659,6 +684,46 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Conexión manual por IP ────────────────────────────────────
+
+  Widget _buildManualConnection(ColorScheme colorScheme, TextTheme textTheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const SizedBox(height: 8),
+        Text(
+          'Conexión manual',
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _manualIpController,
+          decoration: const InputDecoration(
+            labelText: 'Dirección IP',
+            hintText: '192.168.1.100',
+            prefixIcon: Icon(Icons.computer),
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          keyboardType: TextInputType.number,
+          onSubmitted: (_) => _connectManual(),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _connectManual,
+            icon: const Icon(Icons.link),
+            label: const Text('Conectar manualmente'),
+          ),
+        ),
+      ],
     );
   }
 

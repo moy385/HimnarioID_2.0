@@ -104,6 +104,8 @@ class ReceptorBinding extends ConsumerStatefulWidget {
 }
 
 class _ReceptorBindingState extends ConsumerState<ReceptorBinding> {
+  ProviderSubscription<LiveControlState>? _subscription;
+
   @override
   void initState() {
     super.initState();
@@ -117,7 +119,7 @@ class _ReceptorBindingState extends ConsumerState<ReceptorBinding> {
   /// [HimnarioDualApp]) pueda transicionar de [StandbyScreen] a
   /// [LiveProjectionScreen].
   void _setupListener() {
-    ref.listen(liveControlProvider, (
+    _subscription = ref.listenManual(liveControlProvider, (
       LiveControlState? previous,
       LiveControlState next,
     ) {
@@ -126,6 +128,12 @@ class _ReceptorBindingState extends ConsumerState<ReceptorBinding> {
         // hacia LiveProjectionScreen.
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.close();
+    super.dispose();
   }
 
   @override

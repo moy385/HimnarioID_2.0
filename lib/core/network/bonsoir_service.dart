@@ -26,7 +26,10 @@ class BonsoirService {
       _discovery = BonsoirDiscovery(type: '_himnario_grpc._tcp');
       await _discovery!.initialize();
       _log.info('BonsoirDiscovery inicializado');
+
+      // IMPORTANTE: Escuchar eventos ANTES de start()
       _eventSubscription = _discovery!.eventStream?.listen(_onDiscoveryEvent);
+
       await _discovery!.start();
       _log.info('BonsoirDiscovery iniciado');
     } catch (e) {
@@ -37,28 +40,47 @@ class BonsoirService {
 
   void _onDiscoveryEvent(BonsoirDiscoveryEvent event) {
     switch (event) {
+      case BonsoirDiscoveryServiceFoundEvent(service: final service):
+        _log.info('Servicio encontrado: ${service.name}, resolviendo...');
+        // En v7, se necesita resolver explícitamente para obtener IP/puerto
+        _discovery?.serviceResolver.resolveService(service);
+
+      case BonsoirDiscoveryServiceResolveFailedEvent():
+        _log.warning('Resolución de servicio falló');
+
       case BonsoirDiscoveryServiceResolvedEvent(service: final service):
+        _log.info('Servicio RESUELTO: ${service.name}');
+        // En v7: usar hostname para mostrar, hostAddresses para conectar
+        final ip = service.hostAddresses.isNotEmpty
+            ? service.hostAddresses.first
+            : '0.0.0.0';
         _serviceController.add(
           BonsoirDiscoveredService(
             name: service.name,
-            ip: service.host ?? '0.0.0.0',
+            ip: ip,
             port: service.port,
             attributes: Map<String, String>.from(service.attributes),
             isNew: true,
             isRemoved: false,
           ),
         );
+
       case BonsoirDiscoveryServiceLostEvent(service: final service):
+        _log.info('Servicio perdido: ${service.name}');
+        final ip = service.hostAddresses.isNotEmpty
+            ? service.hostAddresses.first
+            : '0.0.0.0';
         _serviceController.add(
           BonsoirDiscoveredService(
             name: service.name,
-            ip: service.host ?? '0.0.0.0',
+            ip: ip,
             port: service.port,
             attributes: Map<String, String>.from(service.attributes),
             isNew: false,
             isRemoved: true,
           ),
         );
+
       default:
         break;
     }
