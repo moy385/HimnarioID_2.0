@@ -461,9 +461,9 @@ List<Widget> _brushSheetChildren({
     const SizedBox(height: 20),
 
     // ==========================================
-    // 3b. Tamaño de letra — Proyección (solo desktop)
+    // 3b. Tamaño de letra — Proyección (desktop o emisor conectado)
     // ==========================================
-    if (ref.watch(isDesktopModeProvider)) ...[
+    if (ref.watch(isDesktopModeProvider) || ref.watch(isConnectedProvider)) ...[
       const SizedBox(height: 16),
       Text(
         'Tamaño de letra — Proyección',
