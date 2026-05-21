@@ -149,6 +149,18 @@ void _syncAppearanceToProjection(WidgetRef ref) {
       cardOpacity: appearance.cardOpacity,
       projectionFontScale: appearance.projectionFontScale,
     ).catchError((_) => false);
+
+    // NUEVO: Enviar fondo seleccionado
+    if (appearance.selectedFondo != null) {
+      dataSource.sendSetBackground(
+        appearance.selectedFondo!.id.toString(),
+      ).catchError((_) => false);
+    }
+
+    // NUEVO: Enviar escala de fuente local
+    dataSource.sendSetFontSize(
+      appearance.fontScale * 48.0,
+    ).catchError((_) => false);
   }
 }
 

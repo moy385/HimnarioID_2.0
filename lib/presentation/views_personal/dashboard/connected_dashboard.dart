@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/enums/himno_tipo.dart';
 import '../../../core/network/connection_state.dart';
+import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/hymn_card.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 import '../../shared_widgets/search_bar.dart';
 import '../../views_projection/controller/minimal_control_screen.dart';
 import '../../views_projection/providers/active_hymn_providers.dart';
@@ -216,6 +218,10 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
                       onTap: () {
                         ref.read(activeHymnIdProvider.notifier).state =
                             himno.id;
+                        // Enviar himno al display remoto inmediatamente
+                        if (ref.read(isConnectedProvider)) {
+                          _sendHymnToDisplay(ref, himno);
+                        }
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const MinimalControlScreen(),
@@ -231,6 +237,54 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
         ],
       ),
     );
+  }
+
+  /// Envía el himno completo al display remoto vía gRPC.
+  Future<void> _sendHymnToDisplay(WidgetRef ref, Himno himno) async {
+    try {
+      final repo = ref.read(hymnRepositoryProvider);
+      final versionPaisId = himno.primaryVersionPaisId;
+      if (versionPaisId < 0) return;
+      final stanzas = await repo.getStanzas(versionPaisId);
+      if (stanzas.isEmpty) return;
+
+      final dataSource = ref.read(controlDataSourceProvider);
+      await dataSource.sendHymnContent(
+        hymnId: himno.id,
+        titulo: himno.titulo,
+        numero: himno.numero,
+        tipo: himno.tipo.name,
+        versionPaisId: versionPaisId,
+        estrofas: stanzas
+            .map((e) => <String, dynamic>{
+                  'id': e.id,
+                  'version_pais_id': e.versionPaisId,
+                  'tipo': e.tipo.name,
+                  'orden': e.orden,
+                  'contenido': e.contenido,
+                })
+            .toList(),
+      );
+
+      // También enviar apariencia actual
+      final appearance = ref.read(hymnAppearanceProvider);
+      await dataSource.sendSetAppearance(
+        textColor: _colorToHex(appearance.textColor),
+        chordColor: _colorToHex(appearance.chordColor),
+        fontFamily: appearance.fontFamily,
+        isBold: appearance.isBold,
+        showChords: appearance.showChords,
+        cardOpacity: appearance.cardOpacity,
+        projectionFontScale: appearance.projectionFontScale,
+      );
+    } catch (_) {
+      // Fallo silencioso — el estado local persiste
+    }
+  }
+
+  /// Convierte un Color a string hex #AARRGGBB.
+  String _colorToHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
   }
 
   Widget _buildFilterChip(String label, HimnoTipo? filterValue) {

@@ -8,7 +8,6 @@ import '../core/database/database_helper.dart';
 import '../core/network/mdns_broadcast_service.dart';
 import '../core/network/nsd_discovery_service.dart';
 import '../core/network/mdns_discovery.dart';
-import '../core/window_manager/window_service.dart';
 import '../data/datasources/remote/grpc_display_server.dart';
 import '../domain/entities/estrofa.dart';
 import '../domain/entities/himno.dart';
@@ -184,9 +183,6 @@ class AppInitializer {
           effectiveContainer
               .read(isClientConnectedProvider.notifier)
               .state = true;
-
-          // Intentar abrir ventana de proyección automáticamente
-          _openProjectionWindow(clientName);
         };
 
         _displayServer!.onLoadHymnContent = (
@@ -286,19 +282,4 @@ class AppInitializer {
     _log.info('Servicios de red detenidos.');
   }
 
-  /// Abre la ventana de proyección cuando un cliente se conecta.
-  static void _openProjectionWindow(String clientName) {
-    try {
-      final windowService = SubprocessWindowService();
-      windowService.openProjectionWindow({
-        'type': 'CONNECTED',
-        'clientName': clientName,
-        'serverName': _displayServer?.displayName ?? 'Display Principal',
-        'sessionId': _displayServer?.sessionId ?? '',
-      });
-      _log.info('Ventana de proyección abierta automáticamente.');
-    } catch (e) {
-      _log.warning('No se pudo abrir ventana de proyección automática: $e');
-    }
-  }
 }

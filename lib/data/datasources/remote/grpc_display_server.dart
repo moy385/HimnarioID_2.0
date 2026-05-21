@@ -226,6 +226,37 @@ class GrpcDisplayServer extends HymnControlServiceBase {
           // No modifica estado, solo responder
           break;
 
+        case CommandType.SET_BACKGROUND:
+          if (_container != null && request.hasBackgroundId()) {
+            try {
+              final bgId = int.tryParse(request.backgroundId);
+              if (bgId == null) {
+                _log.warning('ID de fondo inválido: ${request.backgroundId}');
+                break;
+              }
+              final repo = _container.read(fondoRepositoryProvider);
+              final fondos = await repo.getAll();
+              final fondo = fondos.where((f) => f.id == bgId).firstOrNull;
+              if (fondo != null) {
+                _container.read(hymnAppearanceProvider.notifier).setFondo(fondo);
+                _log.info('Fondo cambiado a: ${fondo.nombre}');
+              } else {
+                _log.warning('Fondo con ID $bgId no encontrado');
+              }
+            } catch (e) {
+              _log.severe('Error al cambiar fondo: $e');
+            }
+          }
+          break;
+
+        case CommandType.SET_FONT_SIZE:
+          if (_container != null && request.hasFontSize()) {
+            final scale = request.fontSize / 48.0;
+            _container.read(hymnAppearanceProvider.notifier).setFontScale(scale);
+            _log.info('Tamaño de fuente cambiado a escala: $scale');
+          }
+          break;
+
         case CommandType.SET_APPEARANCE:
           if (_container != null) {
             try {

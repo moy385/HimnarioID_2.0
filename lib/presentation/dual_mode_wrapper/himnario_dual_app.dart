@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/himno.dart';
 import '../../core/theme/app_theme.dart';
+import '../shared_widgets/fullscreen_handler.dart';
 import '../views_personal/dashboard/home_screen.dart';
 import '../views_personal/hymn_scroll/arrangement_editor_screen.dart';
 import '../views_personal/hymn_scroll/hymn_detail_screen.dart';
@@ -32,42 +33,44 @@ class HimnarioDualApp extends ConsumerWidget {
     final isDesktop = mode == DeviceMode.desktop;
     final isPresenting = ref.watch(isPresentingProvider);
 
-    return MaterialApp(
-      title: 'HimnarioID 2.0',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+    return FullscreenHandler(
+      child: MaterialApp(
+        title: 'HimnarioID 2.0',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
 
-      // Rutas de la aplicación
-      routes: {
-        '/hymn-detail': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-          if (args is! Himno) return const HomeScreen();
-          return HymnDetailScreen(himno: args);
+        // Rutas de la aplicación
+        routes: {
+          '/hymn-detail': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            if (args is! Himno) return const HomeScreen();
+            return HymnDetailScreen(himno: args);
+          },
+          '/live-control': (context) {
+            return const LiveControlScreen();
+          },
+          '/arrangement-editor': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            if (args is! Himno) return const HomeScreen();
+            return ArrangementEditorScreen(himno: args);
+          },
         },
-        '/live-control': (context) {
-          return const LiveControlScreen();
-        },
-        '/arrangement-editor': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-          if (args is! Himno) return const HomeScreen();
-          return ArrangementEditorScreen(himno: args);
-        },
-      },
 
-      // Punto de entrada basado en el modo dual y estado de presentación
-      // HomeScreen es SIEMPRE la base (phone, desktop, desktop+presenting).
-      // El overlay de control (PresentControlBar) se muestra solo cuando
-      // el dispositivo está en modo desktop y el modo presentación activo.
-      // StandbyScreen se maneja DENTRO de HomeScreen según ConnectionRole.
-      home: Stack(
-        children: [
-          const HomeScreen(),
-          if (isDesktop && isPresenting)
-            const PresentControlBar(),
-          const DeviceSwitch(),
-        ],
+        // Punto de entrada basado en el modo dual y estado de presentación
+        // HomeScreen es SIEMPRE la base (phone, desktop, desktop+presenting).
+        // El overlay de control (PresentControlBar) se muestra solo cuando
+        // el dispositivo está en modo desktop y el modo presentación activo.
+        // StandbyScreen se maneja DENTRO de HomeScreen según ConnectionRole.
+        home: Stack(
+          children: [
+            const HomeScreen(),
+            if (isDesktop && isPresenting)
+              const PresentControlBar(),
+            const DeviceSwitch(),
+          ],
+        ),
       ),
     );
   }
