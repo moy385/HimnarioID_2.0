@@ -99,9 +99,13 @@ flutter install
 **Causa**: La columna vieja `pais` (TEXT) quedó con NOT NULL después de la migración a `pais_id`.
 **Solución**: `ALTER TABLE Version_Pais DROP COLUMN pais` con SQLite >= 3.35.0.
 
-### APK muy grande (155MB)
+### APK muy grande (155MB debug)
 El APK debug incluye símbolos de depuración. Para release:
+```bash
+flutter build apk --release
+```
+Esto genera un APK fat de ~65.5MB. Para APKs más pequeños:
 ```bash
 flutter build apk --release --split-per-abi
 ```
-Esto genera APKs más pequeños (~20-30MB) por arquitectura (armeabi-v7a, arm64-v8a, x86_64).
+Esto genera APKs ~20-30MB por arquitectura (armeabi-v7a, arm64-v8a, x86_64).

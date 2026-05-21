@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 20 de mayo de 2026 — 4ª revisión
+> **Última actualización:** 21 de mayo de 2026 — 5ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -12,13 +12,15 @@
 - **Hosting**: GitHub Releases (para pistas de audio)
 
 ## Base de Datos (SQLite)
-- Version actual: 4
+- Version actual: 6
 - Tablas: Himno, Version_Pais, Pais, Estrofa, Categoria, Himno_Categoria, Usuario,
   Arreglo_Musical, Estrofa_Arreglo, Pista_Audio, Fondo_Pantalla, Configuracion,
   Historial_Reproduccion, **Himno_Busqueda**
 - BD embebida en: `assets/db/himnario_id.db` (400 himnos precargados + 25 nuevos de convenciones)
-- Migraciones: v1→v2→v3→v4
+- Migraciones: v1→v2→v3→v4→v5→v6
   - v4: `Himno_Busqueda` con texto pre-normalizado para búsqueda rápida en Android
+  - v5: Columna `evento` en Himno (para registrar evento/semana del himno)
+  - v6: Eliminado tipo `'video'` del CHECK constraint de Fondo_Pantalla (recreación de tabla)
 - Scripts: `scripts/insertar_himnos_convenciones.py` — inserta 25 himnos desde PDF
 
 ## Estructura del Proyecto
@@ -63,6 +65,9 @@ lib/
 └── main.dart
 ```
 
+## Rama activa
+- **`feature/orden-filtros-admin-crud`** — Orden de himnos (Oficiales primero vía `CASE WHEN` SQL), filtro "Convención" en búsqueda, CRUD Usuarios backend (lógica conservada, UI removida del panel admin)
+
 ## Características implementadas
 - Modo personal: búsqueda, filtros (tipo, A-Z, Z-A, categoría), scroll alfabético
 - Acordes sobre el texto (ChordParser + ChordPainter con caché LRU + ChordOverlayText)
@@ -97,14 +102,19 @@ lib/
   - Orquestación centralizada en AppInitializer (initNetworkServices)
   - Try/catch en cada capa con logs informativos y degradación graceful
   - Detección automática de plataforma: desktop → servidor gRPC (+ broadcast), móvil → discovery
-- Build Android funcional (APK release con JDK 17)
+- Build Android funcional (APK release 65.5MB con JDK 17)
 - 25 himnos adicionales de convenciones/campamentos insertados desde script Python
+- **F11 fullscreen**: Handler global para alternar pantalla completa en desktop (`FullscreenHandler`)
+- **Slider tamaño letra proyección visible en móvil**: Condición `isDesktopModeProvider || isConnectedProvider` en `control_sheets.dart`
+- **Orden himnos Oficiales primero**: `CASE WHEN h.tipo = 1 THEN 0 ELSE 1 END` en `_defaultOrderBy` del datasource — 0 hardcodes de `h.numero_oficial ASC` fuera del getter
+- **Filtro Convención**: Chip en HomeScreen + ConnectedDashboard para filtrar por `HimnoTipo.convencion`
+- **CRUD Usuarios backend**: CatalogLocalDataSource (4 métodos SQL), AdminRepository (interfaz + impl), manage_usuarios.dart (4 use cases), admin_providers.dart (5 providers Riverpod). UI removida del panel admin (se conserva lógica para futuro)
 
 ## Estado de Tests
 - **Unit + Widget**: 263 tests
 - **Integración**: 11 tests (~11 fallan por NOT NULL en tabla Pais)
 - **Total**: 274 tests (~11 fallos conocidos)
-- **`dart analyze lib/`**: 0 errors, 0 warnings (info pre-existentes)
+- **`dart analyze lib/`**: 0 errors, 0 warnings (27 info de estilo pre-existentes)
 
 ## Plataformas Soportadas
 - **Linux** (desarrollo principal) ✅
@@ -133,6 +143,8 @@ lib/
 - `feature/agregar-himnos-convenciones` — 25 himnos de convenciones + mejoras brocha + fondos + fix delete
 - `feature/copiar-fondos-a-local-storage` — FileStorageService, copia de fondos a directorio local de la app
 - `chore/limpieza-codigo-muerto` — 310 líneas eliminadas, 32 archivos. Limpieza post-revert de video
+- `feature/flujo-emisor-receptor` — Conexión gRPC Emisor/Receptor + mDNS + envío automático de himno, comandos SET_BACKGROUND/SET_FONT_SIZE, F11 fullscreen, slider proyección en móvil emisor conectado
+- `feature/orden-filtros-admin-crud` (activa, pendiente de merge) — Orden himnos Oficiales primero, filtro Convención, CRUD Usuarios backend
 
 ## Notas técnicas importantes
 - **Fondos de video**: Se intentó implementar con `video_player_media_kit` / `media_kit` + libmpv, pero se descartó por crash irrecuperable en Linux (assertion `group_index >= 0` en libmpv 0.41.0). Todo el código de video fue revertido. Pendiente para cuando Ubuntu actualice libmpv.

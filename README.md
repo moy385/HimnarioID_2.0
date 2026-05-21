@@ -241,7 +241,7 @@ flutter build apk --debug
 ```
 APK: `build/app/outputs/flutter-apk/app-debug.apk`
 
-Para APK release (fat): `flutter build apk` → **64.6MB**
+Para APK release (fat): `flutter build apk` → **65.5MB**
 Para APK más pequeño: `flutter build apk --split-per-abi` → ~20-30MB por arquitectura
 
 ### Pistas de Audio
@@ -251,8 +251,10 @@ Para APK más pequeño: `flutter build apk --split-per-abi` → ~20-30MB por arq
 
 ### Documentación adicional
 - `doc/CONTEXTO_PROYECTO.md` — Contexto completo del proyecto
+- `doc/tareas_pendientes.md` — Estado actual y prioridades
 - `doc/ANDROID_BUILD.md` — Guía de build para Android
+- `doc/BUILD_WINDOWS.md` — Build de Windows .exe (CI y local)
+- `doc/CONEXION_LAN.md` — Conexión gRPC Emisor/Receptor vía LAN
 - `doc/git-ramas-guia.md` — Guía de ramas y flujo Git
-- `doc/PLAN_DE_DELEGACION.md` — Plan de trabajo con agentes
-- `doc/TAREAS_DIFERIDAS.md` — Tareas pendientes
-- `TASKS_FASE4.md` — Plan de Fase 4 (histórico)
+- `doc/PLAN_DE_DELEGACION.md` — Plan histórico de trabajo con agentes
+- `doc/TAREAS_DIFERIDAS.md` — Tareas diferidas para próximos sprints

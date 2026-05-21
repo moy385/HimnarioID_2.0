@@ -1,8 +1,8 @@
 # Conexión LAN — Control Remoto (Android ⇄ Windows)
 
-> **Última actualización:** 20 de mayo de 2026
-> **Rama:** `feature/conexion-lan-grpc`
-> **Estado:** Planificación — Pendiente de implementación
+> **Última actualización:** 21 de mayo de 2026
+> **Rama:** `main` (mergeada como `feature/flujo-emisor-receptor`)
+> **Estado:** ✅ Implementado y funcional — infraestructura gRPC + mDNS completa, flujo Emisor/Receptor operativo
 
 ---
 
@@ -102,6 +102,8 @@ Que un **móvil Android** conectado a la misma **red WiFi** que una **PC con Win
 ---
 
 ## 3. Estado Actual del Código
+
+> **Nota:** Todo el flujo Emisor/Receptor (Fase 1-4) fue implementado y mergeado a `main` en la rama `feature/flujo-emisor-receptor`. Esta sección documenta el estado de cada componente.
 
 ### ✅ Lo que está listo (no requiere cambios)
 
@@ -437,34 +439,35 @@ Total: ~1 minuto antes de error permanente
 
 ## 7. Checklist de Avance
 
-### Fase 1 — Ajustes gRPC
-- [ ] `ClientKeepAliveOptions` agregado en `grpc_control_datasource.dart`
-- [ ] `ServerKeepAliveOptions` agregado en `grpc_display_server.dart`
-- [ ] Fallback de puertos implementado en servidor
-- [ ] Heartbeat (PING cada 15s) en `ConnectionNotifier`
-- [ ] Backoff exponencial para reconexión
-- [ ] Stream `watchStatus()` resistente a cierres silenciosos
+### Fase 1 — Ajustes gRPC ✅ COMPLETADO
+- [x] `ClientKeepAliveOptions` agregado en `grpc_control_datasource.dart`
+- [x] `ServerKeepAliveOptions` agregado en `grpc_display_server.dart`
+- [x] Fallback de puertos implementado en servidor
+- [x] Heartbeat (PING cada 15s) en `ConnectionNotifier`
+- [x] Backoff exponencial para reconexión
+- [x] Stream `watchStatus()` resistente a cierres silenciosos
 
-### Fase 2 — Migración mDNS
-- [ ] `bonsoir ^6.1.0` agregado en `pubspec.yaml` (reemplazar `multicast_dns`)
-- [ ] `BonsoirService` (discovery) implementado
-- [ ] `BonsoirBroadcastService` implementado
-- [ ] `AppInitializer` actualizado (broadcast en PC, discovery en mobile)
-- [ ] UI de discovery actualizada (refresh periódico, limpieza)
-- [ ] Permisos Android e iOS configurados
+### Fase 2 — Migración mDNS ✅ COMPLETADO
+- [x] `bonsoir ^6.1.0` agregado en `pubspec.yaml` (reemplazar `multicast_dns`)
+- [x] `BonsoirService` (discovery) implementado
+- [x] `BonsoirBroadcastService` implementado
+- [x] `AppInitializer` actualizado (broadcast en PC, discovery en mobile)
+- [x] UI de discovery actualizada (refresh periódico, limpieza)
+- [x] Permisos Android e iOS configurados
 
-### Fase 3 — Pruebas
-- [ ] Conexión real Android ⇄ Windows probada
-- [ ] Comandos de navegación funcionan (< 500ms)
-- [ ] Reconexión automática probada
-- [ ] Firewall de Windows documentado
-- [ ] `doc/CONEXION_LAN.md` actualizado
+### Fase 3 — Pruebas 🔶 Parcial
+- [x] Conexión real Android ⇄ Windows probada en desarrollo
+- [x] Comandos de navegación funcionan (< 500ms)
+- [ ] Reconexión automática probada en entorno real
+- [x] Firewall de Windows documentado
+- [x] `doc/CONEXION_LAN.md` actualizado
 
-### Fase 4 — Mejoras
-- [ ] `watchStatus()` streaming en UI del controlador
-- [ ] Fondo y fuente sincronizables desde móvil
-- [ ] Transposición controlable desde móvil
-- [ ] Presentación automática con timer local
+### Fase 4 — Mejoras 🔶 Parcial
+- [x] `watchStatus()` streaming en UI del controlador
+- [x] Fondo y fuente sincronizables desde móvil
+- [x] Transposición controlable desde móvil
+- [x] Envío automático de himno al conectar
+- [x] Presentación automática con timer local (LiveControlNotifier)
 
 ---
 
