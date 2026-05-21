@@ -7,6 +7,7 @@ import '../../models/categoria_model.dart';
 import '../../models/pais_model.dart';
 import '../../models/pista_audio_model.dart';
 import '../../models/fondo_pantalla_model.dart';
+import '../../models/usuario_model.dart';
 
 /// DataSource local para operaciones CRUD sobre tablas de catálogo
 /// (Categoria, Pais, Pista_Audio, Fondo_Pantalla).
@@ -393,6 +394,61 @@ class CatalogLocalDataSource {
         'Error al eliminar fondo: $e',
         query: 'deleteFondo',
       );
+    }
+  }
+
+  // ─── USUARIOS ────────────────────────────────────────────
+
+  /// Obtiene todos los usuarios ordenados por nombre.
+  Future<List<UsuarioModel>> getAllUsuarios() async {
+    try {
+      final db = await _db;
+      final result = await db.query('Usuario', orderBy: 'nombre ASC');
+      return result.map((m) => UsuarioModel.fromMap(m)).toList();
+    } catch (e) {
+      _log.severe('Error al obtener usuarios: $e');
+      throw exc.DatabaseException('Error al obtener usuarios: $e');
+    }
+  }
+
+  /// Crea un nuevo usuario.
+  Future<int> insertUsuario(UsuarioModel usuario) async {
+    try {
+      final db = await _db;
+      final map = usuario.toMap(includeId: false);
+      map.remove('fecha_registro');
+      final id = await db.insert('Usuario', map);
+      return id;
+    } catch (e) {
+      _log.severe('Error al crear usuario: $e');
+      throw exc.DatabaseException('Error al crear usuario: $e');
+    }
+  }
+
+  /// Actualiza un usuario existente.
+  Future<void> updateUsuario(UsuarioModel usuario) async {
+    try {
+      final db = await _db;
+      await db.update(
+        'Usuario',
+        usuario.toMap(),
+        where: 'id = ?',
+        whereArgs: [usuario.id],
+      );
+    } catch (e) {
+      _log.severe('Error al actualizar usuario: $e');
+      throw exc.DatabaseException('Error al actualizar usuario: $e');
+    }
+  }
+
+  /// Elimina un usuario por ID.
+  Future<void> deleteUsuario(int id) async {
+    try {
+      final db = await _db;
+      await db.delete('Usuario', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      _log.severe('Error al eliminar usuario: $e');
+      throw exc.DatabaseException('Error al eliminar usuario: $e');
     }
   }
 }

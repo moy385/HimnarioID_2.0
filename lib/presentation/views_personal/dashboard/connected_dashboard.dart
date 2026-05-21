@@ -122,6 +122,8 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
                 _buildFilterChip('Oficiales', HimnoTipo.oficial),
                 const SizedBox(width: 8),
                 _buildFilterChip('Inspiradas', HimnoTipo.inspirada),
+                const SizedBox(width: 8),
+                _buildFilterChip('Convención', HimnoTipo.convencion),
               ],
             ),
           ),

@@ -21,6 +21,11 @@ class HymnLocalDataSource {
   HymnLocalDataSource({DatabaseHelper? dbHelper})
       : _dbHelper = dbHelper ?? DatabaseHelper.instance;
 
+  /// Retorna el ORDER BY por defecto: Oficiales (tipo=1) primero,
+  /// luego por número oficial ascendente.
+  String get _defaultOrderBy =>
+      'CASE WHEN h.tipo = 1 THEN 0 ELSE 1 END, h.numero_oficial ASC';
+
   /// Obtiene la instancia de BD.
   Future<Database> get _db => _dbHelper.database;
 
@@ -150,8 +155,8 @@ class HymnLocalDataSource {
       final effectiveOrderBy =
           (orderBy != null && orderBy.contains('titulo_principal'))
               ? null
-              : (orderBy ?? 'h.numero_oficial ASC');
-      final orderClause = effectiveOrderBy ?? 'h.numero_oficial ASC';
+              : (orderBy ?? _defaultOrderBy);
+      final orderClause = effectiveOrderBy ?? _defaultOrderBy;
 
       // Params extra para ORDER BY CASE
       params.addAll([normalizedQuery, '$normalizedQuery%']);
@@ -236,7 +241,7 @@ class HymnLocalDataSource {
     List<Map<String, dynamic>> maps;
     final effectiveOrderBy = (orderBy != null && orderBy.contains('titulo_principal'))
         ? null
-        : (orderBy ?? 'h.numero_oficial ASC');
+        : (orderBy ?? _defaultOrderBy);
 
     if (categoriaId != null) {
       conditions.add('hc.categoria_id = ?');
@@ -246,14 +251,14 @@ class HymnLocalDataSource {
         FROM Himno h
         INNER JOIN Himno_Categoria hc ON hc.himno_id = h.id
         WHERE ${conditions.join(' AND ')}
-        ORDER BY ${effectiveOrderBy ?? 'h.numero_oficial ASC'}
+        ORDER BY ${effectiveOrderBy ?? _defaultOrderBy}
       ''', params,);
     } else {
       maps = await db.rawQuery('''
         SELECT h.id, h.titulo_principal, h.numero_oficial, h.tipo, h.activo
         FROM Himno h
         WHERE ${conditions.join(' AND ')}
-        ORDER BY ${effectiveOrderBy ?? 'h.numero_oficial ASC'}
+        ORDER BY ${effectiveOrderBy ?? _defaultOrderBy}
       ''', params,);
     }
 
@@ -397,7 +402,7 @@ class HymnLocalDataSource {
         FROM Himno h
         INNER JOIN Himno_Categoria hc ON hc.himno_id = h.id
         WHERE hc.categoria_id = ? AND h.activo = 1
-        ORDER BY h.numero_oficial ASC
+        ORDER BY $_defaultOrderBy
       ''',
         [categoriaId],
       );
