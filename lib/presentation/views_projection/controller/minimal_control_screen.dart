@@ -169,14 +169,7 @@ class MinimalControlScreen extends ConsumerWidget {
                   ref: ref,
                 ),
               ),
-              _FunctionButton(
-                icon: Icons.music_note,
-                label: 'Solfa',
-                onPressed: () => showSolfaSheet(
-                  context,
-                  ref: ref,
-                ),
-              ),
+              // Solfa (transposición) no disponible en modo remoto
               _FunctionButton(
                 icon: Icons.audiotrack,
                 label: 'Nota',
