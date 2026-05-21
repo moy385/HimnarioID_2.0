@@ -417,3 +417,189 @@ flutter build windows --debug
 ---
 
 *Documento generado por @orquestador — 20 de mayo de 2026*
+
+---
+
+# Reporte de Aplicación: Flujo Emisor/Receptor vía gRPC
+
+> **Fecha:** 21 de mayo de 2026
+> **Rama:** `feature/flujo-emisor-receptor`
+> **Objetivo:** Implementar el flujo completo de control remoto — celular como Emisor (Control), PC como Receptor (Display).
+
+---
+
+## 1. Resumen Ejecutivo
+
+Una vez establecida la conexión LAN (mDNS + gRPC), se implementó el flujo de datos reactivo entre el controlador (celular Android) y el display (PC Windows). El celular envía himnos completos por gRPC, navega estrofas remotamente, y consulta fondos del PC. El PC recibe el contenido y lo proyecta en ventana secundaria.
+
+## 2. Agentes Participantes
+
+| Agente | Rol |
+|---|---|
+| **@arqui** | Evaluación del plan `pasos.md`, identificación de 7 problemas, plan de implementación detallado |
+| **@curie** | Investigación de APIs: gRPC proto, nsd discovery Android, Riverpod + streaming, multi-ventana |
+| **@dev** | Implementación backend: proto, stubs, servidor, cliente, auto-proyección |
+| **@design** | Implementación UI: MinimalControlScreen, navegación condicional, fondos remotos |
+| **@arqui (verificación)** | Revisión post-implementación, detección de 2 bugs críticos + 4 menores |
+| **@orquestador** | Corrección de bugs críticos y generación de reporte |
+
+## 3. Problemas Identificados en `pasos.md`
+
+| # | Problema | Impacto |
+|---|---|---|
+| 1 | `SetBackground` como RPC separado es redundante — ya existe en `SendCommand` | Arquitectónico |
+| 2 | `RemoteControlPanel` ya existe como `MinimalControlScreen` | Esfuerzo duplicado |
+| 3 | `SendHymnContent` requiere inyectar en `liveControlProvider` del PC | Funcional |
+| 4 | Fondos: celular usa `fondosActivosProvider` local, no remoto | Divergencia de datos |
+| 5 | Auto-proyección: servidor gRPC no tiene callback `onClientConnected` | Falta de diseño |
+| 6 | Flujo local vs remoto: `SubprocessWindowService` vs gRPC | Coexistencia |
+| 7 | Navegación condicional ya existe pero no auto-asigna rol `emitter` | UX |
+| 8 | nsd Android 14+ puede tener bug de `startDiscovery()` | Técnico |
+
+## 4. Solución Aplicada
+
+### 4.1 Proto (`hymn_control.proto`)
+
+**2 nuevos RPCs** añadidos al servicio:
+
+```protobuf
+rpc SendHymnContent (HymnPayload) returns (CommandResponse);
+rpc GetAvailableBackgrounds (Empty) returns (BackgroundList);
+```
+
+**4 nuevos mensajes:**
+- `HymnPayload` — título, número, tipo, estrofas (repeated `StanzaPayload`)
+- `StanzaPayload` — id, version_pais_id, tipo, orden, contenido
+- `BackgroundInfo` — id, nombre, tipo
+- `BackgroundList` — repeated `BackgroundInfo`
+
+### 4.2 Servidor gRPC (PC) — `grpc_display_server.dart`
+
+- **`sendHymnContent()`**: Recibe `HymnPayload`, construye entidades `Himno` + `List<Estrofa>`, delega en `onLoadHymnContent` para inyectar en `liveControlProvider`
+- **`getAvailableBackgrounds()`**: Lee fondos del `FondoRepository` del PC vía `fondoRepositoryProvider`, fallback estático hardcodeado
+- **`onClientConnected`**: Callback que se dispara en `handshake()` cuando un cliente se conecta
+- **`onLoadHymnContent`**: Callback para cargar himno en `LiveControlNotifier`
+
+### 4.3 Cliente gRPC (Celular) — `grpc_control_datasource.dart`
+
+- **`sendHymnContent()`**: Construye `HymnPayload` + `StanzaPayload`s y envía al display remoto
+- **`getAvailableBackgrounds()`**: Consulta fondos del PC, retorna lista de mapas
+
+### 4.4 Auto-proyección — `app_initializer.dart` + `receptor_binding.dart`
+
+- `onClientConnected` marca `isClientConnectedProvider = true`
+- `onLoadHymnContent` inyecta el himno recibido en `liveControlProvider`
+- Nuevo provider: `isClientConnectedProvider` (StateProvider bool)
+
+### 4.5 Providers — `connection_providers.dart`
+
+- **`remoteBackgroundsProvider`**: `FutureProvider.autoDispose` que llama a `getAvailableBackgrounds()` cuando hay conexión activa
+
+### 4.6 MinimalControlScreen — Control Remoto
+
+- **Al cargar himno**: Envía el contenido completo por gRPC al display remoto
+- **Botones navegación**: `sendNextStanza()` / `sendPrevStanza()` vía gRPC además del estado local
+- **Brocha conectada**: Muestra fondos remotos obtenidos del PC
+
+### 4.7 Navegación condicional — `discover_display_sheet.dart`
+
+- Auto-asignación de `ConnectionRole.emitter` después de conexión exitosa
+- Sheet de brocha usa `remoteBackgroundsProvider` cuando conectado, `fondosActivosProvider` cuando no
+
+## 5. Bugs Detectados y Corregidos (por @arqui)
+
+### Bug #1 (Crítico): Carga de himno no funciona en primera navegación
+
+**Síntoma:** `ref.read(stanzasProvider(...)).whenData()` no se ejecuta porque `stanzasProvider` está en `AsyncLoading`.
+
+**Solución:** Reemplazar `ref.read` + `whenData` por `ref.listen(stanzasProvider(vpId), ...)` que sí reacciona al cambio loading → data.
+
+**Archivo:** `minimal_control_screen.dart`
+
+### Bug #2 (Crítico): Crash en `_buildDisplayStatus()` con lyrics vacío
+
+**Síntoma:** `clamp(0, -1)` lanza `ArgumentError` porque `lowerBound > upperBound`.
+
+**Solución:** Añadir guarda early-return cuando `lyrics.isEmpty`.
+
+**Archivo:** `grpc_display_server.dart`
+
+### Bug #3 (Medio): Resource leak en `watchStatus()`
+
+**Síntoma:** Si el cliente cancela la subscripción, `sub.close()`, `timerSub.cancel()`, `controller.close()` no se ejecutan.
+
+**Solución:** Envolver `await for` en `try/finally`.
+
+**Archivo:** `grpc_display_server.dart`
+
+## 6. Estado del Análisis Estático
+
+```
+dart analyze lib/ → 0 errores, 0 warnings
+                    (solo info-level style hints pre-existentes)
+```
+
+## 7. Arquitectura Resultante
+
+### Flujo de Datos
+
+```
+┌─────────────────────┐          gRPC           ┌─────────────────────┐
+│   CELULAR (Control) │                          │   PC (Display)      │
+│                     │                          │                     │
+│  ┌─────────────┐    │   SendHymnContent()      │  ┌─────────────┐    │
+│  │ Buscar himno │───►──────────────────────────►│  │ LiveControl │    │
+│  │ (SQLite)     │    │   (payload completo)     │  │  Notifier   │    │
+│  └──────┬──────┘    │                          │  └──────┬──────┘    │
+│         │           │                          │         │           │
+│         ▼           │                          │         ▼           │
+│  ┌─────────────┐    │   sendNext/PrevStanza()  │  ┌─────────────┐    │
+│  │ Navegación  │───►──────────────────────────►│  │ Proyección  │    │
+│  │ (flechas)   │    │                          │  │ (ventana 2) │    │
+│  └─────────────┘    │                          │  └─────────────┘    │
+│         │           │                          │                     │
+│         ▼           │                          │                     │
+│  ┌─────────────┐    │   GetAvailableBgs()      │  ┌─────────────┐    │
+│  │ Brocha      │───►──────────────────────────►│  │ Repositorio │    │
+│  │ (fondos)    │◄──────────────────────────────│  │ de Fondos   │    │
+│  └─────────────┘    │   BackgroundList          │  └─────────────┘    │
+│         │           │                          │                     │
+│         ▼           │                          │                     │
+│  ┌─────────────┐    │   SendCommand(            │  ┌─────────────┐    │
+│  │ Seleccionar │───►│   SET_BACKGROUND, id)────►│  │ Cambiar     │    │
+│  │ fondo       │    │                          │  │ fondo       │    │
+│  └─────────────┘    │                          │  └─────────────┘    │
+└─────────────────────┘                          └─────────────────────┘
+```
+
+### Archivos Modificados/Creados
+
+| Archivo | Cambio |
+|---|---|
+| `proto/hymn_control.proto` | +2 RPCs, +4 mensajes |
+| `lib/proto/generated/*` | Stubs regenerados con protoc |
+| `lib/data/datasources/remote/grpc_display_server.dart` | +sendHymnContent, +getAvailableBackgrounds, +onClientConnected, +onLoadHymnContent, fix _buildDisplayStatus crash, fix watchStatus leak |
+| `lib/data/datasources/remote/grpc_control_datasource.dart` | +sendHymnContent, +getAvailableBackgrounds |
+| `lib/bootstrap/app_initializer.dart` | +onClientConnected callback, +onLoadHymnContent callback |
+| `lib/presentation/views_projection/providers/connection_providers.dart` | +remoteBackgroundsProvider |
+| `lib/presentation/views_projection/display/receptor_binding.dart` | +isClientConnectedProvider |
+| `lib/presentation/views_projection/controller/minimal_control_screen.dart` | Envío de himno por gRPC, navegación remota, fix bug carga inicial |
+| `lib/presentation/views_projection/controller/widgets/discover_display_sheet.dart` | Auto-asignación rol emitter, fondos remotos |
+| `lib/presentation/shared_widgets/control_sheets.dart` | Sección de fondos remotos con FilterChips |
+| `doc/CONTEXTO_PROYECTO.md` | Actualizado estado de conexión LAN |
+| `doc/tareas_pendientes.md` | Actualizado (P3.1, P3.2 completados) |
+
+## 8. Pendientes
+
+| Tarea | Prioridad | Descripción |
+|---|---|---|
+| Probar en Windows | 🔴 Alta | Buildear `.exe` y verificar broadcast mDNS + control remoto |
+| Probar en Android | 🔴 Alta | Verificar discovery + envío de himno + fondos |
+| Tipar `sendHymnContent`/`getAvailableBackgrounds` | 🟡 Media | Usar tipos fuertes en vez de `Map<String, dynamic>` |
+| Sincronizar `selected` en fondos remotos | 🟡 Media | Reflejar fondo activo del display en los chips |
+| `_parseStanzaType` añadir `'puente'` | 🟢 Baja | Mapear `puente` → `EstrofaTipo.puente` |
+| Renombrar `BonsoirDiscoveredService` | 🟢 Baja | Eliminar última referencia a Bonsoir |
+
+---
+
+*Documento actualizado por @orquestador — 21 de mayo de 2026*
