@@ -23,7 +23,10 @@ class BonsoirService {
   Future<void> start() async {
     if (_discovery != null) return;
     try {
-      _discovery = BonsoirDiscovery(type: '_himnario_grpc._tcp');
+      _discovery = BonsoirDiscovery(
+        type: '_himnario_grpc._tcp',
+        printLogs: true,
+      );
       await _discovery!.initialize();
       _log.info('BonsoirDiscovery inicializado');
 
@@ -40,8 +43,16 @@ class BonsoirService {
 
   void _onDiscoveryEvent(BonsoirDiscoveryEvent event) {
     switch (event) {
+      // 🔴 NUEVO: Manejar FoundEvent y resolver el servicio
+      case BonsoirDiscoveryServiceFoundEvent(service: final service):
+        _log.info('Servicio ENCONTRADO: ${service.name} — resolviendo...');
+        if (_discovery != null) {
+          service.resolve(_discovery!.serviceResolver);
+        }
+        break;
+
       case BonsoirDiscoveryServiceResolvedEvent(service: final service):
-        _log.info('Servicio RESUELTO: ${service.name} en ${service.host}');
+        _log.info('Servicio RESUELTO: ${service.name} en ${service.host}:${service.port}');
         _serviceController.add(
           BonsoirDiscoveredService(
             name: service.name,
@@ -52,6 +63,7 @@ class BonsoirService {
             isRemoved: false,
           ),
         );
+        break;
 
       case BonsoirDiscoveryServiceLostEvent(service: final service):
         _log.info('Servicio perdido: ${service.name}');
@@ -65,6 +77,7 @@ class BonsoirService {
             isRemoved: true,
           ),
         );
+        break;
 
       default:
         _log.fine('Evento Bonsoir ignorado: ${event.runtimeType}');

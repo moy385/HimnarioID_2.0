@@ -34,6 +34,9 @@ dependencies:
   # Proto
   protobuf: ^6.0.0
 
+  # Permisos runtime (Android 13+ NEARBY_WIFI_DEVICES)
+  permission_handler: ^11.3.0
+
   # Audio
   audioplayers: ^6.6.0
 

@@ -44,7 +44,7 @@ class GrpcControlDataSource {
             timeout: Duration(seconds: 10),
             permitWithoutCalls: true,
           ),
-          connectTimeout: const Duration(minutes: 2),
+          connectTimeout: const Duration(seconds: 10),
         ),
       );
 

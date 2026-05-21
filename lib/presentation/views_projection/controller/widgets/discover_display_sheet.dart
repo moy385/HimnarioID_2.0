@@ -41,6 +41,11 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
   /// Controlador para el campo de IP de conexión manual.
   final _manualIpController = TextEditingController();
 
+  /// Controlador para el campo de puerto de conexión manual.
+  final _manualPortController = TextEditingController(
+    text: '${GrpcDisplayServer.defaultPort}',
+  );
+
   /// Clave para el [AnimatedList] de dispositivos.
   final GlobalKey<AnimatedListState> _listKey =
       GlobalKey<AnimatedListState>();
@@ -72,6 +77,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     _refreshTimer?.cancel();
     _refreshTimer = null;
     _manualIpController.dispose();
+    _manualPortController.dispose();
     super.dispose();
   }
 
@@ -99,12 +105,15 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
   /// Intenta conectar a una IP ingresada manualmente.
   Future<void> _connectManual() async {
     final ip = _manualIpController.text.trim();
+    final portStr = _manualPortController.text.trim();
     if (ip.isEmpty) return;
+
+    final port = int.tryParse(portStr) ?? GrpcDisplayServer.defaultPort;
 
     final device = DeviceInfo(
       name: 'Manual: $ip',
       ip: ip,
-      port: GrpcDisplayServer.defaultPort,
+      port: port,
       id: '',
     );
 
@@ -702,17 +711,40 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _manualIpController,
-          decoration: const InputDecoration(
-            labelText: 'Dirección IP',
-            hintText: '192.168.1.100',
-            prefixIcon: Icon(Icons.computer),
-            border: OutlineInputBorder(),
-            isDense: true,
-          ),
-          keyboardType: TextInputType.number,
-          onSubmitted: (_) => _connectManual(),
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _manualIpController,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección IP',
+                  hintText: '192.168.1.100',
+                  prefixIcon: Icon(Icons.computer),
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                onSubmitted: (_) => _connectManual(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: TextField(
+                controller: _manualPortController,
+                decoration: const InputDecoration(
+                  labelText: 'Puerto',
+                  hintText: '50051',
+                  prefixIcon: Icon(Icons.settings_ethernet),
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                onSubmitted: (_) => _connectManual(),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         SizedBox(
