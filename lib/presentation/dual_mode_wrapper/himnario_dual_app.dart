@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/himno.dart';
 import '../../core/theme/app_theme.dart';
 import '../shared_widgets/fullscreen_handler.dart';
+import '../shared_widgets/theme_mode_toggle_button.dart';
+import '../shared_widgets/providers/theme_mode_provider.dart';
 import '../views_personal/dashboard/home_screen.dart';
 import '../views_personal/hymn_scroll/arrangement_editor_screen.dart';
 import '../views_personal/hymn_scroll/hymn_detail_screen.dart';
@@ -32,6 +34,7 @@ class HimnarioDualApp extends ConsumerWidget {
     final mode = ref.watch(deviceModeProvider);
     final isDesktop = mode == DeviceMode.desktop;
     final isPresenting = ref.watch(isPresentingProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return FullscreenHandler(
       child: MaterialApp(
@@ -39,7 +42,7 @@ class HimnarioDualApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
+        themeMode: themeMode,
 
         // Rutas de la aplicación
         routes: {
@@ -69,6 +72,7 @@ class HimnarioDualApp extends ConsumerWidget {
             if (isDesktop && isPresenting)
               const PresentControlBar(),
             const DeviceSwitch(),
+            const ThemeModeToggleButton(),
           ],
         ),
       ),
