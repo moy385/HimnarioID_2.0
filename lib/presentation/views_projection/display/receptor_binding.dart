@@ -14,6 +14,9 @@ import 'standby_screen.dart';
 // Providers
 // ─────────────────────────────────────────────────────────────
 
+/// Indica si hay al menos un cliente controlador conectado al display.
+final isClientConnectedProvider = StateProvider<bool>((ref) => false);
+
 /// Provider que expone la instancia del servidor gRPC del display.
 ///
 /// Retorna `null` si la plataforma actual no es desktop (Linux, macOS,

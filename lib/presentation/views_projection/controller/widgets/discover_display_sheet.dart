@@ -7,9 +7,7 @@ import '../../../../core/network/connection_state.dart';
 import '../../../../core/network/domain/discovered_display.dart';
 import '../../../../core/network/permission_service.dart';
 import '../../../../data/datasources/remote/grpc_display_server.dart';
-import '../../../../domain/entities/fondo_pantalla.dart';
 import '../../../../domain/repositories/control_repository.dart' as domain;
-import '../../../shared_widgets/providers/fondo_options_provider.dart';
 import '../../display/receptor_binding.dart';
 import '../../providers/connection_providers.dart';
 import '../../providers/discovery_providers.dart';
@@ -113,6 +111,11 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     if (!mounted) return;
     if (success) {
       setState(() => _connectingIp = null);
+      // Auto-asignar rol emitter si no hay rol definido
+      final currentRole = ref.read(connectionRoleProvider);
+      if (currentRole == ConnectionRole.none) {
+        ref.read(connectionRoleProvider.notifier).state = ConnectionRole.emitter;
+      }
     }
   }
 
@@ -1125,17 +1128,17 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  // ── D2.2: Selector de fondo ──────────────────────────────────
+  // ── D2.2: Selector de fondo (remoto) ──────────────────────────
 
-  /// Sección de fondo: muestra los fondos activos del móvil en un
-  /// grid horizontal de [FilterChip]s. Al seleccionar uno, envía
-  /// [ControlRepository.sendSetConfig] con el id del fondo.
+  /// Sección de fondo remoto: muestra los fondos disponibles en el PC
+  /// conectado como [FilterChip]s. Al seleccionar uno, envía
+  /// [GrpcControlDataSource.sendSetBackground] al display remoto.
   Widget _buildBackgroundSection(
     ColorScheme colorScheme,
     TextTheme textTheme,
     AsyncValue<domain.DisplayStatus?> liveStatus,
   ) {
-    final fondosAsync = ref.watch(fondosActivosProvider);
+    final remoteFondosAsync = ref.watch(remoteBackgroundsProvider);
     final currentBgId = liveStatus.valueOrNull?.currentBackgroundId;
 
     return Card(
@@ -1153,7 +1156,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Fondo',
+                  'Fondo (PC remoto)',
                   style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -1161,13 +1164,13 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
               ],
             ),
             const SizedBox(height: 12),
-            fondosAsync.when(
+            remoteFondosAsync.when(
               loading: () => const SizedBox(
                 height: 40,
                 child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
               error: (_, __) => Text(
-                'Error al cargar fondos',
+                'Error al cargar fondos remotos',
                 style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.error,
                 ),
@@ -1175,7 +1178,7 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
               data: (fondos) {
                 if (fondos.isEmpty) {
                   return Text(
-                    'No hay fondos disponibles',
+                    'No hay fondos disponibles en el PC',
                     style: textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -1184,15 +1187,18 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
                 return Wrap(
                   spacing: 8,
                   runSpacing: 4,
-                  children: fondos.map((fondo) {
-                    final isSelected = currentBgId == fondo.id.toString();
+                  children: fondos.map((bg) {
+                    final bgId = bg['id'] as int;
+                    final nombre = bg['nombre'] as String;
+                    final isSelected = currentBgId == bgId.toString();
                     return FilterChip(
                       label: Text(
-                        fondo.nombre,
+                        nombre,
                         style: textTheme.labelSmall,
                       ),
                       selected: isSelected,
-                      onSelected: (_) => _selectBackground(fondo, currentBgId),
+                      onSelected: (_) =>
+                          _selectRemoteBackground(bgId, currentBgId),
                       showCheckmark: true,
                       visualDensity: VisualDensity.compact,
                     );
@@ -1206,20 +1212,20 @@ class _DiscoverDisplaySheetState extends ConsumerState<DiscoverDisplaySheet> {
     );
   }
 
-  /// Envía el comando para cambiar el fondo del display remoto.
-  Future<void> _selectBackground(
-    FondoPantalla fondo,
+  /// Envía el comando [SET_BACKGROUND] al display remoto.
+  Future<void> _selectRemoteBackground(
+    int bgId,
     String? currentBgId,
   ) async {
-    if (currentBgId == fondo.id.toString()) return;
+    if (currentBgId == bgId.toString()) return;
     try {
       await ref
-          .read(controlRepositoryProvider)
-          .sendSetConfig(fondo: fondo.id.toString());
+          .read(controlDataSourceProvider)
+          .sendSetBackground(bgId.toString());
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cambiar fondo: $e')),
+        SnackBar(content: Text('Error al cambiar fondo remoto: $e')),
       );
     }
   }

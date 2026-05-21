@@ -40,6 +40,89 @@ final $typed_data.Uint8List commandTypeDescriptor = $convert.base64Decode(
     'S09VVBAFEhUKEVNFVF9UUkFOU1BPU0lUSU9OEAYSEAoMSlVNUF9UT19IWU1OEAcSEgoOU0VUX0'
     'JBQ0tHUk9VTkQQCBIRCg1TRVRfRk9OVF9TSVpFEAkSCAoEUElORxAK');
 
+@$core.Deprecated('Use hymnPayloadDescriptor instead')
+const HymnPayload$json = {
+  '1': 'HymnPayload',
+  '2': [
+    {'1': 'hymn_id', '3': 1, '4': 1, '5': 5, '10': 'hymnId'},
+    {'1': 'titulo', '3': 2, '4': 1, '5': 9, '10': 'titulo'},
+    {'1': 'numero', '3': 3, '4': 1, '5': 5, '9': 0, '10': 'numero', '17': true},
+    {'1': 'tipo', '3': 4, '4': 1, '5': 9, '10': 'tipo'},
+    {'1': 'version_pais_id', '3': 5, '4': 1, '5': 5, '10': 'versionPaisId'},
+    {
+      '1': 'estrofas',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.himnario.StanzaPayload',
+      '10': 'estrofas'
+    },
+  ],
+  '8': [
+    {'1': '_numero'},
+  ],
+};
+
+/// Descriptor for `HymnPayload`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List hymnPayloadDescriptor = $convert.base64Decode(
+    'CgtIeW1uUGF5bG9hZBIXCgdoeW1uX2lkGAEgASgFUgZoeW1uSWQSFgoGdGl0dWxvGAIgASgJUg'
+    'Z0aXR1bG8SGwoGbnVtZXJvGAMgASgFSABSBm51bWVyb4gBARISCgR0aXBvGAQgASgJUgR0aXBv'
+    'EiYKD3ZlcnNpb25fcGFpc19pZBgFIAEoBVINdmVyc2lvblBhaXNJZBIzCghlc3Ryb2ZhcxgGIA'
+    'MoCzIXLmhpbW5hcmlvLlN0YW56YVBheWxvYWRSCGVzdHJvZmFzQgkKB19udW1lcm8=');
+
+@$core.Deprecated('Use stanzaPayloadDescriptor instead')
+const StanzaPayload$json = {
+  '1': 'StanzaPayload',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 5, '10': 'id'},
+    {'1': 'version_pais_id', '3': 2, '4': 1, '5': 5, '10': 'versionPaisId'},
+    {'1': 'tipo', '3': 3, '4': 1, '5': 9, '10': 'tipo'},
+    {'1': 'orden', '3': 4, '4': 1, '5': 5, '10': 'orden'},
+    {'1': 'contenido', '3': 5, '4': 1, '5': 9, '10': 'contenido'},
+  ],
+};
+
+/// Descriptor for `StanzaPayload`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List stanzaPayloadDescriptor = $convert.base64Decode(
+    'Cg1TdGFuemFQYXlsb2FkEg4KAmlkGAEgASgFUgJpZBImCg92ZXJzaW9uX3BhaXNfaWQYAiABKA'
+    'VSDXZlcnNpb25QYWlzSWQSEgoEdGlwbxgDIAEoCVIEdGlwbxIUCgVvcmRlbhgEIAEoBVIFb3Jk'
+    'ZW4SHAoJY29udGVuaWRvGAUgASgJUgljb250ZW5pZG8=');
+
+@$core.Deprecated('Use backgroundInfoDescriptor instead')
+const BackgroundInfo$json = {
+  '1': 'BackgroundInfo',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 5, '10': 'id'},
+    {'1': 'nombre', '3': 2, '4': 1, '5': 9, '10': 'nombre'},
+    {'1': 'tipo', '3': 3, '4': 1, '5': 9, '10': 'tipo'},
+  ],
+};
+
+/// Descriptor for `BackgroundInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List backgroundInfoDescriptor = $convert.base64Decode(
+    'Cg5CYWNrZ3JvdW5kSW5mbxIOCgJpZBgBIAEoBVICaWQSFgoGbm9tYnJlGAIgASgJUgZub21icm'
+    'USEgoEdGlwbxgDIAEoCVIEdGlwbw==');
+
+@$core.Deprecated('Use backgroundListDescriptor instead')
+const BackgroundList$json = {
+  '1': 'BackgroundList',
+  '2': [
+    {
+      '1': 'backgrounds',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.himnario.BackgroundInfo',
+      '10': 'backgrounds'
+    },
+  ],
+};
+
+/// Descriptor for `BackgroundList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List backgroundListDescriptor = $convert.base64Decode(
+    'Cg5CYWNrZ3JvdW5kTGlzdBI6CgtiYWNrZ3JvdW5kcxgBIAMoCzIYLmhpbW5hcmlvLkJhY2tncm'
+    '91bmRJbmZvUgtiYWNrZ3JvdW5kcw==');
+
 @$core.Deprecated('Use emptyDescriptor instead')
 const Empty$json = {
   '1': 'Empty',
@@ -177,45 +260,3 @@ final $typed_data.Uint8List handshakeResponseDescriptor = $convert.base64Decode(
     'clZlcnNpb24SIQoMZGlzcGxheV9uYW1lGAQgASgJUgtkaXNwbGF5TmFtZRIpChBwcm90b2NvbF'
     '92ZXJzaW9uGAUgASgFUg9wcm90b2NvbFZlcnNpb24SHQoKc2Vzc2lvbl9pZBgGIAEoCVIJc2Vz'
     'c2lvbklk');
-
-const $core.Map<$core.String, $core.dynamic> HymnControlServiceBase$json = {
-  '1': 'HymnControl',
-  '2': [
-    {
-      '1': 'SendCommand',
-      '2': '.himnario.CommandRequest',
-      '3': '.himnario.CommandResponse'
-    },
-    {'1': 'GetStatus', '2': '.himnario.Empty', '3': '.himnario.DisplayStatus'},
-    {
-      '1': 'WatchStatus',
-      '2': '.himnario.Empty',
-      '3': '.himnario.DisplayStatus',
-      '6': true
-    },
-    {
-      '1': 'Handshake',
-      '2': '.himnario.HandshakeRequest',
-      '3': '.himnario.HandshakeResponse'
-    },
-  ],
-};
-
-@$core.Deprecated('Use hymnControlServiceDescriptor instead')
-const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
-    HymnControlServiceBase$messageJson = {
-  '.himnario.CommandRequest': CommandRequest$json,
-  '.himnario.CommandResponse': CommandResponse$json,
-  '.himnario.Empty': Empty$json,
-  '.himnario.DisplayStatus': DisplayStatus$json,
-  '.himnario.HandshakeRequest': HandshakeRequest$json,
-  '.himnario.HandshakeResponse': HandshakeResponse$json,
-};
-
-/// Descriptor for `HymnControl`. Decode as a `google.protobuf.ServiceDescriptorProto`.
-final $typed_data.Uint8List hymnControlServiceDescriptor = $convert.base64Decode(
-    'CgtIeW1uQ29udHJvbBJCCgtTZW5kQ29tbWFuZBIYLmhpbW5hcmlvLkNvbW1hbmRSZXF1ZXN0Gh'
-    'kuaGltbmFyaW8uQ29tbWFuZFJlc3BvbnNlEjUKCUdldFN0YXR1cxIPLmhpbW5hcmlvLkVtcHR5'
-    'GhcuaGltbmFyaW8uRGlzcGxheVN0YXR1cxI5CgtXYXRjaFN0YXR1cxIPLmhpbW5hcmlvLkVtcH'
-    'R5GhcuaGltbmFyaW8uRGlzcGxheVN0YXR1czABEkQKCUhhbmRzaGFrZRIaLmhpbW5hcmlvLkhh'
-    'bmRzaGFrZVJlcXVlc3QaGy5oaW1uYXJpby5IYW5kc2hha2VSZXNwb25zZQ==');

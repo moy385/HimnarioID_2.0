@@ -6,8 +6,13 @@ import 'package:grpc/grpc.dart';
 import 'package:logging/logging.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/enums/estrofa_tipo.dart';
+import '../../../core/enums/himno_tipo.dart';
+import '../../../domain/entities/estrofa.dart';
+import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/projection_slide.dart';
 import '../../../presentation/views_projection/providers/live_control_providers.dart';
+import '../../../presentation/views_projection/providers/projection_providers.dart';
 import '../../../proto/generated/hymn_control.pbgrpc.dart';
 
 /// Servidor gRPC para control remoto de un display.
@@ -41,6 +46,12 @@ class GrpcDisplayServer extends HymnControlServiceBase {
   /// Se invoca cuando se recibe un comando [CommandType.JUMP_TO_HYMN].
   /// Debe cargar el himno y sus estrofas, y llamar a [LiveControlNotifier.loadHymn].
   Future<void> Function(int hymnId)? onJumpToHymn;
+
+  /// Callback cuando un cliente se conecta exitosamente (handshake).
+  void Function(String clientName)? onClientConnected;
+
+  /// Callback para cargar un himno por payload completo (SendHymnContent).
+  Future<void> Function(Himno hymn, List<Estrofa> stanzas)? onLoadHymnContent;
 
   Server? _server;
   bool _isRunning = false;
@@ -279,15 +290,17 @@ class GrpcDisplayServer extends HymnControlServiceBase {
       }
     });
 
-    // Pasar eventos del controller al generador
-    await for (final status in controller.stream) {
-      if (!_isRunning) break;
-      yield status;
+    try {
+      // Pasar eventos del controller al generador
+      await for (final status in controller.stream) {
+        if (!_isRunning) break;
+        yield status;
+      }
+    } finally {
+      sub.close();
+      await timerSub.cancel();
+      await controller.close();
     }
-
-    sub.close();
-    await timerSub.cancel();
-    await controller.close();
   }
 
   /// Construye un [DisplayStatus] a partir del estado real de [LiveControlState].
@@ -295,6 +308,21 @@ class GrpcDisplayServer extends HymnControlServiceBase {
     final state = _container!.read(liveControlProvider);
     final lyrics =
         state.slides.whereType<LyricsSlide>().map((s) => s.estrofa).toList();
+
+    // Evita crash en clamp(0, -1) cuando no hay himno cargado
+    if (lyrics.isEmpty) {
+      return DisplayStatus(
+        currentHymnId: state.hymn?.id ?? 0,
+        currentHymnTitle: state.hymn?.titulo ?? '',
+        currentStanzaIndex: 0,
+        totalStanzas: 0,
+        transpositionSemitones: 0,
+        isBlackout: state.isBlackout,
+        fontSize: 48.0,
+        displayName: displayName,
+      );
+    }
+
     final currentLyricsIndex = (state.currentSlideIndex - 1).clamp(0, lyrics.length - 1);
     return DisplayStatus(
       currentHymnId: state.hymn?.id ?? 0,
@@ -318,6 +346,8 @@ class GrpcDisplayServer extends HymnControlServiceBase {
       'v${request.clientVersion} (protocolo ${request.protocolVersion})',
     );
 
+    onClientConnected?.call(request.clientName);
+
     return HandshakeResponse(
       accepted: true,
       serverName: 'HimnarioID Display',
@@ -328,8 +358,93 @@ class GrpcDisplayServer extends HymnControlServiceBase {
     );
   }
 
+  @override
+  Future<CommandResponse> sendHymnContent(
+    ServiceCall call,
+    HymnPayload request,
+  ) async {
+    _log.info(
+      'SendHymnContent recibido: himno #${request.hymnId} '
+      '(${request.titulo}) con ${request.estrofas.length} estrofas',
+    );
+
+    try {
+      final himno = Himno(
+        id: request.hymnId,
+        titulo: request.titulo,
+        numero: request.hasNumero() ? request.numero : null,
+        tipo: HimnoTipo.values.firstWhere(
+          (t) => t.name == request.tipo,
+          orElse: () => HimnoTipo.oficial,
+        ),
+        versiones: [],
+        categorias: [],
+      );
+
+      final estrofas = request.estrofas.map((s) => Estrofa(
+        id: s.id,
+        versionPaisId: s.versionPaisId,
+        tipo: _parseStanzaType(s.tipo),
+        orden: s.orden,
+        contenido: s.contenido,
+      ),).toList();
+
+      await onLoadHymnContent?.call(himno, estrofas);
+      return CommandResponse(success: true);
+    } catch (e) {
+      _log.severe('Error en sendHymnContent: $e');
+      return CommandResponse(
+        success: false,
+        errorMessage: 'Error al procesar himno: $e',
+      );
+    }
+  }
+
+  @override
+  Future<BackgroundList> getAvailableBackgrounds(
+    ServiceCall call,
+    Empty request,
+  ) async {
+    _log.info('GetAvailableBackgrounds solicitado');
+    if (_container != null) {
+      try {
+        final repo = _container.read(fondoRepositoryProvider);
+        final fondos = await repo.getAll();
+        return BackgroundList(
+          backgrounds: fondos.map((f) => BackgroundInfo(
+            id: f.id,
+            nombre: f.nombre,
+            tipo: f.tipo.name,
+          ),).toList(),
+        );
+      } catch (e) {
+        _log.warning('Error al leer fondos del PC: $e');
+      }
+    }
+    return BackgroundList(
+      backgrounds: [
+        BackgroundInfo(id: 0, nombre: 'Negro', tipo: 'color'),
+        BackgroundInfo(id: 1, nombre: 'Cielo Azul', tipo: 'image'),
+      ],
+    );
+  }
+
   /// Despacha una actualización de estado vía el callback [onCommand].
   void _dispatch(LiveControlState Function(LiveControlState) update) {
     onCommand?.call(update);
+  }
+
+  /// Parsea el tipo de estrofa desde el string del proto al enum de dominio.
+  static EstrofaTipo _parseStanzaType(String tipo) {
+    switch (tipo) {
+      case 'coro':
+        return EstrofaTipo.coro;
+      case 'intro':
+        return EstrofaTipo.intro;
+      case 'amen':
+        return EstrofaTipo.final_;
+      default:
+        return EstrofaTipo.estrofa;
+    }
   }
 }

@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/flag_utils.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
+import '../../../data/datasources/remote/grpc_control_datasource.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/pista_audio.dart';
+import '../views_projection/providers/connection_providers.dart';
 import '../dual_mode_wrapper/dual_mode_providers.dart';
 import '../views_personal/providers/audio_providers.dart';
 import '../views_personal/providers/hymn_providers.dart';
@@ -238,6 +240,10 @@ List<Widget> _brushSheetChildren({
   required AsyncValue<List<FondoPantalla>> fondosAsync,
   required WidgetRef ref,
 }) {
+  // Si estamos conectados como emisor, los fondos son remotos (desde el PC)
+  final isConnected = ref.watch(isConnectedProvider);
+  final remoteFondosAsync = ref.watch(remoteBackgroundsProvider);
+
   return [
     // ---- Title ----
     Row(
@@ -273,65 +279,71 @@ List<Widget> _brushSheetChildren({
     const SizedBox(height: 20),
 
     // ==========================================
-    // 1. Fondos guardados (desde BD)
+    // 1. Fondos (remotos si conectado, locales si no)
     // ==========================================
-    Text(
-      'Fondos guardados',
-      style: textTheme.labelLarge?.copyWith(
-        color: colorScheme.onSurfaceVariant,
-      ),
-    ),
-    const SizedBox(height: 8),
-    fondosAsync.when(
-      loading: () => const SizedBox(
-        height: 60,
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+    if (isConnected) ..._remoteBackgroundSection(
+      colorScheme,
+      textTheme,
+      remoteFondosAsync,
+      ref,
+    ) else ...[
+      Text(
+        'Fondos guardados',
+        style: textTheme.labelLarge?.copyWith(
+          color: colorScheme.onSurfaceVariant,
         ),
       ),
-      error: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          'Error al cargar fondos',
-          style: textTheme.bodySmall?.copyWith(
-            color: colorScheme.error,
-          ),
-        ),
-      ),
-      data: (fondos) {
-        if (fondos.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'No hay fondos guardados',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+      const SizedBox(height: 8),
+      fondosAsync.when(
+        loading: () => const SizedBox(
+          height: 60,
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          );
-        }
-        return Wrap(
-          spacing: 16,
-          runSpacing: 12,
-          children: fondos.map((FondoPantalla fondo) {
-            final isSelected = appearance.selectedFondo?.id == fondo.id;
-            return _FondoItem(
-              fondo: fondo,
-              isSelected: isSelected,
-              onTap: () {
-                ref.read(hymnAppearanceProvider.notifier).setFondo(fondo);
-                _syncAppearanceToProjection(ref);
-                
-              },
+          ),
+        ),
+        error: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Error al cargar fondos',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.error,
+            ),
+          ),
+        ),
+        data: (fondos) {
+          if (fondos.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No hay fondos guardados',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
             );
-          }).toList(),
-        );
-      },
-    ),
+          }
+          return Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            children: fondos.map((FondoPantalla fondo) {
+              final isSelected = appearance.selectedFondo?.id == fondo.id;
+              return _FondoItem(
+                fondo: fondo,
+                isSelected: isSelected,
+                onTap: () {
+                  ref.read(hymnAppearanceProvider.notifier).setFondo(fondo);
+                  _syncAppearanceToProjection(ref);
+                },
+              );
+            }).toList(),
+          );
+        },
+      ),
+    ],
     const SizedBox(height: 20),
 
     // ==========================================
@@ -1274,6 +1286,87 @@ class HymnSearchDelegate extends SearchDelegate<int> {
       },
         );
   }
+}
+
+/// Construye la sección de Fondos Remotos (PC) para el sheet Brocha.
+///
+/// Muestra los fondos disponibles en el display remoto como [FilterChip]s.
+/// Al seleccionar uno, envía [GrpcControlDataSource.sendSetBackground].
+List<Widget> _remoteBackgroundSection(
+  ColorScheme colorScheme,
+  TextTheme textTheme,
+  AsyncValue<List<Map<String, dynamic>>> remoteFondosAsync,
+  WidgetRef ref,
+) {
+  return [
+    Row(
+      children: [
+        Icon(Icons.desktop_windows, size: 18, color: colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          'Fondos del PC remoto',
+          style: textTheme.labelLarge?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 8),
+    ...remoteFondosAsync.when(
+      loading: () => [
+        const SizedBox(
+          height: 40,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+      ],
+      error: (_, __) => [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Error al cargar fondos remotos',
+            style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+          ),
+        ),
+      ],
+      data: (fondos) {
+        if (fondos.isEmpty) {
+          return [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No hay fondos disponibles en el PC',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ];
+        }
+        return [
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: fondos.map((bg) {
+              final bgId = bg['id'] as int;
+              final nombre = bg['nombre'] as String;
+              return FilterChip(
+                label: Text(nombre, style: textTheme.labelSmall),
+                selected: false,
+                onSelected: (_) {
+                  ref
+                      .read(controlDataSourceProvider)
+                      .sendSetBackground(bgId.toString());
+                },
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+        ];
+      },
+    ),
+    const SizedBox(height: 12),
+  ];
 }
 
 // =============================================================================

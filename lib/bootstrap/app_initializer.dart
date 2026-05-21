@@ -9,7 +9,10 @@ import '../core/network/mdns_broadcast_service.dart';
 import '../core/network/nsd_discovery_service.dart';
 import '../core/network/mdns_discovery.dart';
 import '../data/datasources/remote/grpc_display_server.dart';
+import '../domain/entities/estrofa.dart';
+import '../domain/entities/himno.dart';
 import '../presentation/views_personal/providers/hymn_providers.dart';
+import '../presentation/views_projection/display/receptor_binding.dart';
 import '../presentation/views_projection/providers/live_control_providers.dart';
 
 /// Inicializador de la aplicación.
@@ -172,6 +175,27 @@ class AppInitializer {
             );
           } catch (e) {
             _log.severe('Error al cargar himno $hymnId: $e');
+          }
+        };
+
+        _displayServer!.onClientConnected = (String clientName) {
+          _log.info('Cliente conectado: $clientName');
+          effectiveContainer
+              .read(isClientConnectedProvider.notifier)
+              .state = true;
+        };
+
+        _displayServer!.onLoadHymnContent = (
+          Himno himno,
+          List<Estrofa> estrofas,
+        ) async {
+          try {
+            effectiveContainer
+                .read(liveControlProvider.notifier)
+                .loadHymn(himno, estrofas, versionPaisId: himno.primaryVersionPaisId);
+            _log.info('Himno "${himno.titulo}" cargado desde controlador remoto.');
+          } catch (e) {
+            _log.severe('Error al cargar himno desde controlador remoto: $e');
           }
         };
       }

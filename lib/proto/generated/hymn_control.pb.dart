@@ -10,7 +10,6 @@
 // ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
 // ignore_for_file: non_constant_identifier_names, prefer_relative_imports
 
-import 'dart:async' as $async;
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
@@ -20,6 +19,348 @@ import 'hymn_control.pbenum.dart';
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
 export 'hymn_control.pbenum.dart';
+
+/// Payload completo de un himno enviado por el controlador al display.
+class HymnPayload extends $pb.GeneratedMessage {
+  factory HymnPayload({
+    $core.int? hymnId,
+    $core.String? titulo,
+    $core.int? numero,
+    $core.String? tipo,
+    $core.int? versionPaisId,
+    $core.Iterable<StanzaPayload>? estrofas,
+  }) {
+    final result = create();
+    if (hymnId != null) result.hymnId = hymnId;
+    if (titulo != null) result.titulo = titulo;
+    if (numero != null) result.numero = numero;
+    if (tipo != null) result.tipo = tipo;
+    if (versionPaisId != null) result.versionPaisId = versionPaisId;
+    if (estrofas != null) result.estrofas.addAll(estrofas);
+    return result;
+  }
+
+  HymnPayload._();
+
+  factory HymnPayload.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory HymnPayload.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'HymnPayload',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'himnario'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'hymnId')
+    ..aOS(2, _omitFieldNames ? '' : 'titulo')
+    ..aI(3, _omitFieldNames ? '' : 'numero')
+    ..aOS(4, _omitFieldNames ? '' : 'tipo')
+    ..aI(5, _omitFieldNames ? '' : 'versionPaisId')
+    ..pPM<StanzaPayload>(6, _omitFieldNames ? '' : 'estrofas',
+        subBuilder: StanzaPayload.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  HymnPayload clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  HymnPayload copyWith(void Function(HymnPayload) updates) =>
+      super.copyWith((message) => updates(message as HymnPayload))
+          as HymnPayload;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static HymnPayload create() => HymnPayload._();
+  @$core.override
+  HymnPayload createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static HymnPayload getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<HymnPayload>(create);
+  static HymnPayload? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get hymnId => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set hymnId($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHymnId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHymnId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get titulo => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set titulo($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitulo() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitulo() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get numero => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set numero($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNumero() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNumero() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get tipo => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set tipo($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTipo() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTipo() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get versionPaisId => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set versionPaisId($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasVersionPaisId() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearVersionPaisId() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $pb.PbList<StanzaPayload> get estrofas => $_getList(5);
+}
+
+/// Una estrofa individual dentro del payload del himno.
+class StanzaPayload extends $pb.GeneratedMessage {
+  factory StanzaPayload({
+    $core.int? id,
+    $core.int? versionPaisId,
+    $core.String? tipo,
+    $core.int? orden,
+    $core.String? contenido,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (versionPaisId != null) result.versionPaisId = versionPaisId;
+    if (tipo != null) result.tipo = tipo;
+    if (orden != null) result.orden = orden;
+    if (contenido != null) result.contenido = contenido;
+    return result;
+  }
+
+  StanzaPayload._();
+
+  factory StanzaPayload.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory StanzaPayload.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StanzaPayload',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'himnario'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'id')
+    ..aI(2, _omitFieldNames ? '' : 'versionPaisId')
+    ..aOS(3, _omitFieldNames ? '' : 'tipo')
+    ..aI(4, _omitFieldNames ? '' : 'orden')
+    ..aOS(5, _omitFieldNames ? '' : 'contenido')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StanzaPayload clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StanzaPayload copyWith(void Function(StanzaPayload) updates) =>
+      super.copyWith((message) => updates(message as StanzaPayload))
+          as StanzaPayload;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static StanzaPayload create() => StanzaPayload._();
+  @$core.override
+  StanzaPayload createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static StanzaPayload getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StanzaPayload>(create);
+  static StanzaPayload? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get id => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set id($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get versionPaisId => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set versionPaisId($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasVersionPaisId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearVersionPaisId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get tipo => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set tipo($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTipo() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTipo() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get orden => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set orden($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasOrden() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOrden() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get contenido => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set contenido($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasContenido() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearContenido() => $_clearField(5);
+}
+
+/// Información de un fondo disponible en el PC.
+class BackgroundInfo extends $pb.GeneratedMessage {
+  factory BackgroundInfo({
+    $core.int? id,
+    $core.String? nombre,
+    $core.String? tipo,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (nombre != null) result.nombre = nombre;
+    if (tipo != null) result.tipo = tipo;
+    return result;
+  }
+
+  BackgroundInfo._();
+
+  factory BackgroundInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory BackgroundInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'BackgroundInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'himnario'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'nombre')
+    ..aOS(3, _omitFieldNames ? '' : 'tipo')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BackgroundInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BackgroundInfo copyWith(void Function(BackgroundInfo) updates) =>
+      super.copyWith((message) => updates(message as BackgroundInfo))
+          as BackgroundInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static BackgroundInfo create() => BackgroundInfo._();
+  @$core.override
+  BackgroundInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static BackgroundInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<BackgroundInfo>(create);
+  static BackgroundInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get id => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set id($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get nombre => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set nombre($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasNombre() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearNombre() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get tipo => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set tipo($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTipo() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTipo() => $_clearField(3);
+}
+
+/// Lista de fondos disponibles en el PC.
+class BackgroundList extends $pb.GeneratedMessage {
+  factory BackgroundList({
+    $core.Iterable<BackgroundInfo>? backgrounds,
+  }) {
+    final result = create();
+    if (backgrounds != null) result.backgrounds.addAll(backgrounds);
+    return result;
+  }
+
+  BackgroundList._();
+
+  factory BackgroundList.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory BackgroundList.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'BackgroundList',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'himnario'),
+      createEmptyInstance: create)
+    ..pPM<BackgroundInfo>(1, _omitFieldNames ? '' : 'backgrounds',
+        subBuilder: BackgroundInfo.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BackgroundList clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BackgroundList copyWith(void Function(BackgroundList) updates) =>
+      super.copyWith((message) => updates(message as BackgroundList))
+          as BackgroundList;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static BackgroundList create() => BackgroundList._();
+  @$core.override
+  BackgroundList createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static BackgroundList getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<BackgroundList>(create);
+  static BackgroundList? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<BackgroundInfo> get backgrounds => $_getList(0);
+}
 
 class Empty extends $pb.GeneratedMessage {
   factory Empty() => create();
@@ -582,36 +923,6 @@ class HandshakeResponse extends $pb.GeneratedMessage {
   $core.bool hasSessionId() => $_has(5);
   @$pb.TagNumber(6)
   void clearSessionId() => $_clearField(6);
-}
-
-class HymnControlApi {
-  final $pb.RpcClient _client;
-
-  HymnControlApi(this._client);
-
-  /// Comandos del controlador al display
-  $async.Future<CommandResponse> sendCommand(
-          $pb.ClientContext? ctx, CommandRequest request) =>
-      _client.invoke<CommandResponse>(
-          ctx, 'HymnControl', 'SendCommand', request, CommandResponse());
-
-  /// Obtener estado actual del display
-  $async.Future<DisplayStatus> getStatus(
-          $pb.ClientContext? ctx, Empty request) =>
-      _client.invoke<DisplayStatus>(
-          ctx, 'HymnControl', 'GetStatus', request, DisplayStatus());
-
-  /// Streaming de estado (el display notifica cambios en tiempo real)
-  $async.Future<DisplayStatus> watchStatus(
-          $pb.ClientContext? ctx, Empty request) =>
-      _client.invoke<DisplayStatus>(
-          ctx, 'HymnControl', 'WatchStatus', request, DisplayStatus());
-
-  /// Handshake de conexión inicial
-  $async.Future<HandshakeResponse> handshake(
-          $pb.ClientContext? ctx, HandshakeRequest request) =>
-      _client.invoke<HandshakeResponse>(
-          ctx, 'HymnControl', 'Handshake', request, HandshakeResponse());
 }
 
 const $core.bool _omitFieldNames =

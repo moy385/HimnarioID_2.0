@@ -66,6 +66,25 @@ class HymnControlClient extends $grpc.Client {
     return $createUnaryCall(_$handshake, request, options: options);
   }
 
+  /// ─── NUEVOS RPCs ──────────────────────────────────────────
+  /// Enviar contenido completo de un himno al display remoto.
+  /// El controlador envía el payload completo (título + estrofas).
+  $grpc.ResponseFuture<$0.CommandResponse> sendHymnContent(
+    $0.HymnPayload request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$sendHymnContent, request, options: options);
+  }
+
+  /// Obtener lista de fondos disponibles en el PC (dueño de los archivos multimedia).
+  $grpc.ResponseFuture<$0.BackgroundList> getAvailableBackgrounds(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getAvailableBackgrounds, request,
+        options: options);
+  }
+
   // method descriptors
 
   static final _$sendCommand =
@@ -86,6 +105,16 @@ class HymnControlClient extends $grpc.Client {
           '/himnario.HymnControl/Handshake',
           ($0.HandshakeRequest value) => value.writeToBuffer(),
           $0.HandshakeResponse.fromBuffer);
+  static final _$sendHymnContent =
+      $grpc.ClientMethod<$0.HymnPayload, $0.CommandResponse>(
+          '/himnario.HymnControl/SendHymnContent',
+          ($0.HymnPayload value) => value.writeToBuffer(),
+          $0.CommandResponse.fromBuffer);
+  static final _$getAvailableBackgrounds =
+      $grpc.ClientMethod<$0.Empty, $0.BackgroundList>(
+          '/himnario.HymnControl/GetAvailableBackgrounds',
+          ($0.Empty value) => value.writeToBuffer(),
+          $0.BackgroundList.fromBuffer);
 }
 
 @$pb.GrpcServiceName('himnario.HymnControl')
@@ -121,6 +150,20 @@ abstract class HymnControlServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.HandshakeRequest.fromBuffer(value),
         ($0.HandshakeResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.HymnPayload, $0.CommandResponse>(
+        'SendHymnContent',
+        sendHymnContent_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.HymnPayload.fromBuffer(value),
+        ($0.CommandResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.BackgroundList>(
+        'GetAvailableBackgrounds',
+        getAvailableBackgrounds_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.BackgroundList value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.CommandResponse> sendCommand_Pre($grpc.ServiceCall $call,
@@ -154,4 +197,20 @@ abstract class HymnControlServiceBase extends $grpc.Service {
 
   $async.Future<$0.HandshakeResponse> handshake(
       $grpc.ServiceCall call, $0.HandshakeRequest request);
+
+  $async.Future<$0.CommandResponse> sendHymnContent_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.HymnPayload> $request) async {
+    return sendHymnContent($call, await $request);
+  }
+
+  $async.Future<$0.CommandResponse> sendHymnContent(
+      $grpc.ServiceCall call, $0.HymnPayload request);
+
+  $async.Future<$0.BackgroundList> getAvailableBackgrounds_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getAvailableBackgrounds($call, await $request);
+  }
+
+  $async.Future<$0.BackgroundList> getAvailableBackgrounds(
+      $grpc.ServiceCall call, $0.Empty request);
 }

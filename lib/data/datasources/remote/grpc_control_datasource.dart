@@ -210,6 +210,66 @@ class GrpcControlDataSource {
     return response.success;
   }
 
+  /// Envía el contenido completo de un himno al display remoto.
+  Future<bool> sendHymnContent({
+    required int hymnId,
+    required String titulo,
+    int? numero,
+    required String tipo,
+    required int versionPaisId,
+    required List<Map<String, dynamic>> estrofas,
+  }) async {
+    _ensureConnected();
+
+    try {
+      final payload = HymnPayload(
+        hymnId: hymnId,
+        titulo: titulo,
+        tipo: tipo,
+        versionPaisId: versionPaisId,
+      );
+      if (numero != null) payload.numero = numero;
+      payload.estrofas.addAll(
+        estrofas.map((e) => StanzaPayload(
+          id: e['id'] as int,
+          versionPaisId: e['version_pais_id'] as int,
+          tipo: e['tipo'] as String,
+          orden: e['orden'] as int,
+          contenido: e['contenido'] as String,
+        )),
+      );
+
+      final response = await _client!.sendHymnContent(payload);
+      return response.success;
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC en sendHymnContent: $e');
+      throw NetworkException(
+        'Error al enviar himno: ${e.message}',
+        statusCode: e.code,
+      );
+    }
+  }
+
+  /// Obtiene la lista de fondos disponibles en el display remoto.
+  Future<List<Map<String, dynamic>>> getAvailableBackgrounds() async {
+    _ensureConnected();
+
+    try {
+      final response = await _client!.getAvailableBackgrounds(Empty());
+      return response.backgrounds.map((bg) => {
+        'id': bg.id,
+        'nombre': bg.nombre,
+        'tipo': bg.tipo,
+      }).toList();
+    } on GrpcError catch (e) {
+      _log.severe('Error gRPC en getAvailableBackgrounds: $e');
+      throw NetworkException(
+        'Error al obtener fondos: ${e.message}',
+        statusCode: e.code,
+      );
+    }
+  }
+
   /// Obtiene el estado actual del display.
   Future<domain.DisplayStatus> getStatus() async {
     _ensureConnected();

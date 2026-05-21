@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../domain/entities/estrofa.dart';
+import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/control_sheets.dart';
 import '../providers/connection_providers.dart';
 import '../providers/live_control_providers.dart';
@@ -25,21 +27,37 @@ class MinimalControlScreen extends ConsumerWidget {
     final isConnected = ref.watch(isConnectedProvider);
     final liveState = ref.watch(liveControlProvider);
 
-    // Cargar el himno si aún no está cargado o es otro himno
+    // Cargar himno y disparar la carga de estrofas
     ref.listen(hymnDetailProvider(hymnId), (prev, next) {
       next.whenData((himno) {
         final currentHymn = ref.read(liveControlProvider).hymn;
         if (currentHymn == null || currentHymn.id != hymnId) {
-          ref.read(stanzasProvider(himno.primaryVersionPaisId)).whenData(
-                (estrofas) {
-              ref
-                  .read(liveControlProvider.notifier)
-                  .loadHymn(himno, estrofas);
-            },
-              );
+          // Forzar la evaluación del provider de estrofas
+          ref.read(stanzasProvider(himno.primaryVersionPaisId));
         }
       });
     });
+
+    // Escuchar estrofas — se ejecuta cuando los datos están listos
+    final himnoAsync = ref.watch(hymnDetailProvider(hymnId)).valueOrNull;
+    final currentVpId = himnoAsync?.primaryVersionPaisId;
+    if (currentVpId != null) {
+      ref.listen(stanzasProvider(currentVpId), (prev, next) {
+        next.whenData((estrofas) async {
+          final currentHymn = ref.read(liveControlProvider).hymn;
+          if (currentHymn == null || currentHymn.id != hymnId) {
+            final himno = ref.read(hymnDetailProvider(hymnId)).valueOrNull;
+            if (himno == null) return;
+            ref
+                .read(liveControlProvider.notifier)
+                .loadHymn(himno, estrofas, versionPaisId: currentVpId);
+            if (ref.read(isConnectedProvider)) {
+              await _sendHymnToDisplay(ref, himno, estrofas);
+            }
+          }
+        });
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -104,10 +122,19 @@ class MinimalControlScreen extends ConsumerWidget {
                 icon: Icons.skip_previous,
                 label: 'Anterior',
                 onPressed: liveState.hasPrevSlide
-                    ? () {
+                    ? () async {
                   ref
                       .read(liveControlProvider.notifier)
                       .prevSlide();
+                  if (ref.read(isConnectedProvider)) {
+                    try {
+                      await ref
+                          .read(controlDataSourceProvider)
+                          .sendPrevStanza();
+                    } catch (_) {
+                      // Fallo silencioso — el estado local persiste
+                    }
+                  }
                 }
                     : null,
               ),
@@ -116,10 +143,19 @@ class MinimalControlScreen extends ConsumerWidget {
                 icon: Icons.skip_next,
                 label: 'Siguiente',
                 onPressed: liveState.hasNextSlide
-                    ? () {
+                    ? () async {
                   ref
                       .read(liveControlProvider.notifier)
                       .nextSlide();
+                  if (ref.read(isConnectedProvider)) {
+                    try {
+                      await ref
+                          .read(controlDataSourceProvider)
+                          .sendNextStanza();
+                    } catch (_) {
+                      // Fallo silencioso — el estado local persiste
+                    }
+                  }
                 }
                     : null,
               ),
@@ -198,6 +234,31 @@ class MinimalControlScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Envía el himno completo al display remoto vía gRPC.
+Future<void> _sendHymnToDisplay(
+    WidgetRef ref,
+    Himno himno,
+    List<Estrofa> estrofas,
+  ) async {
+    final dataSource = ref.read(controlDataSourceProvider);
+    await dataSource.sendHymnContent(
+      hymnId: himno.id,
+      titulo: himno.titulo,
+      numero: himno.numero,
+      tipo: himno.tipo.name,
+      versionPaisId: himno.primaryVersionPaisId,
+      estrofas: estrofas
+          .map((e) => <String, dynamic>{
+                'id': e.id,
+                'version_pais_id': e.versionPaisId,
+                'tipo': e.tipo.name,
+                'orden': e.orden,
+                'contenido': e.contenido,
+              })
+          .toList(),
+    );
+  }
 
 class _ControlButton extends StatelessWidget {
   final IconData icon;

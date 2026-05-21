@@ -19,11 +19,52 @@ service HymnControl {
 
   // Handshake de conexión inicial
   rpc Handshake (HandshakeRequest) returns (HandshakeResponse);
+
+  // ─── NUEVOS RPCs ──────────────────────────────────────────
+  // Enviar contenido completo de un himno al display remoto.
+  // El controlador envía el payload completo (título + estrofas).
+  rpc SendHymnContent (HymnPayload) returns (CommandResponse);
+
+  // Obtener lista de fondos disponibles en el PC (dueño de los archivos multimedia).
+  rpc GetAvailableBackgrounds (Empty) returns (BackgroundList);
 }
 
 // ──────────────────────────────────────────────
 // Mensajes
 // ──────────────────────────────────────────────
+
+// ─── NUEVOS MENSAJES ───────────────────────────────────────
+
+// Payload completo de un himno enviado por el controlador al display.
+message HymnPayload {
+  int32 hymn_id = 1;
+  string titulo = 2;
+  optional int32 numero = 3;
+  string tipo = 4;             // "oficial" | "inspirada"
+  int32 version_pais_id = 5;
+  repeated StanzaPayload estrofas = 6;
+}
+
+// Una estrofa individual dentro del payload del himno.
+message StanzaPayload {
+  int32 id = 1;
+  int32 version_pais_id = 2;
+  string tipo = 3;             // "estrofa" | "coro" | "intro" | "amen"
+  int32 orden = 4;
+  string contenido = 5;
+}
+
+// Información de un fondo disponible en el PC.
+message BackgroundInfo {
+  int32 id = 1;
+  string nombre = 2;
+  string tipo = 3;             // "image" | "video" | "color"
+}
+
+// Lista de fondos disponibles en el PC.
+message BackgroundList {
+  repeated BackgroundInfo backgrounds = 1;
+}
 
 message Empty {}
 

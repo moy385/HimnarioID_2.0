@@ -24,6 +24,15 @@ final controlRepositoryProvider = Provider<domain.ControlRepository>((ref) {
   return ControlRepositoryImpl(dataSource: dataSource);
 });
 
+/// Provider que obtiene la lista de fondos disponibles en el display remoto.
+final remoteBackgroundsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final connectionState = ref.watch(connectionStateProvider);
+  if (connectionState is! Connected) return [];
+  final dataSource = ref.watch(controlDataSourceProvider);
+  return dataSource.getAvailableBackgrounds();
+});
+
 /// Provider del estado de conexión usando [ConnectionNotifier].
 final connectionStateProvider =
     StateNotifierProvider<ConnectionNotifier, ConnectionState>((ref) {

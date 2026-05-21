@@ -8,8 +8,6 @@
 
 #include <audioplayers_windows/audioplayers_windows_plugin.h>
 #include <desktop_multi_window/desktop_multi_window_plugin.h>
-#include <nsd_windows/nsd_windows_plugin_c_api.h>
-#include <permission_handler_windows/permission_handler_windows_plugin.h>
 #include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
 #include <window_manager/window_manager_plugin.h>
 
@@ -18,10 +16,6 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("AudioplayersWindowsPlugin"));
   DesktopMultiWindowPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("DesktopMultiWindowPlugin"));
-  NsdWindowsPluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("NsdWindowsPluginCApi"));
-  PermissionHandlerWindowsPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
   ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
   WindowManagerPluginRegisterWithRegistrar(
