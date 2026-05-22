@@ -2,7 +2,7 @@
 ### Para flujo de trabajo en equipo pequeño (1 persona) con Flutter/Dart en Linux
 
 > **Propósito:** Referencia rápida para el desarrollo de HimnarioID 2.0
-> **Fecha:** 20 de mayo de 2026
+> **Fecha:** 22 de mayo de 2026
 
 ---
 
@@ -243,7 +243,7 @@ flutter build apk --debug
 # 4. (Recomendado) Verificar conteo de tests
 flutter test --reporter expanded | grep -E "All tests passed|Some tests failed"
 ```
-> Estado actual del proyecto: **274 tests** (263 unit/widget + 11 integración), `dart analyze lib/` → **0 errors, 0 warnings** (27 info de estilo). Última rama activa: `feature/orden-filtros-admin-crud`.
+> Estado actual del proyecto: **274 tests** (263 unit/widget + 11 integración), `dart analyze lib/` → **0 errors, 0 warnings** (27 info de estilo). Rama activa: `feature/db-auto-update`. Rama estable `main` en commit `f9077af`.
 
 ### Mantener la rama feature actualizada con `main`
 
@@ -308,7 +308,9 @@ git merge --no-ff feature/login
 | `feature/settings-panel-sin-login` | Admin directo (icono ajustes sin login forzoso) | ✅ Mergeada a main |
 | `feature/agregar-himnos-convenciones` | 25 himnos + brocha mejorada + fondos + fix delete | ✅ Mergeada a main |
 | `feature/flujo-emisor-receptor` | Conexión gRPC Emisor/Receptor + mDNS + F11 fullscreen + slider proyección en móvil emisor | ✅ Mergeada a main |
-| `feature/orden-filtros-admin-crud` | Orden himnos Oficiales primero, filtro Convención, CRUD Usuarios backend | 🔶 Abierta (pendiente merge) |
+| `feature/orden-filtros-admin-crud` | Orden himnos Oficiales primero, filtro Convención, CRUD Usuarios backend | ✅ Mergeada a main |
+| `feature/peticiones-mayo-2026` | Cambios solicitados mayo 2026 (revertidos parcialmente) | ✅ Mergeada (y revertida) |
+| `feature/db-auto-update` | Mecanismo desacoplado de auto-actualización de BD | 🔶 Abierta (en desarrollo) |
 
 ---
 

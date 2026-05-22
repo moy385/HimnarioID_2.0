@@ -1,7 +1,7 @@
 # Tareas Pendientes — HimnarioID 2.0
 
-> **Fecha:** 21 de mayo de 2026 — 5ª revisión
-> **Propósito:** Estado actual tras completar flujo Emisor/Receptor, orden himnos, filtro Convención y CRUD Usuarios backend.
+> **Fecha:** 22 de mayo de 2026 — 7ª revisión
+> **Propósito:** Estado actual tras implementar DB auto-update, split APK, renombrar ejecutable Windows a MQ_App.exe.
 
 ---
 
@@ -35,10 +35,15 @@
 | **Modo Dual PC/Celular** | ✅ Funcional | Switch debug, rutas, botón Presentar |
 | **Conexión Emisor/Receptor** | ✅ Completa y funcional | gRPC server + mDNS broadcast/discovery + flujo completo: discover, handshake, watchStatus, comandos de navegación, apariencia y envío automático de himno |
 | **gRPC** | ✅ Implementado | GrpcDisplayServer (335 líneas, 7 comandos, handshake, watchStatus streaming). GrpcControlDataSource con keepalive, heartbeat, auto-reconexión |
-| **F11 fullscreen** | ✅ Implementado | FullscreenHandler global en HimnarioDualApp |
+| **F11 fullscreen** | ✅ Implementado | FullscreenHandler en projection_app.dart + windowManager.ensureInitialized() en main.dart (recuperado tras revert 22 mayo) |
+| **Título ventana Windows "MQ App"** | ✅ Recuperado | `windows/runner/main.cpp:30` → `L"MQ App"` (revertido 22 mayo, re-implementado manualmente) |
+| **Numeración estrofas presentación** | ✅ Recuperado | `_calcStanzaNumber()` en `live_projection_screen.dart` (revertido 22 mayo, re-implementado manualmente) |
 | **Fondos de video** | ❌ Revertido | Crash irrecuperable en Linux (libmpv 0.41.0). Pendiente para futuro. |
-| **Tests** | ✅ 274 tests | 263 unit/widget + 11 integración (~11 fallos conocidos) |
-| **APK Android** | ✅ Funcional | Build release 65.5MB (fat APK) con JDK 17 en `/home/melquisedec/jdk17` |
+| **DB auto-update desde assets** | ✅ Implementado | Rama `feature/db-auto-update`. Backup/restore de datos de usuario. |
+| **APK Android (split-per-abi)** | ✅ Optimizado | APKs por arquitectura: arm64-v8a ~24MB, armeabi-v7a ~22MB, x86_64 ~26MB |
+| **Ejecutable Windows** | ✅ Renombrado | `MQ_App.exe` (antes `himnario_id_2.exe`) |
+| **Tests** | ✅ 294 tests | 263 unit/widget + 11 integración + 20 nuevos unit (~11 fallos conocidos) |
+| **APK Android** | ✅ Funcional | Build release con `--split-per-abi`. Script: `scripts/build_apk.sh` |
 
 ---
 
@@ -75,10 +80,12 @@
 #### ✅ P1.1 — Probar flujo Presentar end-to-end en Linux
 **Estado**: ✅ Probado
 
-#### P1.2 — Reducir tamaño APK (split-per-abi)
-**Archivos**: `android/`, comando build
-**Descripción**: `--split-per-abi` para bajar de ~64MB a ~25MB. Firmar con keystore.
-**Tiempo estimado**: ~1h
+#### ✅ P1.2 — Reducir tamaño APK (split-per-abi)
+**Archivos**: `android/`, comando build, `scripts/build_apk.sh`
+**Descripción**: `--split-per-abi` para bajar de ~64MB a ~25MB por arquitectura. APKs renombrados como `mq-app-{arch}-{version}.apk`.
+**Resultado**: arm64-v8a 24MB, armeabi-v7a 22MB, x86_64 26MB (antes 65.5MB fat).
+**Script**: `scripts/build_apk.sh [version]` para builds futuros.
+**Estado**: ✅ Completado 22 mayo 2026
 
 ---
 
@@ -114,10 +121,29 @@
 
 ### 🟡 P1 — Nueva
 
-#### P1.3 — Limpiar CHECK constraints SQL (cosmético)
+#### ✅ P1.3 — DB auto-update (desacoplado de sqflite onUpgrade)
+**Archivos**: `lib/core/database/database_helper.dart`, `lib/core/database/db_version_manager.dart`, `lib/core/database/user_data_backup.dart`, `assets/db/db_version.json`, `assets/db/himnario_id.db`
+**Descripción**: Mecanismo que compara `db_version.json` (manifiesto del asset) contra `db_version_applied.txt` (archivo marker local). Si `assetVersion > localVersion`: backup de datos de usuario → reemplazar .db completo → restore de datos → abrir BD con onCreate/onUpgrade.
+**Arquitectura**: Dos capas ortogonales — SCHEMA_VERSION (migraciones estructurales) vs ASSET_VERSION (seed data).
+**Rama**: `feature/db-auto-update`
+**Estado**: ✅ Completado 22 mayo 2026 (commit `6db1c31`)
+
+#### P1.4 — Limpiar CHECK constraints SQL (cosmético)
 **Archivos**: `lib/core/database/database_helper.dart`
 **Descripción**: Las constraints SQL aún mencionan `'video'` como tipo válido. Requiere migración de BD (v5) para limpiar. No urgente — mantiene compatibilidad hacia atrás.
 **Tiempo estimado**: ~30min
+
+### 🔵 P2 — Media prioridad
+
+#### P2.8 — Etiqueta "Personal" en modo Convención (Punto 1)
+**Archivos**: Vista de himno en modo personal, lógica de diferenciación de tipos
+**Descripción**: Mostrar etiqueta visual "Personal" en himnos de tipo Convención cuando se usan en modo personal (fuera de la lista de Convención). Se perdió en el revert del 22 mayo.
+**Tiempo estimado**: ~1h
+
+#### P2.9 — Botones separados "Presentar" y "Conectar" (Punto 4)
+**Archivos**: `connected_dashboard.dart`, `present_button.dart`, `discover_display_sheet.dart`
+**Descripción**: Separar el botón único actual en dos botones independientes para presentar y conectar. Se perdió en el revert del 22 mayo.
+**Tiempo estimado**: ~1h
 
 ### 🟢 P3 — Baja prioridad / Mejora continua
 
@@ -149,13 +175,29 @@
 ## Dependencias entre tareas
 
 ```
-P1.2 Split APK ─── sin dependencias
-P1.3 CHECK SQL ─── migracion BD (v4→v5)
-~~P3.1 gRPC servidor ───→ P3.2 Modo Emisor~~ ✅ P3.1 completado
+✅ P1.2 Split APK ─── Completado 22 mayo
+✅ P1.3 DB auto-update ─── Completado 22 mayo
+P1.4 CHECK SQL ─── migracion BD (v4→v5)
+P2.8 Etiqueta Personal ─── sin dependencias
+P2.9 Botones separados ─── sin dependencias
 P2.1 Tests core ───→ P3.5 Tests widgets
 ```
 
+## Novedades 22 mayo 2026 (7ª revisión)
+
+- **✅ P1.3 DB auto-update**: Implementado en rama `feature/db-auto-update`. Dos capas de versionado ortogonales. Backup/restore de datos de usuario (7 tablas). Pantalla informativa con logo y spinner. 20 tests unitarios nuevos.
+- **✅ P1.2 Split APK**: Build con `--split-per-abi` genera APKs de ~24MB. Script `scripts/build_apk.sh` para automatizar.
+- **✅ Ejecutable Windows**: Renombrado a `MQ_App.exe`. Modificados: `windows/CMakeLists.txt` (BINARY_NAME), `Runner.rc` (InternalName), CI artifact name.
+- **📄 implementacion.md**: Reporte detallado movido a `doc/`.
+- **🧹 Limpieza raíz**: Solo `README.md` y `PropuestaInterfaz.md` en raíz. Reportes antiguos eliminados. Documentos movidos a `doc/`.
+
 ---
+
+## Incidente DB auto-update (22 mayo 2026)
+1. **Revert total a `f666da8`**: El mecanismo de DB auto-update (que comparaba `_assetDbVersion` contra `user_version`) falló porque acopló el número de versión al `version:` de sqflite `openDatabase`, causando que `onUpgrade` se ejecutara siempre.
+2. **3 de 6 cambios recuperados manualmente**: Se re-implementaron Punto 2 (ventana), Punto 3 (estrofas), Punto 5 (F11). No se recuperaron Punto 1 (etiqueta Personal) ni Punto 4 (botones separados).
+3. **Nueva rama**: `feature/db-auto-update` creada desde `main` (commit `f9077af`) para rediseñar el mecanismo con enfoque desacoplado.
+4. **APK release reconstruido** desde `main` (commit `f9077af`). Windows CI disparado desde main (run #26287517141).
 
 ## Notas importantes
 

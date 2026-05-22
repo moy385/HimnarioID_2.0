@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 21 de mayo de 2026 — 5ª revisión
+> **Última actualización:** 22 de mayo de 2026 — 7ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -66,7 +66,8 @@ lib/
 ```
 
 ## Rama activa
-- **`feature/orden-filtros-admin-crud`** — Orden de himnos (Oficiales primero vía `CASE WHEN` SQL), filtro "Convención" en búsqueda, CRUD Usuarios backend (lógica conservada, UI removida del panel admin)
+- **`feature/db-auto-update`** — Mecanismo de auto-actualización de base de datos desde assets (desacoplado de sqflite `onUpgrade`, con archivo manifiesto `db_version.json`)
+- **`main`** (commit `f9077af`) — Rama estable con las 3 funcionalidades recuperadas (ventana Windows, orden estrofas, F11)
 
 ## Características implementadas
 - Modo personal: búsqueda, filtros (tipo, A-Z, Z-A, categoría), scroll alfabético
@@ -109,6 +110,9 @@ lib/
 - **Orden himnos Oficiales primero**: `CASE WHEN h.tipo = 1 THEN 0 ELSE 1 END` en `_defaultOrderBy` del datasource — 0 hardcodes de `h.numero_oficial ASC` fuera del getter
 - **Filtro Convención**: Chip en HomeScreen + ConnectedDashboard para filtrar por `HimnoTipo.convencion`
 - **CRUD Usuarios backend**: CatalogLocalDataSource (4 métodos SQL), AdminRepository (interfaz + impl), manage_usuarios.dart (4 use cases), admin_providers.dart (5 providers Riverpod). UI removida del panel admin (se conserva lógica para futuro)
+- **Título ventana Windows**: `windows/runner/main.cpp` → `L"MQ App"` como título de la ventana principal
+- **Numeración correcta de estrofas en proyección**: `_calcStanzaNumber()` en `live_projection_screen.dart` — cuenta solo slides no-coro para etiquetas "Estrofa 1, Coro, Estrofa 2..."
+- **F11 en modo proyección**: `FullscreenHandler` envuelve `MaterialApp` en `projection_app.dart` + `windowManager.ensureInitialized()` temprano en `main.dart` para modo `--projection`
 
 ## Estado de Tests
 - **Unit + Widget**: 263 tests
@@ -144,7 +148,21 @@ lib/
 - `feature/copiar-fondos-a-local-storage` — FileStorageService, copia de fondos a directorio local de la app
 - `chore/limpieza-codigo-muerto` — 310 líneas eliminadas, 32 archivos. Limpieza post-revert de video
 - `feature/flujo-emisor-receptor` — Conexión gRPC Emisor/Receptor + mDNS + envío automático de himno, comandos SET_BACKGROUND/SET_FONT_SIZE, F11 fullscreen, slider proyección en móvil emisor conectado
-- `feature/orden-filtros-admin-crud` (activa, pendiente de merge) — Orden himnos Oficiales primero, filtro Convención, CRUD Usuarios backend
+- `feature/orden-filtros-admin-crud` — Orden himnos Oficiales primero, filtro Convención, CRUD Usuarios backend
+- `feature/peticiones-mayo-2026` — Cambios solicitados mayo 2026 (revertidos parcialmente: ventana Windows, orden estrofas, F11 recuperados en commit `f9077af`; DB auto-update, etiqueta Personal, botones separados revertidos permanentemente)
+
+## DB Auto-Update (implementado 22 mayo 2026)
+- **Arquitectura**: Dos capas de versionado ortogonales:
+  - **SCHEMA_VERSION** (constante 6 en `DatabaseHelper`) → migraciones estructurales vía `onUpgrade`
+  - **ASSET_VERSION** (`assets/db/db_version.json`) → reemplazo completo de seed data
+- **Nuevos archivos**: `db_version_manager.dart`, `user_data_backup.dart`, `db_update_screen.dart`
+- **Flujo**: Backup de datos de usuario (7 tablas) → reemplazar .db desde assets → restore → abrir BD
+- **Rama**: `feature/db-auto-update` (commit `6db1c31`)
+- **Reporte detallado**: `doc/implementacion.md`
+
+## Cambios en builds (22 mayo 2026)
+- **APK Android**: Build con `--split-per-abi` genera APKs separados por arquitectura (~24MB c/u). Script: `scripts/build_apk.sh`.
+- **Ejecutable Windows**: Renombrado de `himnario_id_2.exe` a `MQ_App.exe` (`windows/CMakeLists.txt` BINARY_NAME).
 
 ## Notas técnicas importantes
 - **Fondos de video**: Se intentó implementar con `video_player_media_kit` / `media_kit` + libmpv, pero se descartó por crash irrecuperable en Linux (assertion `group_index >= 0` en libmpv 0.41.0). Todo el código de video fue revertido. Pendiente para cuando Ubuntu actualice libmpv.

@@ -1,10 +1,10 @@
-# HimnarioID 2.0
+# 🎵 MQ App (antes HimnarioID 2.0)
 
 Aplicación Flutter multiplataforma para himnos religiosos con modo personal, proyección, administración y descarga de pistas de audio.
 
 ---
 
-Este repositorio contiene el código fuente y la arquitectura para la nueva generación del Himnario Web, evolucionado hacia un sistema de proyección controlable remotamente y gestión musical avanzada. 
+Este repositorio contiene el código fuente y la arquitectura para la nueva generación del Himnario Web, evolucionado hacia un sistema de proyección controlable remotamente y gestión musical avanzada.
 
 El sistema está diseñado pensando en alta resiliencia offline (ideal para entornos con conectividad inestable, como suele ocurrir en algunas zonas de El Salvador) y permite que un dispositivo móvil controle la proyección en una PC o TV mediante la red local (LAN).
 
@@ -16,7 +16,7 @@ El sistema está diseñado pensando en alta resiliencia offline (ideal para ento
    - **Modo Personal:** Visualización fluida (scroll) de las estrofas y coros, con herramientas flotantes para músicos (transposición, acordes, reproducción de pistas).
    - **Modo Proyección:** Paneles minimalistas de control remoto y visualización de estrofas estáticas para el público.
 2. **Roles Dinámicos (Emisor / Receptor):** Cualquier dispositivo en la red puede actuar como el control remoto (Emisor) o como la pantalla de presentación (Receptor) mediante una conexión gRPC over LAN.
-3. **Soporte Multi-Ventana (Desktop):** En PC, el sistema puede separar el panel de control (ventana principal) de la proyección visual (ventana secundaria o pantalla extendida).
+3. **Soporte Multi-Ventana (Desktop):** En PC, el sistema puede separar el panel de control (ventana principal) de la proyección visual (ventana secundaria o pantalla extendida). La ventana de proyección soporta **F11** para alternar fullscreen.
 4. **Módulo Administrativo Integrado:** Un backoffice protegido por credenciales dentro de la misma app para gestionar el CRUD completo de himnos, categorías, pistas y fondos sin depender de software externo.
 5. **Resiliencia Offline:** Base de datos embebida (SQLite) y red de área local (mDNS) para funcionar sin conexión a Internet.
 
@@ -232,29 +232,84 @@ lib/
 | `country_flags` | Banderas de países (no implementado aún) |
 
 ### Build Android
+
 ```bash
 export JAVA_HOME=/home/melquisedec/jdk17
 export PATH=$JAVA_HOME/bin:$PATH
 export ANDROID_HOME=/home/melquisedec/android-sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools
-flutter build apk --debug
-```
-APK: `build/app/outputs/flutter-apk/app-debug.apk`
 
-Para APK release (fat): `flutter build apk` → **65.5MB**
-Para APK más pequeño: `flutter build apk --split-per-abi` → ~20-30MB por arquitectura
+# Generar APKs por arquitectura (recomendado, ~24MB c/u)
+flutter build apk --release --split-per-abi
+```
+
+APK moderno: `build/app/outputs/flutter-apk/mq-app-arm64-v8a-{version}.apk` (~24MB)
+APK antiguo: `build/app/outputs/flutter-apk/mq-app-armeabi-v7a-{version}.apk` (~22MB)
+
+> Script automatizado: `./scripts/build_apk.sh [version]`
+
+### Build Windows
+
+El ejecutable se genera via CI (GitHub Actions):
+```yaml
+# .github/workflows/build_windows.yml
+# Se activa manualmente o al pushear tags v*
+```
+El .exe se llama **`MQ_App.exe`** (configurado en `windows/CMakeLists.txt`).
+
+## 🗄️ Database Auto-Update
+
+El sistema soporta actualización automática de la base de datos precargada sin perder datos de usuario.
+
+### Cómo funciona
+
+1. **`assets/db/db_version.json`** contiene la versión actual del seed data (ej. `{"version": 3}`).
+2. Al iniciar, `DbVersionManager` compara la versión del asset contra `db_version_applied.txt` en el directorio de documentos.
+3. Si `assetVersion > localVersion`, se activa el flujo de actualización:
+   - Backup de datos de usuario (tablas: `Usuario`, `Arreglo_Musical`, `Estrofa_Arreglo`, `Configuracion`, `Fondo_Pantalla`, `Historial_Reproduccion`, `Pista_Audio`).
+   - Reemplazo del archivo `.db` completo desde assets.
+   - Restauración de datos de usuario en la nueva BD.
+   - Escritura del marker de versión local.
+4. Luego se abre la BD con `onCreate`/`onUpgrade` para manejar migraciones de esquema SQLite.
+
+### Versiones independientes
+
+| Concepto | Dónde se define | Cuándo se incrementa |
+|----------|----------------|----------------------|
+| **Asset version** | `assets/db/db_version.json` | Cambia seed data (himnos, estrofas) |
+| **SCHEMA_VERSION** | `DatabaseHelper` (constante 6) | Cambia estructura de tablas/columnas |
+
+### Para desarrollar/actualizar
+
+```bash
+# 1. Reemplazar la BD precargada
+cp nueva_base.db assets/db/himnario_id.db
+
+# 2. Actualizar versión del asset
+echo '{"version": 3}' > assets/db/db_version.json
+
+# 3. Si hay migraciones de esquema, actualizar SCHEMA_VERSION
+#    y agregar migración en _onUpgrade()
+
+# 4. Verificar que el asset esté listado en pubspec.yaml
+#    (ya incluido: assets/db/db_version.json, assets/db/himnario_id.db)
+```
 
 ### Pistas de Audio
 - Alojadas en GitHub Releases: `v1.0-audio`
 - URL base: `https://github.com/moy385/HimnarioID_2.0/releases/download/v1.0-audio/`
 - La app descarga bajo demanda y almacena localmente
 
-### Documentación adicional
+### Documentación adicional (en `doc/`)
 - `doc/CONTEXTO_PROYECTO.md` — Contexto completo del proyecto
 - `doc/tareas_pendientes.md` — Estado actual y prioridades
+- `doc/implementacion.md` — Reporte de implementación DB auto-update
 - `doc/ANDROID_BUILD.md` — Guía de build para Android
 - `doc/BUILD_WINDOWS.md` — Build de Windows .exe (CI y local)
 - `doc/CONEXION_LAN.md` — Conexión gRPC Emisor/Receptor vía LAN
 - `doc/git-ramas-guia.md` — Guía de ramas y flujo Git
 - `doc/PLAN_DE_DELEGACION.md` — Plan histórico de trabajo con agentes
 - `doc/TAREAS_DIFERIDAS.md` — Tareas diferidas para próximos sprints
+- `doc/Interfaz.md` — Diseño de vistas y flujo de usuario
+- `doc/TASKS_DESIGN.md` — Tareas de diseño pendientes
+- `doc/TASKS_DEV.md` — Tareas de desarrollo pendientes
