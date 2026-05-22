@@ -98,6 +98,7 @@ message CommandRequest {
   optional bool show_chords = 11;
   optional float card_opacity = 12;
   optional float projection_font_scale = 13;
+  optional string bg_color = 14;
 }
 
 message CommandResponse {

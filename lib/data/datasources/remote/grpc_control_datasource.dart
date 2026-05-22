@@ -219,6 +219,7 @@ class GrpcControlDataSource {
     bool? showChords,
     double? cardOpacity,
     double? projectionFontScale,
+    String? bgColor,
   }) async {
     _ensureConnected();
     try {
@@ -230,6 +231,7 @@ class GrpcControlDataSource {
       if (showChords != null) request.showChords = showChords;
       if (cardOpacity != null) request.cardOpacity = cardOpacity;
       if (projectionFontScale != null) request.projectionFontScale = projectionFontScale;
+      if (bgColor != null) request.bgColor = bgColor;
       final response = await _client!.sendCommand(request);
       return response.success;
     } on GrpcError catch (e) {
