@@ -57,7 +57,7 @@ class DesktopWindowService implements WindowService {
     // Configurar la ventana para proyección: fullscreen + always-on-top
     await windowManager.setFullScreen(true);
     await windowManager.setAlwaysOnTop(true);
-    await windowManager.setTitle('HimnarioID - Proyección');
+    await windowManager.setTitle('MQ App - Proyección');
     await windowManager.setBackgroundColor(Colors.black);
     await windowManager.setSkipTaskbar(true);
 
@@ -92,7 +92,7 @@ class DesktopWindowService implements WindowService {
       // Sin estado guardado: restaurar valores por defecto
       await windowManager.setFullScreen(false);
       await windowManager.setAlwaysOnTop(false);
-      await windowManager.setTitle('HimnarioID');
+      await windowManager.setTitle('MQ App');
       await windowManager.setSkipTaskbar(false);
     }
 

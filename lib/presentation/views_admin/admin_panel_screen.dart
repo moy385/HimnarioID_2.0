@@ -79,7 +79,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'HimnarioID',
+                  'MQ App',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: colorScheme.onPrimaryContainer,
                   ),

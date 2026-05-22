@@ -41,7 +41,7 @@ class HimnarioDualApp extends ConsumerWidget {
 
     return FullscreenHandler(
       child: MaterialApp(
-        title: 'HimnarioID 2.0',
+        title: 'MQ App',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

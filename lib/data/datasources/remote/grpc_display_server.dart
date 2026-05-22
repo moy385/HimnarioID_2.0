@@ -402,7 +402,7 @@ class GrpcDisplayServer extends HymnControlServiceBase {
 
     return HandshakeResponse(
       accepted: true,
-      serverName: 'HimnarioID Display',
+      serverName: 'MQ App Display',
       serverVersion: '2.0.0',
       displayName: displayName,
       protocolVersion: protocolVersion,

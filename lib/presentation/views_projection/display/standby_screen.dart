@@ -51,7 +51,7 @@ class StandbyScreen extends ConsumerWidget {
 
                 // ── Título principal ──
                 Text(
-                  'HimnarioID',
+                  'MQ App',
                   style: textTheme.displayLarge?.copyWith(
                     color: colors.primary,
                     fontWeight: FontWeight.w300,
@@ -87,7 +87,7 @@ class StandbyScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Abre la aplicación HimnarioID en tu dispositivo móvil '
+                  'Abre la aplicación MQ App en tu dispositivo móvil '
                   'para conectar y controlar la proyección.',
                   textAlign: TextAlign.center,
                   style: textTheme.bodyMedium?.copyWith(

@@ -280,7 +280,7 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'HimnarioID - Proyección',
+      title: 'MQ App - Proyección',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.indigo,

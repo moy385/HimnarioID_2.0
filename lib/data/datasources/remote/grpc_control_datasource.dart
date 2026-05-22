@@ -54,7 +54,7 @@ class GrpcControlDataSource {
       final response = await client
           .handshake(
             HandshakeRequest(
-              clientName: 'HimnarioID Controller',
+              clientName: 'MQ App Controller',
               clientVersion: '2.0.0',
               protocolVersion: 1,
             ),

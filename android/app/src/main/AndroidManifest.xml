@@ -9,7 +9,7 @@
     <!-- Android 13+ (API 33+) requiere permiso runtime NEARBY_WIFI_DEVICES -->
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
     <application
-        android:label="Himnario ID"
+        android:label="MQ App"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

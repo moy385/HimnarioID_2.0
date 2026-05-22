@@ -213,7 +213,7 @@ class AppInitializer {
       try {
         _mdnsBroadcast = MdnsBroadcastService();
         await _mdnsBroadcast!.start(
-          name: 'HimnarioID-${_displayServer!.displayName}',
+          name: 'MQ App-${_displayServer!.displayName}',
           port: _displayServer!.port,
           sessionId: _displayServer!.sessionId,
           displayName: _displayServer!.displayName,

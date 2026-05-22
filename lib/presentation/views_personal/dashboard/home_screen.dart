@@ -161,7 +161,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           isDesktop && !isPresenting ? const PresentButton() : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: AppBar(
-        title: const Text('HimnarioID'),
+        title: const Text('MQ App'),
         leading: IconButton(
           icon: const Icon(Icons.settings_rounded),
           onPressed: () => Navigator.pushReplacement(
