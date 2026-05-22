@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 22 de mayo de 2026 — 6ª revisión
+> **Última actualización:** 22 de mayo de 2026 — 7ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -151,11 +151,18 @@ lib/
 - `feature/orden-filtros-admin-crud` — Orden himnos Oficiales primero, filtro Convención, CRUD Usuarios backend
 - `feature/peticiones-mayo-2026` — Cambios solicitados mayo 2026 (revertidos parcialmente: ventana Windows, orden estrofas, F11 recuperados en commit `f9077af`; DB auto-update, etiqueta Personal, botones separados revertidos permanentemente)
 
-## Incidente DB auto-update (22 mayo 2026)
-- Se implementó un mecanismo de actualización de BD desde assets que comparaba `_assetDbVersion` contra `user_version` de SQLite, pero la migración falló porque la implementación original **acopló `_assetDbVersion` al `version:` de sqflite `openDatabase`**, causando que `onUpgrade` se ejecutara siempre al reiniciar la app (re-creando tablas y perdiendo datos).
-- **Solución temporal**: `git reset --hard f666da8` + re-implementación manual de solo 3 de 6 cambios (ventana, estrofas, F11). El DB auto-update se pospone a la rama `feature/db-auto-update`.
-- **Archivo**: `assets/db/db_version.json` — manifiesto auxiliar `{"version": 1}` para futura detección de cambios.
-- **Para ver BD actualizada en Windows**: borrar `%APPDATA%/himnario_id/himnario_id.db` ANTES de ejecutar nuevo .exe.
+## DB Auto-Update (implementado 22 mayo 2026)
+- **Arquitectura**: Dos capas de versionado ortogonales:
+  - **SCHEMA_VERSION** (constante 6 en `DatabaseHelper`) → migraciones estructurales vía `onUpgrade`
+  - **ASSET_VERSION** (`assets/db/db_version.json`) → reemplazo completo de seed data
+- **Nuevos archivos**: `db_version_manager.dart`, `user_data_backup.dart`, `db_update_screen.dart`
+- **Flujo**: Backup de datos de usuario (7 tablas) → reemplazar .db desde assets → restore → abrir BD
+- **Rama**: `feature/db-auto-update` (commit `6db1c31`)
+- **Reporte detallado**: `doc/implementacion.md`
+
+## Cambios en builds (22 mayo 2026)
+- **APK Android**: Build con `--split-per-abi` genera APKs separados por arquitectura (~24MB c/u). Script: `scripts/build_apk.sh`.
+- **Ejecutable Windows**: Renombrado de `himnario_id_2.exe` a `MQ_App.exe` (`windows/CMakeLists.txt` BINARY_NAME).
 
 ## Notas técnicas importantes
 - **Fondos de video**: Se intentó implementar con `video_player_media_kit` / `media_kit` + libmpv, pero se descartó por crash irrecuperable en Linux (assertion `group_index >= 0` en libmpv 0.41.0). Todo el código de video fue revertido. Pendiente para cuando Ubuntu actualice libmpv.

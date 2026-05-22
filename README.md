@@ -232,17 +232,30 @@ lib/
 | `country_flags` | Banderas de países (no implementado aún) |
 
 ### Build Android
+
 ```bash
 export JAVA_HOME=/home/melquisedec/jdk17
 export PATH=$JAVA_HOME/bin:$PATH
 export ANDROID_HOME=/home/melquisedec/android-sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools
-flutter build apk --debug
-```
-APK: `build/app/outputs/flutter-apk/app-debug.apk`
 
-Para APK release (fat): `flutter build apk` → **65.5MB**
-Para APK más pequeño: `flutter build apk --split-per-abi` → ~20-30MB por arquitectura
+# Generar APKs por arquitectura (recomendado, ~24MB c/u)
+flutter build apk --release --split-per-abi
+```
+
+APK moderno: `build/app/outputs/flutter-apk/mq-app-arm64-v8a-{version}.apk` (~24MB)
+APK antiguo: `build/app/outputs/flutter-apk/mq-app-armeabi-v7a-{version}.apk` (~22MB)
+
+> Script automatizado: `./scripts/build_apk.sh [version]`
+
+### Build Windows
+
+El ejecutable se genera via CI (GitHub Actions):
+```yaml
+# .github/workflows/build_windows.yml
+# Se activa manualmente o al pushear tags v*
+```
+El .exe se llama **`MQ_App.exe`** (configurado en `windows/CMakeLists.txt`).
 
 ## 🗄️ Database Auto-Update
 
@@ -287,12 +300,16 @@ echo '{"version": 3}' > assets/db/db_version.json
 - URL base: `https://github.com/moy385/HimnarioID_2.0/releases/download/v1.0-audio/`
 - La app descarga bajo demanda y almacena localmente
 
-### Documentación adicional
+### Documentación adicional (en `doc/`)
 - `doc/CONTEXTO_PROYECTO.md` — Contexto completo del proyecto
 - `doc/tareas_pendientes.md` — Estado actual y prioridades
+- `doc/implementacion.md` — Reporte de implementación DB auto-update
 - `doc/ANDROID_BUILD.md` — Guía de build para Android
 - `doc/BUILD_WINDOWS.md` — Build de Windows .exe (CI y local)
 - `doc/CONEXION_LAN.md` — Conexión gRPC Emisor/Receptor vía LAN
 - `doc/git-ramas-guia.md` — Guía de ramas y flujo Git
 - `doc/PLAN_DE_DELEGACION.md` — Plan histórico de trabajo con agentes
 - `doc/TAREAS_DIFERIDAS.md` — Tareas diferidas para próximos sprints
+- `doc/Interfaz.md` — Diseño de vistas y flujo de usuario
+- `doc/TASKS_DESIGN.md` — Tareas de diseño pendientes
+- `doc/TASKS_DEV.md` — Tareas de desarrollo pendientes
