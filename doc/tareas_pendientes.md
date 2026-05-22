@@ -1,7 +1,7 @@
 # Tareas Pendientes — HimnarioID 2.0
 
-> **Fecha:** 20 de mayo de 2026 — 4ª revisión
-> **Propósito:** Estado actual tras implementación de infraestructura de red (gRPC + mDNS).
+> **Fecha:** 21 de mayo de 2026 — 5ª revisión
+> **Propósito:** Estado actual tras completar flujo Emisor/Receptor, orden himnos, filtro Convención y CRUD Usuarios backend.
 
 ---
 
@@ -15,8 +15,9 @@
 | **Detalle de himno** | ✅ Funcional | Acordes sobre texto con ChordOverlayText (Stack + Positioned + TextPainter) |
 | **Acordes sobre texto** | ✅ Funcional | ChordParser + ChordPainter con caché LRU + ChordOverlayText |
 | **Toggle acordes (Solfa)** | ✅ Funcional | showChords persistente en DB, botón Solfa funcional |
-| **Admin CRUD** | ✅ Funcional | Himnos, categorías, países, pistas, fondos |
+| **Admin CRUD** | ✅ Funcional | Himnos, categorías, países, pistas, fondos. Backend Usuarios listo (UI removida) |
 | **Admin directo** | ✅ Funcional | Icono de ajustes sin login forzoso |
+| **CRUD Usuarios (backend)** | ✅ Implementado | Datasource, repository, use cases, providers. UI removida del panel (conservada para futuro) |
 | **Audio** | ✅ Funcional | Descarga, reproducción, bottom player |
 | **Brocha (apariencia)** | ✅ Mejorada | Auto-refresh (Consumer), fondos color/imagen, selector HSV, paleta 22 colores, opacidad tarjetas |
 | **Brocha conectada** | ✅ Funcional | IPC SET_CONFIG a ventana de proyección |
@@ -24,17 +25,34 @@
 | **Eliminación de fondos** | ✅ Funcional | Invalida brocha/vista himno + borra archivo físico |
 | **Almacenamiento local de fondos** | ✅ Implementado | FileStorageService copia a `{appDocs}/himnario_id/fondos/` al seleccionar, solo borra copia local |
 | **Limpieza de código muerto** | ✅ Completado | 310 líneas eliminadas, 32 archivos. Eliminados: FondoPantallaTipo.video, 3 directorios huérfanos, login_screen, barrel files, 6 providers deprecados |
-| **Escalado proyección** | ✅ Funcional | `projectionFontScale` independiente (0.5–3.0) |
+| **Escalado proyección** | ✅ Funcional | `projectionFontScale` independiente (0.5–3.0). Slider visible en móvil emisor conectado |
+| **Orden himnos Oficiales primero** | ✅ Implementado | `CASE WHEN` en SQL getter `_defaultOrderBy` |
+| **Filtro Convención** | ✅ Implementado | Chip en HomeScreen + ConnectedDashboard |
 | **Scroll proyección** | ✅ Funcional | Condicional, SingleChildScrollView si desborda |
 | **Reflow acordes proyección** | ✅ Funcional | StanzaLayoutEngine.processStanza |
 | **Flujo presentación slides** | ✅ Funcional | Title → Lyrics → Amen con etiquetas |
 | **Ventana de proyección** | ✅ Funcional | SubprocessWindowService + IPC JSON |
 | **Modo Dual PC/Celular** | ✅ Funcional | Switch debug, rutas, botón Presentar |
-| **Conexión Emisor/Receptor** | ✅ Infraestructura completa | gRPC server + mDNS broadcast/discovery integrados en AppInitializer |
-| **gRPC** | ✅ Implementado | GrpcDisplayServer en lib/data/datasources/remote/ (335 líneas, 7 comandos, handshake, watchStatus streaming) |
+| **Conexión Emisor/Receptor** | ✅ Completa y funcional | gRPC server + mDNS broadcast/discovery + flujo completo: discover, handshake, watchStatus, comandos de navegación, apariencia y envío automático de himno |
+| **gRPC** | ✅ Implementado | GrpcDisplayServer (335 líneas, 7 comandos, handshake, watchStatus streaming). GrpcControlDataSource con keepalive, heartbeat, auto-reconexión |
+| **F11 fullscreen** | ✅ Implementado | FullscreenHandler global en HimnarioDualApp |
 | **Fondos de video** | ❌ Revertido | Crash irrecuperable en Linux (libmpv 0.41.0). Pendiente para futuro. |
 | **Tests** | ✅ 274 tests | 263 unit/widget + 11 integración (~11 fallos conocidos) |
-| **APK Android** | ✅ Funcional | Build release 62MB (fat APK) con JDK 17 en `/home/melquisedec/jdk17` |
+| **APK Android** | ✅ Funcional | Build release 65.5MB (fat APK) con JDK 17 en `/home/melquisedec/jdk17` |
+
+---
+
+## Evaluación de tablas restantes (21 mayo 2026)
+
+@arqui evaluó las 3 tablas que faltaban (`Version_Pais`, `Arreglo_Musical`, `Himno_Categoria`) y determinó que **ninguna justifica un CRUD standalone**:
+
+| Tabla | ¿CRUD Admin? | Motivo |
+|-------|:------------:|--------|
+| **Himno_Categoria** | ❌ | Ya gestionada desde `hymn_form_screen.dart` vía `CategoriaSelector` |
+| **Version_Pais** | ❌ | Pertenece al contexto del himno. Mejora futura: multi-versión en formulario de himno |
+| **Arreglo_Musical** | ❌ | Ya tiene capa de datos completa. UI pertenece al músico/usuario final, no al admin |
+
+**El panel admin está completo con 4 tabs** (Categorías, Países, Pistas, Fondos).
 
 ---
 
@@ -83,6 +101,17 @@
 
 ---
 
+### 🔵 P2 — Media prioridad (actualizado)
+
+#### P2.4 — Orden himnos Oficiales primero ✅ Completado
+
+#### P2.5 — Filtro Convención ✅ Completado
+
+#### P2.6 — CRUD Usuarios backend ✅ Completado (UI removida, lógica conservada)
+
+#### P2.7 — Merge feature/orden-filtros-admin-crud → main
+**Descripción**: Fusionar la rama actual a main tras aprobación.
+
 ### 🟡 P1 — Nueva
 
 #### P1.3 — Limpiar CHECK constraints SQL (cosmético)
@@ -97,14 +126,13 @@
 **Descripción**: Servidor gRPC creado e integrado. 335 líneas, implementa HymnControlServiceBase con 7 tipos de comando (NEXT, PREV, GO_TO_STANZA, GO_TO_CHORUS, BLACKOUT, CLEAR_BLACKOUT, JUMP_TO_HYMN, PING), handshake con versión de protocolo, y watchStatus streaming con ProviderContainer.
 **Estado**: ✅ Completado
 
-#### P3.2 — Modo Emisor completo
+#### ✅ P3.2 — Modo Emisor completo (COMPLETADO)
 **Archivos**: `connected_dashboard.dart`, `minimal_control_screen.dart`
-**Dependencias**: P3.1 ✅ Completado
-**Tiempo estimado**: ~3h
+**Estado**: ✅ Completado — flujo Emisor/Receptor funcional vía gRPC con discover, handshake, watchStatus, comandos de navegación, apariencia y envío automático de himno
 
-#### P3.3 — Detección automática de plataforma en producción
-**Archivos**: `dual_mode_providers.dart`
-**Tiempo estimado**: ~30min
+#### ✅ P3.3 — Detección automática de plataforma (COMPLETADO)
+**Archivos**: `app_initializer.dart`, `dual_mode_providers.dart`
+**Estado**: ✅ Completado — detección por TargetPlatform en AppInitializer que decide iniciar servidor gRPC (desktop) o discovery mDNS (mobile)
 
 #### P3.4 — Fondos de video (a futuro)
 **Archivos**: Requiere re-implementar con soporte nativo de video

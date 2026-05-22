@@ -214,6 +214,15 @@ const CommandRequest$json = {
       '10': 'projectionFontScale',
       '17': true
     },
+    {
+      '1': 'bg_color',
+      '3': 14,
+      '4': 1,
+      '5': 9,
+      '9': 7,
+      '10': 'bgColor',
+      '17': true
+    },
   ],
   '8': [
     {'1': '_text_color'},
@@ -223,6 +232,7 @@ const CommandRequest$json = {
     {'1': '_show_chords'},
     {'1': '_card_opacity'},
     {'1': '_projection_font_scale'},
+    {'1': '_bg_color'},
   ],
 };
 
@@ -236,10 +246,10 @@ final $typed_data.Uint8List commandRequestDescriptor = $convert.base64Decode(
     'hvcmRDb2xvcogBARIkCgtmb250X2ZhbWlseRgJIAEoCUgCUgpmb250RmFtaWx5iAEBEhwKB2lz'
     'X2JvbGQYCiABKAhIA1IGaXNCb2xkiAEBEiQKC3Nob3dfY2hvcmRzGAsgASgISARSCnNob3dDaG'
     '9yZHOIAQESJgoMY2FyZF9vcGFjaXR5GAwgASgCSAVSC2NhcmRPcGFjaXR5iAEBEjcKFXByb2pl'
-    'Y3Rpb25fZm9udF9zY2FsZRgNIAEoAkgGUhNwcm9qZWN0aW9uRm9udFNjYWxliAEBQg0KC190ZX'
-    'h0X2NvbG9yQg4KDF9jaG9yZF9jb2xvckIOCgxfZm9udF9mYW1pbHlCCgoIX2lzX2JvbGRCDgoM'
-    'X3Nob3dfY2hvcmRzQg8KDV9jYXJkX29wYWNpdHlCGAoWX3Byb2plY3Rpb25fZm9udF9zY2FsZQ'
-    '==');
+    'Y3Rpb25fZm9udF9zY2FsZRgNIAEoAkgGUhNwcm9qZWN0aW9uRm9udFNjYWxliAEBEh4KCGJnX2'
+    'NvbG9yGA4gASgJSAdSB2JnQ29sb3KIAQFCDQoLX3RleHRfY29sb3JCDgoMX2Nob3JkX2NvbG9y'
+    'Qg4KDF9mb250X2ZhbWlseUIKCghfaXNfYm9sZEIOCgxfc2hvd19jaG9yZHNCDwoNX2NhcmRfb3'
+    'BhY2l0eUIYChZfcHJvamVjdGlvbl9mb250X3NjYWxlQgsKCV9iZ19jb2xvcg==');
 
 @$core.Deprecated('Use commandResponseDescriptor instead')
 const CommandResponse$json = {

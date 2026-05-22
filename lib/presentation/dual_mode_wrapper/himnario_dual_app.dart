@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/himno.dart';
+import '../../core/network/connection_state.dart';
 import '../../core/theme/app_theme.dart';
 import '../shared_widgets/fullscreen_handler.dart';
+import '../shared_widgets/theme_mode_toggle_button.dart';
+import '../shared_widgets/providers/theme_mode_provider.dart';
 import '../views_personal/dashboard/home_screen.dart';
 import '../views_personal/hymn_scroll/arrangement_editor_screen.dart';
 import '../views_personal/hymn_scroll/hymn_detail_screen.dart';
 import '../views_projection/controller/live_control_screen.dart';
 import '../views_projection/controller/present_control_bar.dart';
+import '../views_projection/providers/connection_providers.dart';
 import '../views_projection/providers/presentation_providers.dart';
 import 'device_mode.dart';
 import 'device_switch.dart';
@@ -32,6 +36,8 @@ class HimnarioDualApp extends ConsumerWidget {
     final mode = ref.watch(deviceModeProvider);
     final isDesktop = mode == DeviceMode.desktop;
     final isPresenting = ref.watch(isPresentingProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final role = ref.watch(connectionRoleProvider);
 
     return FullscreenHandler(
       child: MaterialApp(
@@ -39,7 +45,7 @@ class HimnarioDualApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
+        themeMode: themeMode,
 
         // Rutas de la aplicación
         routes: {
@@ -69,6 +75,7 @@ class HimnarioDualApp extends ConsumerWidget {
             if (isDesktop && isPresenting)
               const PresentControlBar(),
             const DeviceSwitch(),
+            if (role != ConnectionRole.receiver) const ThemeModeToggleButton(),
           ],
         ),
       ),

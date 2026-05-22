@@ -1,6 +1,6 @@
 # Build y Mantenimiento — Windows .exe
 
-> **Última actualización:** 20 de mayo de 2026
+> **Última actualización:** 21 de mayo de 2026
 
 ---
 
@@ -107,9 +107,10 @@ El proyecto usa archivos generados que **deben estar presentes** para compilar:
 
 1. Ir a **GitHub → Actions → Build Windows .exe → Run workflow**
 2. Seleccionar `main` como rama
-3. Opcional: escribir versión (ej: `2.0.1`)
-4. Hacer clic en **Run workflow**
-5. Esperar ~5 minutos
+3. Seleccionar rama (ej: `main` o `feature/orden-filtros-admin-crud`)
+4. Opcional: escribir versión (ej: `2.0.2`)
+5. Hacer clic en **Run workflow**
+6. Esperar ~5 minutos
 6. Descargar el artifact desde la página del run (sección **Artifacts**)
 
 #### Opción B: Automático (para releases)

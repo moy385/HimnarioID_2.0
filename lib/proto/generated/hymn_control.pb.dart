@@ -414,6 +414,7 @@ class CommandRequest extends $pb.GeneratedMessage {
     $core.bool? showChords,
     $core.double? cardOpacity,
     $core.double? projectionFontScale,
+    $core.String? bgColor,
   }) {
     final result = create();
     if (type != null) result.type = type;
@@ -430,6 +431,7 @@ class CommandRequest extends $pb.GeneratedMessage {
     if (cardOpacity != null) result.cardOpacity = cardOpacity;
     if (projectionFontScale != null)
       result.projectionFontScale = projectionFontScale;
+    if (bgColor != null) result.bgColor = bgColor;
     return result;
   }
 
@@ -462,6 +464,7 @@ class CommandRequest extends $pb.GeneratedMessage {
         fieldType: $pb.PbFieldType.OF)
     ..aD(13, _omitFieldNames ? '' : 'projectionFontScale',
         fieldType: $pb.PbFieldType.OF)
+    ..aOS(14, _omitFieldNames ? '' : 'bgColor')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -600,6 +603,15 @@ class CommandRequest extends $pb.GeneratedMessage {
   $core.bool hasProjectionFontScale() => $_has(12);
   @$pb.TagNumber(13)
   void clearProjectionFontScale() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  $core.String get bgColor => $_getSZ(13);
+  @$pb.TagNumber(14)
+  set bgColor($core.String value) => $_setString(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasBgColor() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearBgColor() => $_clearField(14);
 }
 
 class CommandResponse extends $pb.GeneratedMessage {

@@ -28,6 +28,7 @@ enum HymnFilter {
   todos,
   oficiales,
   inspiradas,
+  convenciones,
 }
 
 /// Orden de clasificación para la lista de himnos.
@@ -103,6 +104,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return HimnoTipo.oficial;
       case HymnFilter.inspiradas:
         return HimnoTipo.inspirada;
+      case HymnFilter.convenciones:
+        return HimnoTipo.convencion;
       case HymnFilter.todos:
         return null;
     }
@@ -237,6 +240,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context,
                   'Inspiradas',
                   HymnFilter.inspiradas,
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip(
+                  context,
+                  'Convención',
+                  HymnFilter.convenciones,
                 ),
                 const SizedBox(width: 8),
                 _buildSortChip(context, 'A-Z', HymnSortOrder.tituloAsc),

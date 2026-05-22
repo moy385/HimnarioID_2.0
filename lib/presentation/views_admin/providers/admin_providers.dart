@@ -46,3 +46,14 @@ export '../../../../domain/usecases/admin/manage_fondos.dart'
         updateFondoUseCaseProvider,
         DeleteFondoUseCase,
         deleteFondoUseCaseProvider;
+
+export '../../../../domain/usecases/admin/manage_usuarios.dart'
+    show
+        GetAllUsuariosUseCase,
+        getAllUsuariosUseCaseProvider,
+        CreateUsuarioUseCase,
+        createUsuarioUseCaseProvider,
+        UpdateUsuarioUseCase,
+        updateUsuarioUseCaseProvider,
+        DeleteUsuarioUseCase,
+        deleteUsuarioUseCaseProvider;

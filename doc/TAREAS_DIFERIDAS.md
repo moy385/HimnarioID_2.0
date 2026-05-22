@@ -6,31 +6,16 @@
 
 ---
 
-## Sprint 2
+## Sprint 2 (✅ COMPLETADO)
 
-### I1 — Servidor gRPC (Display)
-**Estimado**: ~4h
-**Dependencias**: Proto compilado existente en `lib/proto/generated/`
-**Archivos a crear**:
-- `bin/server.dart` — Entry point del servidor gRPC
-- `lib/core/network/grpc_server.dart` — Lógica del servidor
-- Tests de integración
+### ✅ I1 — Servidor gRPC (Display) — COMPLETADO
+**Implementado en**: `lib/data/datasources/remote/grpc_display_server.dart` (335 líneas)
+**Integrado en**: `lib/bootstrap/app_initializer.dart`
+**Funcionalidad**: Servidor gRPC completo con 7 tipos de comando + handshake + watchStatus streaming + keepalive + fallback de puertos. Se inicia automáticamente en desktop.
 
-**Descripción**: Implementar el servidor gRPC que corre en el display (PC/TV) y recibe comandos del controlador remoto. Debe manejar:
-- Handshake con el controlador
-- Control de navegación de estrofas
-- Estado compartido (estrofa actual, blackout, transposición)
-- Watch status stream para actualizaciones en tiempo real
-
-### I2 — Control remoto funcional
-**Estimado**: ~3h
-**Dependencias**: I1 (servidor gRPC funcionando)
-**Archivos a modificar**:
-- `lib/data/datasources/remote/grpc_control_datasource.dart`
-- `lib/presentation/state_management/providers/connection_providers.dart`
-- `lib/presentation/state_management/providers/live_control_providers.dart`
-
-**Descripción**: Conectar los providers de control en vivo (`LiveControlNotifier`) con los comandos gRPC reales. Hoy los comandos se ejecutan localmente; deben enviarse al display remoto.
+### ✅ I2 — Control remoto funcional — COMPLETADO
+**Implementado en**: `lib/data/datasources/remote/grpc_control_datasource.dart` + `lib/presentation/views_projection/providers/connection_providers.dart`
+**Funcionalidad**: Cliente gRPC con keepalive, heartbeat cada 15s con backoff exponencial, auto-reconexión, manejo de expiración de streams. Providers conectados al datasource real (no mock).
 
 ### M1 — Tests unitarios (cobertura ≥80%)
 **Estimado**: ~6h (transversal)
@@ -48,18 +33,13 @@
 
 ---
 
-## Sprint 3
+## Sprint 3 (✅ COMPLETADO)
 
-### I5 — Conexión automática mDNS
-**Estimado**: ~3h
-**Dependencias**: I1 + I2 (gRPC funcionando)
-**Archivos a modificar**:
-- `lib/core/network/mdns_discovery.dart` — Integrar con connection providers
-- `lib/presentation/app_controller/screens/home_screen.dart` — UI de "buscando displays"
+### ✅ I5 — Conexión automática mDNS — COMPLETADO
+**Implementado en**: `lib/core/network/bonsoir_service.dart`, `lib/core/network/bonsoir_broadcast_service.dart`
+**Funcionalidad**: Broadcast mDNS desde desktop (Bonsoir), discovery desde mobile. Publicación de servicio `_himnario._tcp` con puerto. Integrado en `AppInitializer` con detección de plataforma.
 
-**Descripción**: Usar `MdnsDiscovery` para encontrar automáticamente displays en la LAN y conectarse al primero disponible. Añadir UI de selección si hay múltiples.
-
-### A1 — Reproductor de audio
+### ✅ A1 — Reproductor de audio — COMPLETADO
 **Estimado**: ~4h
 **Dependencias**: `audioplayers` ya en pubspec
 **Archivos a crear/modificar**:
