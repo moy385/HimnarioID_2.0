@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'crud_hymns/hymn_list_screen.dart';
 import 'crud_catalogs/catalog_panel_screen.dart';
@@ -111,28 +112,138 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   }
 
   Widget _buildWelcome(ThemeData theme, ColorScheme colorScheme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(
-            Icons.admin_panel_settings,
-            size: 64,
-            color: colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Bienvenido, Admin',
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Selecciona una opción del menú',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const SizedBox(height: 32),
+            Icon(
+              Icons.admin_panel_settings,
+              size: 72,
+              color: colorScheme.primary,
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'Panel de Configuración',
+              style: theme.textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 24),
+            // Card 1: Mensaje de bienvenida
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.person_outline, color: colorScheme.primary),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Bienvenido, acá puedes configurar y personalizar tu app.',
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Selecciona una opción del menú y prueba.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Card 2: Desarrollador
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.code, color: colorScheme.primary),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Desarrollada por Melquisedec-ark',
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.open_in_new),
+                            label: const Text('Ver en GitHub'),
+                            onPressed: () {
+                              launchUrl(
+                                Uri.parse('https://github.com/moy385/HimnarioID_2.0'),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Card 3: Comunidad WhatsApp
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.chat, color: colorScheme.primary),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Únete a nuestra comunidad en WhatsApp',
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          FilledButton.icon(
+                            icon: const Icon(Icons.chat),
+                            label: const Text('WhatsApp'),
+                            onPressed: () {
+                              launchUrl(
+                                Uri.parse('https://chat.whatsapp.com/IjXJP2HUAJjE0Dd4s5TW7I'),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
