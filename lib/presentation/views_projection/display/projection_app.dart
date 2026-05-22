@@ -11,6 +11,7 @@ import '../../../core/enums/himno_tipo.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
+import '../../shared_widgets/fullscreen_handler.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -278,26 +279,28 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
   Widget build(BuildContext context) {
     final liveState = ref.watch(liveControlProvider);
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'MQ App - Proyección',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
+    return FullscreenHandler(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'MQ App - Proyección',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.indigo,
+            brightness: Brightness.dark,
+          ),
+          scaffoldBackgroundColor: Colors.black,
         ),
-        scaffoldBackgroundColor: Colors.black,
-      ),
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: liveState.hymn == null
-            ? const Center(
-                child: Text(
-                  'Esperando proyección...',
-                  style: TextStyle(color: Colors.white54),
-                ),
-              )
-            : const LiveProjectionScreen(),
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: liveState.hymn == null
+              ? const Center(
+                  child: Text(
+                    'Esperando proyección...',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                )
+              : const LiveProjectionScreen(),
+        ),
       ),
     );
   }

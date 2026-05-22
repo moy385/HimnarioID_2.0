@@ -23,6 +23,8 @@ void main(List<String> args) async {
     final container = ProviderContainer();
     // Inicializar servicios necesarios para la ventana de proyección
     AppContainer().init(container);
+    // Inicializar window_manager antes de lanzar la ventana de proyección
+    await windowManager.ensureInitialized();
     // El subproceso NO necesita servidor gRPC (se comunica por stdin/stdout)
     await AppInitializer.initialize(container: container, skipNetwork: true);
 

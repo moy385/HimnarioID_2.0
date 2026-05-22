@@ -133,6 +133,7 @@ class LiveProjectionScreen extends ConsumerWidget {
           transitionDuration: config.transitionDurationMs,
           totalSlides: liveState.slides.length,
           currentSlideIndex: liveState.currentSlideIndex,
+          stanzaNumber: _calcStanzaNumber(liveState.currentSlideIndex, liveState.slides),
           appearance: appearance,
           textTheme: textTheme,
         ),
@@ -141,6 +142,18 @@ class LiveProjectionScreen extends ConsumerWidget {
           appearance: appearance,
         ),
     };
+  }
+
+  /// Calcula el número de estrofa (no coro) hasta el slide actual.
+  int _calcStanzaNumber(int currentIndex, List<ProjectionSlide> slides) {
+    int stanzaCount = 0;
+    for (int i = 0; i <= currentIndex; i++) {
+      final slide = slides[i];
+      if (slide is LyricsSlide && slide.estrofa.tipo != EstrofaTipo.coro) {
+        stanzaCount++;
+      }
+    }
+    return stanzaCount;
   }
 
   /// Chip minimalista que indica el estado del servidor gRPC.
@@ -269,6 +282,7 @@ class _LyricsSlide extends StatelessWidget {
   final int transitionDuration;
   final int totalSlides;
   final int currentSlideIndex;
+  final int stanzaNumber;
   final HymnAppearanceState appearance;
   final TextTheme textTheme;
 
@@ -280,6 +294,7 @@ class _LyricsSlide extends StatelessWidget {
     required this.transitionDuration,
     required this.totalSlides,
     required this.currentSlideIndex,
+    required this.stanzaNumber,
     required this.appearance,
     required this.textTheme,
   });
@@ -483,7 +498,7 @@ class _LyricsSlide extends StatelessWidget {
   Widget _buildEstrofaLabel() {
     final label = estrofa.tipo == EstrofaTipo.coro
         ? 'Coro'
-        : '${estrofa.tipo.value} ${estrofa.orden + 1}';
+        : '${estrofa.tipo.value} $stanzaNumber';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
