@@ -1,10 +1,10 @@
-# HimnarioID 2.0
+# 🎵 MQ App (antes HimnarioID 2.0)
 
 Aplicación Flutter multiplataforma para himnos religiosos con modo personal, proyección, administración y descarga de pistas de audio.
 
 ---
 
-Este repositorio contiene el código fuente y la arquitectura para la nueva generación del Himnario Web, evolucionado hacia un sistema de proyección controlable remotamente y gestión musical avanzada. 
+Este repositorio contiene el código fuente y la arquitectura para la nueva generación del Himnario Web, evolucionado hacia un sistema de proyección controlable remotamente y gestión musical avanzada.
 
 El sistema está diseñado pensando en alta resiliencia offline (ideal para entornos con conectividad inestable, como suele ocurrir en algunas zonas de El Salvador) y permite que un dispositivo móvil controle la proyección en una PC o TV mediante la red local (LAN).
 
@@ -16,7 +16,7 @@ El sistema está diseñado pensando en alta resiliencia offline (ideal para ento
    - **Modo Personal:** Visualización fluida (scroll) de las estrofas y coros, con herramientas flotantes para músicos (transposición, acordes, reproducción de pistas).
    - **Modo Proyección:** Paneles minimalistas de control remoto y visualización de estrofas estáticas para el público.
 2. **Roles Dinámicos (Emisor / Receptor):** Cualquier dispositivo en la red puede actuar como el control remoto (Emisor) o como la pantalla de presentación (Receptor) mediante una conexión gRPC over LAN.
-3. **Soporte Multi-Ventana (Desktop):** En PC, el sistema puede separar el panel de control (ventana principal) de la proyección visual (ventana secundaria o pantalla extendida).
+3. **Soporte Multi-Ventana (Desktop):** En PC, el sistema puede separar el panel de control (ventana principal) de la proyección visual (ventana secundaria o pantalla extendida). La ventana de proyección soporta **F11** para alternar fullscreen.
 4. **Módulo Administrativo Integrado:** Un backoffice protegido por credenciales dentro de la misma app para gestionar el CRUD completo de himnos, categorías, pistas y fondos sin depender de software externo.
 5. **Resiliencia Offline:** Base de datos embebida (SQLite) y red de área local (mDNS) para funcionar sin conexión a Internet.
 
