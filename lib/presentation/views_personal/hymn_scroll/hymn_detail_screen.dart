@@ -21,6 +21,7 @@ import '../../views_projection/providers/presentation_providers.dart';
 import '../../views_projection/providers/projection_actions.dart'
     show projectHymn;
 import '../providers/audio_providers.dart';
+import '../../providers/fullscreen_mode_provider.dart';
 import '../providers/hymn_providers.dart';
 import '../providers/transpose_providers.dart';
 import 'arrangement_editor_screen.dart';
@@ -43,7 +44,8 @@ class HymnDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<HymnDetailScreen> createState() => _HymnDetailScreenState();
 }
 
-class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
+class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
+    with WidgetsBindingObserver {
   bool _isPlaying = false;
   int? _currentPistaId;
   late final ScrollController _scrollController;
@@ -52,9 +54,21 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeKeyFromHymn();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Salir de fullscreen si la app pasa a segundo plano
+    if ((state == AppLifecycleState.paused ||
+            state == AppLifecycleState.inactive) &&
+        ref.read(fullscreenModeProvider)) {
+      ref.read(fullscreenModeProvider.notifier).exitFullscreen();
+    }
   }
 
   void _initializeKeyFromHymn() {
@@ -130,6 +144,12 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     }
   }
 
+  /// Activa el modo fullscreen delegando en [fullscreenModeProvider].
+  /// El provider se encarga de ocultar la UI del sistema (SystemChrome).
+  void _enterMobileFullscreen() {
+    ref.read(fullscreenModeProvider.notifier).enterFullscreen();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -139,6 +159,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     final transposedKey = ref.watch(transposedKeyProvider);
     final stanzasAsync = ref.watch(stanzasProvider(widget.himno.primaryVersionPaisId));
     final isDesktop = ref.watch(isDesktopModeProvider);
+    final isPhone = ref.watch(isPhoneModeProvider);
+    final isMobileFullscreen = ref.watch(fullscreenModeProvider);
     final isPresenting = ref.watch(isPresentingProvider);
 
     // ── Contenido scrollable (extraído para reusar entre desktop y móvil) ──
@@ -237,65 +259,83 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Himno ${widget.himno.numero ?? ''}'),
-        actions: [
-          // ── Botón Presentar (solo desktop) ──
-          if (isDesktop)
-            IconButton(
-              icon: Icon(isPresenting ? Icons.stop_screen_share : Icons.screen_share),
-              tooltip: isPresenting ? 'Detener presentación' : 'Presentar',
-              onPressed: _presentCurrentHymn,
-            ),
-          // Menú de opciones
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              if (value == 'arreglo') {
-                Navigator.pushNamed(
-                  context,
-                  '/arrangement-editor',
-                  arguments: widget.himno,
-                );
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'arreglo',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_note),
-                    SizedBox(width: 12),
-                    Text('Crear Arreglo'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Contenido scrollable
-          Expanded(
-            child: _FondoBackground(
-              key: ValueKey('fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
-              fondo: appearance.selectedFondo,
-              bgColor: appearance.bgColor,
-              child: bodyContent,
-            ),
-          ),
+    final showMobileFullscreen = isPhone && isMobileFullscreen;
 
-          // Barra inferior sticky con controles
-          _buildBottomBar(context, transposeValue, transposedKey),
-        ],
-      ),
-      floatingActionButton: FabMenu(
-        onBrushTap: _showBrochaSheet,
-        onNoteTap: _showNotaSheet,
-        onSolfaTap: _showSolfaSheet,
-        onSearchTap: _showLupaDialog,
+    return PopScope(
+      canPop: !showMobileFullscreen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && showMobileFullscreen) {
+          ref.read(fullscreenModeProvider.notifier).exitFullscreen();
+        }
+      },
+      child: Scaffold(
+        appBar: showMobileFullscreen
+            ? null
+            : AppBar(
+                title: Text('Himno ${widget.himno.numero ?? ''}'),
+                actions: [
+                  // ── Botón Presentar (solo desktop) ──
+                  if (isDesktop)
+                    IconButton(
+                      icon: Icon(isPresenting ? Icons.stop_screen_share : Icons.screen_share),
+                      tooltip: isPresenting ? 'Detener presentación' : 'Presentar',
+                      onPressed: _presentCurrentHymn,
+                    ),
+                  // Menú de opciones
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'arreglo') {
+                        Navigator.pushNamed(
+                          context,
+                          '/arrangement-editor',
+                          arguments: widget.himno,
+                        );
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'arreglo',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_note),
+                            SizedBox(width: 12),
+                            Text('Crear Arreglo'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          child: showMobileFullscreen
+              ? _buildFullscreenContent(
+                  key: const ValueKey('fullscreen'),
+                  scrollContent: scrollContent,
+                  appearance: appearance,
+                )
+              : _buildNormalBody(
+                  key: const ValueKey('normal'),
+                  bodyContent: bodyContent,
+                  appearance: appearance,
+                  context: context,
+                  transposeValue: transposeValue,
+                  transposedKey: transposedKey,
+                  isPhone: isPhone,
+                ),
+        ),
+        floatingActionButton: showMobileFullscreen
+            ? null
+            : FabMenu(
+                onBrushTap: _showBrochaSheet,
+                onNoteTap: _showNotaSheet,
+                onSolfaTap: _showSolfaSheet,
+                onSearchTap: _showLupaDialog,
+              ),
       ),
     );
   }
@@ -485,6 +525,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     BuildContext context,
     int transposeValue,
     String transposedKey,
+    bool isPhone,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -508,60 +549,74 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: _isPlaying ? _buildPlayerBar(context, colorScheme, textTheme) : _buildTransposeBar(context, transposeValue, transposedKey, colorScheme, textTheme),
+        child: _isPlaying ? _buildPlayerBar(context, colorScheme, textTheme) : _buildTransposeBar(context, transposeValue, transposedKey, colorScheme, textTheme, isPhone),
       ),
     );
   }
 
-  Widget _buildTransposeBar(BuildContext context, int transposeValue, String transposedKey, ColorScheme colorScheme, TextTheme textTheme) {
-    return Row(
-      children: [
-        Flexible(
-          child: Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue - 1).clamp(-6, 6),
-                  icon: const Icon(Icons.remove),
-                  tooltip: 'Bajar tono',
+  Widget _buildTransposeBar(BuildContext context, int transposeValue, String transposedKey, ColorScheme colorScheme, TextTheme textTheme, bool isPhone) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Reduce gap between buttons on very narrow screens (<360px)
+        final gap = constraints.maxWidth < 360 ? 4.0 : 8.0;
+        return Row(
+          children: [
+            Flexible(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Tono', style: textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                        Text(transposedKey, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
-                      ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue - 1).clamp(-6, 6),
+                      icon: const Icon(Icons.remove),
+                      tooltip: 'Bajar tono',
                     ),
-                  ),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Tono', style: textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                            Text(transposedKey, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue + 1).clamp(-6, 6),
+                      icon: const Icon(Icons.add),
+                      tooltip: 'Subir tono',
+                    ),
+                  ],
                 ),
-                IconButton(
-                  onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue + 1).clamp(-6, 6),
-                  icon: const Icon(Icons.add),
-                  tooltip: 'Subir tono',
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filled(
-          onPressed: _togglePlayback,
-          icon: const Icon(Icons.play_arrow_rounded),
-          style: IconButton.styleFrom(
-            backgroundColor: colorScheme.secondaryContainer,
-            foregroundColor: colorScheme.onSecondaryContainer,
-          ),
-          tooltip: 'Reproducir audio',
-        ),
-      ],
+            // ── Botón fullscreen (solo móvil, desktop usa F11) ──
+            if (isPhone)
+              IconButton(
+                onPressed: _enterMobileFullscreen,
+                icon: const Icon(Icons.fullscreen),
+                tooltip: 'Pantalla completa',
+                color: colorScheme.onSurfaceVariant,
+              ),
+            SizedBox(width: gap),
+            IconButton.filled(
+              onPressed: _togglePlayback,
+              icon: const Icon(Icons.play_arrow_rounded),
+              style: IconButton.styleFrom(
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.onSecondaryContainer,
+              ),
+              tooltip: 'Reproducir audio',
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -573,8 +628,62 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen> {
     );
   }
 
+  /// Contenido en modo fullscreen móvil.
+  /// Sin SafeArea ni padding extra; doble tap para salir.
+  Widget _buildFullscreenContent({
+    required Key key,
+    required Widget scrollContent,
+    required HymnAppearanceState appearance,
+  }) {
+    return GestureDetector(
+      key: key,
+      onDoubleTap: () => ref.read(fullscreenModeProvider.notifier).exitFullscreen(),
+      behavior: HitTestBehavior.translucent,
+      child: _FondoBackground(
+        key: ValueKey('fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
+        fondo: appearance.selectedFondo,
+        bgColor: appearance.bgColor,
+        // Fullscreen: scroll sin padding para que el contenido ocupe toda la pantalla
+        child: SingleChildScrollView(
+          padding: EdgeInsets.zero,
+          child: scrollContent,
+        ),
+      ),
+    );
+  }
+
+  /// Contenido normal con fondo, scroll y barra inferior.
+  Widget _buildNormalBody({
+    required Key key,
+    required Widget bodyContent,
+    required HymnAppearanceState appearance,
+    required BuildContext context,
+    required int transposeValue,
+    required String transposedKey,
+    required bool isPhone,
+  }) {
+    return Column(
+      key: key,
+      children: [
+        Expanded(
+          child: _FondoBackground(
+            key: ValueKey('fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
+            fondo: appearance.selectedFondo,
+            bgColor: appearance.bgColor,
+            child: bodyContent,
+          ),
+        ),
+        _buildBottomBar(context, transposeValue, transposedKey, isPhone),
+      ],
+    );
+  }
+
   @override
   void dispose() {
+    // Restaurar SystemChrome al salir de la pantalla (crítico: evitar
+    // que el sistema UI quede oculto si se navega estando en fullscreen).
+    ref.read(fullscreenModeProvider.notifier).exitFullscreen();
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     if (_isPlaying) {
       // Disparar stop sin await — el widget se está destruyendo
