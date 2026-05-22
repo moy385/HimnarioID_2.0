@@ -20,6 +20,7 @@ import '../../views_projection/providers/projection_actions.dart'
     show projectHymn;
 import '../../views_admin/admin_panel_screen.dart';
 import '../providers/hymn_providers.dart';
+import '../../providers/wakelock_provider.dart';
 import 'connected_dashboard.dart';
 import 'present_button.dart';
 
@@ -155,6 +156,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final isDesktop = ref.watch(isDesktopModeProvider);
     final isPresenting = ref.watch(isPresentingProvider);
+
+    // Activar wakelock en modo desktop para evitar suspensión del PC
+    if (isDesktop) {
+      ref.read(wakelockProvider.notifier).enable();
+    } else {
+      ref.read(wakelockProvider.notifier).disable();
+    }
 
     return Scaffold(
       floatingActionButton:
@@ -514,85 +522,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showModalBottomSheet(
       context: context,
       builder: (ctx) {
-        final categoriasAsync = ref.watch(categoriasProvider);
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant
-                    .withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Filtrar por categoría',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.clear_all),
-              title: const Text('Todas las categorías'),
-              selected: _selectedCategoriaId == null,
-              onTap: () {
-                setState(() {
-                  _selectedCategoriaId = null;
-                  _selectedCategoriaNombre = null;
-                });
-                Navigator.pop(ctx);
-              },
-            ),
-            const Divider(),
-            categoriasAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Error: $e'),
-              ),
-              data: (categorias) => LimitedBox(
-                maxHeight: 300,
-                child: ListView(
-                  shrinkWrap: true,
-                  children: categorias.map((cat) {
-                    return ListTile(
-                      leading: Icon(
-                        Icons.label_outline,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      title: Text(cat.nombre),
-                      selected: _selectedCategoriaId == cat.id,
-                      trailing: _selectedCategoriaId == cat.id
-                          ? const Icon(Icons.check)
-                          : null,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategoriaId = cat.id;
-                          _selectedCategoriaNombre = cat.nombre;
-                        });
-                        Navigator.pop(ctx);
-                      },
-                    );
-                  }).toList(),
+        // Envolver en Consumer para que Riverpod pueda reconstruir
+        // este subtree independientemente cuando categoriasProvider se resuelva
+        return Consumer(
+          builder: (context, ref, _) {
+            final categoriasAsync = ref.watch(categoriasProvider);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Filtrar por categoría',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.clear_all),
+                  title: const Text('Todas las categorías'),
+                  selected: _selectedCategoriaId == null,
+                  onTap: () {
+                    setState(() {
+                      _selectedCategoriaId = null;
+                      _selectedCategoriaNombre = null;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const Divider(),
+                categoriasAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Error: $e'),
+                  ),
+                  data: (categorias) => LimitedBox(
+                    maxHeight: 300,
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: categorias.map((cat) {
+                        return ListTile(
+                          leading: Icon(
+                            Icons.label_outline,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(cat.nombre),
+                          selected: _selectedCategoriaId == cat.id,
+                          trailing: _selectedCategoriaId == cat.id
+                              ? const Icon(Icons.check)
+                              : null,
+                          onTap: () {
+                            setState(() {
+                              _selectedCategoriaId = cat.id;
+                              _selectedCategoriaNombre = cat.nombre;
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            );
+          },
         );
       },
     );
