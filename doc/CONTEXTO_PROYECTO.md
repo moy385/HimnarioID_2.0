@@ -1,6 +1,6 @@
 # Contexto del Proyecto - HimnarioID 2.0
 
-> **Última actualización:** 22 de mayo de 2026 — 7ª revisión
+> **Última actualización:** 22 de mayo de 2026 — 8ª revisión
 
 ## Stack Tecnológico
 - **Frontend**: Flutter (Dart)
@@ -163,6 +163,20 @@ lib/
 ## Cambios en builds (22 mayo 2026)
 - **APK Android**: Build con `--split-per-abi` genera APKs separados por arquitectura (~24MB c/u). Script: `scripts/build_apk.sh`.
 - **Ejecutable Windows**: Renombrado de `himnario_id_2.exe` a `MQ_App.exe` (`windows/CMakeLists.txt` BINARY_NAME).
+
+## Pantalla completa inmersiva en móvil (22 mayo 2026)
+- **Nuevo**: Botón `Icons.fullscreen` ⛶ en la barra inferior del detalle de himno (solo modo personal en móvil).
+- **Funcionamiento**: Al pulsar, activa `SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky)` que oculta la barra de estado, la barra de navegación del sistema, el AppBar, la barra inferior de controles y el FAB. El himno se muestra a pantalla completa con el fondo seleccionado por el usuario.
+- **Salida**: Doble tap en cualquier parte del himno restaura la UI normal. También funciona el gesto de "atrás" de Android (PopScope).
+- **Provider**: `FullscreenModeNotifier` en `lib/presentation/providers/fullscreen_mode_provider.dart` (StateNotifier con Riverpod).
+- **Edge cases cubiertos**:
+  - Al minimizar la app o recibir llamada: `WidgetsBindingObserver` restaura la UI automáticamente.
+  - Al navegar fuera de la pantalla: `dispose()` del State restaura SystemChrome.
+  - Al hacer dispose del provider: `dispose()` de `FullscreenModeNotifier` restaura SystemChrome.
+  - Solo visible en móvil (no en desktop, que ya tiene su propio fullscreen vía F11).
+  - No disponible en web (try-catch en SystemChrome).
+- **Animación**: `AnimatedSwitcher` con duración 300ms y curvas easeIn/easeOut.
+- **Archivos**: `lib/presentation/providers/fullscreen_mode_provider.dart` (nuevo, 52 líneas), `lib/presentation/views_personal/hymn_scroll/hymn_detail_screen.dart` (modificado).
 
 ## Notas técnicas importantes
 - **Fondos de video**: Se intentó implementar con `video_player_media_kit` / `media_kit` + libmpv, pero se descartó por crash irrecuperable en Linux (assertion `group_index >= 0` en libmpv 0.41.0). Todo el código de video fue revertido. Pendiente para cuando Ubuntu actualice libmpv.
