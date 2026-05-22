@@ -278,7 +278,6 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
         showChords: appearance.showChords,
         cardOpacity: appearance.cardOpacity,
         projectionFontScale: appearance.projectionFontScale,
-        bgColor: _colorToHex(appearance.bgColor),
       );
     } catch (_) {
       // Fallo silencioso — el estado local persiste
