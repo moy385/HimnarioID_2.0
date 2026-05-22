@@ -1,7 +1,51 @@
 > ⚠️ **DOCUMENTO HISTÓRICO** — Sprint 5 (mayo 2026)
 > La mayoría de las tareas aquí descritas fueron implementadas en sprints anteriores.
 > Para el estado actual del proyecto, consultar `doc/tareas_pendientes.md`.
-> Fecha de archivo: 20 de mayo de 2026
+> Fecha de archivo: 22 de mayo de 2026
+>
+> ---
+>
+> ## 🗄️ DB Auto-Update (Feature completa desde 22 mayo 2026)
+>
+> ### Arquitectura de versionado
+>
+> Hay **dos números de versión independientes**:
+>
+> 1. **`SCHEMA_VERSION`** (en `DatabaseHelper`): controla migraciones estructurales (tablas, columnas, índices) mediante `onUpgrade()`. Se incrementa cuando el equipo cambia el esquema SQL.
+> 2. **Asset version** (`assets/db/db_version.json`): controla el reemplazo de la BD pre-cargada completa. Se incrementa cuando cambia el seed data (himnos, estrofas, etc.) sin cambiar el esquema.
+>
+> ### Flujo de actualización automática
+>
+> ```
+> _initDatabase()
+>   ├─ 1. Leer assetVersion (db_version.json) y localVersion (db_version.txt)
+>   ├─ 2. ¿assetVersion > localVersion o .db no existe?
+>   │   ├─ Sí → Backup user data → Copiar nuevo .db → writeLocalVersion → Restaurar
+>   │   └─ No → Continuar con BD existente
+>   └─ 3. Abrir BD con onCreate/onUpgrade (esquema SQLite)
+> ```
+>
+> ### Cómo actualizar la BD para nueva release
+>
+> 1. Reemplazar `assets/db/himnario_id.db` con la nueva BD precargada.
+> 2. Incrementar `version` en `assets/db/db_version.json`.
+> 3. Si hay cambios de esquema, incrementar `SCHEMA_VERSION` en `DatabaseHelper` y agregar migración en `_onUpgrade()`.
+> 4. Commit y push. La app existente detectará la nueva versión al iniciar.
+>
+> ### Archivos del sistema
+>
+> | Archivo | Propósito |
+> |---------|-----------|
+> | `assets/db/db_version.json` | Versión del asset (seed data) |
+> | `assets/db/himnario_id.db` | BD precargada |
+> | `{appDocs}/himnario_id.db` | BD local (copia del asset + datos de usuario) |
+> | `{appDocs}/db_version_applied.txt` | Versión aplicada localmente (marker) |
+>
+> ### Clases nuevas
+>
+> - `lib/core/database/db_version_manager.dart` — Lectura/escritura de versiones, comparación, carga de asset.
+> - `lib/core/database/user_data_backup.dart` — Backup/restore de datos de usuario durante actualización.
+> - `lib/core/database/database_helper.dart` (refactorizado) — `SCHEMA_VERSION`, `_openDatabasePlatform()`, `_openDatabaseRaw()`, Logger.
 
 # Tareas para @dev
 

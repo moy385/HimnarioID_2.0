@@ -74,8 +74,10 @@ flutter:
 
   assets:
     - assets/db/himnario_id.db
+    - assets/db/db_version.json
     - assets/database/
     - assets/audio/
+    - assets/images/logoApp.jpg
     - assets/images/backgrounds/
 
   fonts:

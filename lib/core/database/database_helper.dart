@@ -1,10 +1,18 @@
 import 'dart:io' show Platform, File;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:sqflite/sqflite.dart' as mobile;
 import 'package:sqflite_common/sqlite_api.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as desktop;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:logging/logging.dart';
+
+import 'db_version_manager.dart';
+import 'user_data_backup.dart';
+
+/// Logger estructurado para eventos de base de datos.
+final _log = Logger('DatabaseHelper');
 
 /// Helper singleton para la gestión de la base de datos SQLite.
 /// Encapsula la inicialización, migraciones y acceso a la BD.
@@ -22,6 +30,13 @@ class DatabaseHelper {
 
   Database? _database;
 
+  /// Versión del esquema SQLite (migraciones de tabla/columna).
+  ///
+  /// SCHEMA_VERSION: controla las migraciones estructurales de la BD
+  /// mediante onUpgrade(). Es independiente de la versión del asset
+  /// (db_version.json) que controla actualizaciones de seed data.
+  static const int SCHEMA_VERSION = 6;
+
   /// Obtiene la instancia de la base de datos, inicializándola si es necesario.
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -29,39 +44,128 @@ class DatabaseHelper {
     return _database!;
   }
 
+  /// Inicializa la base de datos con soporte de auto-update desde assets.
+  ///
+  /// Flujo:
+  /// 1. Lee assetVersion (db_version.json) y localVersion (db_version.txt).
+  /// 2. Si assetVersion > localVersion o la BD local no existe:
+  ///    a. Backup de datos de usuario (Usuario, Arreglos, etc.).
+  ///    b. Copia nuevo .db desde assets.
+  ///    c. Escribe db_version.txt con la nueva versión.
+  ///    d. Re-importa datos de usuario.
+  /// 3. Abre la BD definitiva con onCreate/onUpgrade.
   Future<Database> _initDatabase() async {
+    final stopwatch = Stopwatch()..start();
     final dir = await getApplicationDocumentsDirectory();
-    final path = p.join(dir.path, 'himnario_id.db');
+    final dbPath = p.join(dir.path, 'himnario_id.db');
+    final localFile = File(dbPath);
 
-    // Si la BD no existe en el sistema de archivos, copiarla desde assets
-    // (así el APK incluye los ~400 himnos pre-cargados)
-    if (!File(path).existsSync()) {
+    // ── 1. Leer versiones ────────────────────────────────────────
+    final assetVersion = await DbVersionManager.readAssetVersion();
+    final localVersion = await DbVersionManager.readLocalVersion(dir.path);
+
+    // ── 2. Verificar si necesita reemplazo ───────────────────────
+    final needsReplace = !localFile.existsSync() ||
+        DbVersionManager.needsUpdate(assetVersion, localVersion);
+
+    if (needsReplace) {
+      _log.info(
+        'DB update: assetVersion=$assetVersion, localVersion=$localVersion',
+      );
+
+      // 2a. Backup de datos de usuario
+      Map<String, List<Map<String, dynamic>>>? userData;
+      if (localFile.existsSync()) {
+        try {
+          final oldDb = await _openDatabaseRaw(dbPath);
+          userData = await UserDataBackup.exportUserData(oldDb);
+          await oldDb.close();
+          _log.info(
+            'User data backed up: ${userData.length} tables, '
+            '${userData.values.fold(0, (sum, rows) => sum + rows.length)} rows',
+          );
+        } catch (e) {
+          _log.warning('Could not backup user data: $e');
+        }
+      }
+
+      // 2b. Copiar nuevo .db desde assets
       try {
-        final byteData = await rootBundle.load('assets/db/himnario_id.db');
-        final buffer = byteData.buffer;
-        await File(path).writeAsBytes(
-          buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
-        );
+        final bytes = await DbVersionManager.assetDbBytes();
+        if (bytes.isEmpty) {
+          _log.info('Asset DB is empty/absent — schema will be created fresh');
+        } else {
+          await localFile.writeAsBytes(bytes);
+          _log.info('New DB copied from assets (${bytes.length} bytes)');
+        }
       } catch (_) {
-        // Si no hay asset (ej: desktop development), se creará vacía con _onCreate
+        // Sin asset (desktop development): se creará BD vacía con onCreate
+        _log.info('No asset DB available, will create fresh schema');
+      }
+
+      // 2c. Escribir versión local
+      if (assetVersion > 0) {
+        await DbVersionManager.writeLocalVersion(dir.path, assetVersion);
+        _log.info('Local version written: $assetVersion');
+      }
+
+      // 2d. Re-importar datos de usuario
+      if (userData != null && userData.isNotEmpty) {
+        try {
+          final newDb = await _openDatabaseRaw(dbPath);
+          await UserDataBackup.importUserData(newDb, userData);
+          await newDb.close();
+          _log.info(
+            'User data restored: ${userData.length} tables',
+          );
+        } catch (e) {
+          _log.warning('Could not restore user data: $e');
+        }
       }
     }
 
+    // ── 3. Abrir BD definitiva con onCreate/onUpgrade ────────────
+    final db = await _openDatabasePlatform(dbPath);
+    _log.info(
+      'Database opened (schema v$SCHEMA_VERSION) in ${stopwatch.elapsedMilliseconds}ms',
+    );
+    return db;
+  }
+
+  /// Abre una base de datos SQLite sin gestión de versiones.
+  ///
+  /// Útil para operaciones de backup/restore donde no se necesita
+  /// onCreate/onUpgrade. Activa PRAGMA foreign_keys para mantener
+  /// integridad referencial durante el restore.
+  Future<Database> _openDatabaseRaw(String path) async {
+    final Database db;
     if (Platform.isAndroid || Platform.isIOS) {
-      // Usar sqflite (plugin nativo) en móvil
+      db = await mobile.openDatabase(path);
+    } else {
+      desktop.sqfliteFfiInit();
+      db = await desktop.databaseFactoryFfi.openDatabase(path);
+    }
+    await db.execute('PRAGMA foreign_keys = ON;');
+    return db;
+  }
+
+  /// Abre una base de datos SQLite con gestión completa de versiones
+  /// (onCreate + onUpgrade), seleccionando automáticamente el backend
+  /// adecuado según la plataforma.
+  Future<Database> _openDatabasePlatform(String path) async {
+    if (Platform.isAndroid || Platform.isIOS) {
       return await mobile.openDatabase(
         path,
-          version: 6,
+        version: SCHEMA_VERSION,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
     } else {
-      // Usar sqflite_common_ffi en desktop (Linux/Windows/Mac)
       desktop.sqfliteFfiInit();
       return await desktop.databaseFactoryFfi.openDatabase(
         path,
         options: OpenDatabaseOptions(
-        version: 6,
+          version: SCHEMA_VERSION,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
         ),
