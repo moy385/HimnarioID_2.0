@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +13,7 @@ import 'package:window_manager/window_manager.dart';
 ///
 /// Solo funciona en desktop (Windows, Linux, macOS).
 /// En web el navegador captura F11 antes que Flutter.
+/// En iOS este widget es un no-op (no hay teclado físico ni window_manager).
 class FullscreenHandler extends StatefulWidget {
   final Widget child;
 
@@ -32,6 +35,10 @@ class _FullscreenHandlerState extends State<FullscreenHandler> {
   void _registerHandler() {
     // En web el navegador captura F11 antes que Flutter.
     if (kIsWeb) return;
+    // En iOS no hay teclado físico ni window_manager.
+    if (Platform.isIOS) return;
+    // En Android el fullscreen se maneja con SystemChrome, no window_manager.
+    if (Platform.isAndroid) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_handlerRegistered) {
