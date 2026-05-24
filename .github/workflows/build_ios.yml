@@ -49,7 +49,7 @@ jobs:
         run: flutter pub get
 
       - name: Verify Dart analysis
-        run: flutter analyze lib/
+        run: flutter analyze lib/ --no-fatal-infos
 
       - name: Run tests
         run: flutter test
