@@ -17,7 +17,7 @@ El build de iOS **funciona correctamente** vía GitHub Actions con el workflow `
 | **Dart** | `3.11.5` |
 | **Runner** | `macos-15-arm64` |
 | **Tiempo total** | ~5 minutos |
-| **Artefacto** | `MQ_App-ios-unsigned_2.0.0` (contiene `Runner.app`) |
+| **Artefacto** | `MQ_App-ios-unsigned_2.0.0` (contiene `MQ_App-unsigned.ipa` ~16MB) |
 
 ### Issues encontrados y resueltos
 
