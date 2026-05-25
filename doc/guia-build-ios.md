@@ -150,7 +150,36 @@ flutter build ios --release
    - **App Store Connect** — para subir a App Store
 5. Sigue los pasos → Xcode genera el `.ipa`
 
-### 4d. Exportar .ipa desde terminal (método automatizado)
+### 4d. Exportar .ipa sin firma para sideloading (AltStore, Sideloadly)
+
+Si no tienes Apple Developer Account, puedes generar un `.ipa` **sin firma** e instalar
+con herramientas que injectan el certificado de una Apple ID gratuita:
+
+```bash
+# 1. Build sin firma
+flutter build ios --release --no-codesign
+
+# 2. Empaquetar como .ipa (es solo un zip con Payload/)
+mkdir -p Payload
+cp -r build/ios/iphoneos/Runner.app Payload/
+zip -r MQ_App-unsigned.ipa Payload/
+rm -rf Payload
+```
+
+### 4e. Herramientas de sideloading (sin $99/año)
+
+| Herramienta | OS | Apple ID | Límite apps | Notas |
+|-------------|----|----------|-------------|-------|
+| **AltStore** | macOS/Windows | Gratis | 3 apps | Firma por 7 días, refresco automático |
+| **Sideloadly** | macOS/Windows/Linux | Gratis | 3 apps | Soporta Linux vía Wine |
+| **SideStore** | macOS/Windows | Gratis | 3 apps | Alternativa open-source a AltStore |
+| **TrollStore** | iOS (jailbreak) | No necesita | Ilimitado | Solo en dispositivos con exploit |
+| **Scarlet** | iOS (sin jailbreak) | Empresarial | Ilimitado | Certificado enterprise (incierto) |
+| **Signulous** | Web | $20/año | Ilimitado | Firma remota por suscripción |
+
+> ⚠️ **Apple ID gratuita**: Las apps firmadas expiran a los **7 días**. AltStore
+> puede renovarlas automáticamente si está en el mismo Wi-Fi. Con cuenta de
+> desarrollador ($99/año) las firmas duran 1 año.
 
 ```bash
 # 1. Crear archive
@@ -190,18 +219,15 @@ El archivo `.github/workflows/build_ios.yml` ya está configurado en el reposito
 
 El workflow produce:
 - `flutter analyze lib/` ✅
-- `flutter test` ✅
+- `flutter create --platforms=ios .` (genera Runner.xcodeproj) ✅
 - `flutter build ios --release --no-codesign` ✅
-- Artefacto: `MQ_App-ios-unsigned_<version>.zip` (contiene `Runner.app`)
+- Empaquetado como `.ipa` sin firma ✅
+- Artefacto: `MQ_App-ios-unsigned_<version>.zip` (contiene `MQ_App-unsigned.ipa`)
 
-Para firmar localmente ese `.app`:
-```bash
-# Descargar y extraer el artefacto
-# Firmar manualmente con tu certificado
-codesign --force --sign "iPhone Developer: Tu Nombre (XXXXXXXX)" \
-  --entitlements Runner.entitlements \
-  Runner.app
-```
+Ese `.ipa` lo puedes usar directamente con herramientas de sideloading:
+- **Sideloadly** (Windows/Mac/Linux con Wine)
+- **AltStore** (Windows/Mac)
+- **SideStore** (Windows/Mac)
 
 ### 2b. Build con firma (signed .ipa)
 
