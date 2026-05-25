@@ -52,6 +52,16 @@ jobs:
         run: flutter analyze lib/ --no-fatal-infos
 
       # ═══════════════════════════════════════════════════════════
+      # REGENERAR XCODE PROJECT (Runner.xcodeproj)
+      # ═══════════════════════════════════════════════════════════
+      # El repo contiene los archivos fuente de iOS (Podfile, Info.plist,
+      # AppDelegate.swift) pero NO el proyecto Xcode. En Linux no se puede
+      # generar, pero en macOS `flutter create` lo crea sin perder los
+      # archivos existentes (es idempotente).
+      - name: Regenerate Xcode project
+        run: flutter create --platforms=ios --project-name=himnario_id_2 .
+
+      # ═══════════════════════════════════════════════════════════
       # BUILD .app (SIN códigos de signatura)
       # ═══════════════════════════════════════════════════════════
       - name: Build iOS release (unsigned .app)
