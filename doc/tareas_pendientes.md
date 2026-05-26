@@ -1,7 +1,7 @@
 # Tareas Pendientes — HimnarioID 2.0
 
-> **Fecha:** 22 de mayo de 2026 — 7ª revisión
-> **Propósito:** Estado actual tras implementar DB auto-update, split APK, renombrar ejecutable Windows a MQ_App.exe.
+> **Fecha:** 25 de mayo de 2026 — 8ª revisión
+> **Propósito:** Estado actual tras migrar a renderizador de acordes responsivo (Wrap), fix de anclaje y fractura de palabras, y correcciones de UI/UX.
 
 ---
 
@@ -12,8 +12,8 @@
 | **Base de datos** | ✅ Funcional | 425 himnos (400 + 25 convenciones), SQLite **v4**, 13 tablas + `Himno_Busqueda` |
 | **Home / Búsqueda** | ✅ Funcional | Búsqueda acento-insensible, filtros, scroll A-Z |
 | **Búsqueda Android** | ✅ Optimizada | Debounce 400ms, N+1 eliminado, tabla pre-normalizada |
-| **Detalle de himno** | ✅ Funcional | Acordes sobre texto con ChordOverlayText (Stack + Positioned + TextPainter) |
-| **Acordes sobre texto** | ✅ Funcional | ChordParser + ChordPainter con caché LRU + ChordOverlayText |
+| **Detalle de himno** | ✅ Funcional | Acordes sobre texto con ResponsiveChordWidget (Wrap nativo + Stack por segmento) |
+| **Acordes sobre texto** | ✅ Funcional | ChordParser + expandToWordSegments + ResponsiveChordWidget (Wrap nativo, sin CustomPainter, sin caché LRU) |
 | **Toggle acordes (Solfa)** | ✅ Funcional | showChords persistente en DB, botón Solfa funcional |
 | **Admin CRUD** | ✅ Funcional | Himnos, categorías, países, pistas, fondos. Backend Usuarios listo (UI removida) |
 | **Admin directo** | ✅ Funcional | Icono de ajustes sin login forzoso |
@@ -29,21 +29,27 @@
 | **Orden himnos Oficiales primero** | ✅ Implementado | `CASE WHEN` en SQL getter `_defaultOrderBy` |
 | **Filtro Convención** | ✅ Implementado | Chip en HomeScreen + ConnectedDashboard |
 | **Scroll proyección** | ✅ Funcional | Condicional, SingleChildScrollView si desborda |
-| **Reflow acordes proyección** | ✅ Funcional | StanzaLayoutEngine.processStanza |
+| **Reflow acordes proyección** | ✅ Funcional | Wrap nativo con spacing:0.0 + alignment condicional. StanzaLayoutEngine eliminado. |
 | **Flujo presentación slides** | ✅ Funcional | Title → Lyrics → Amen con etiquetas |
 | **Ventana de proyección** | ✅ Funcional | SubprocessWindowService + IPC JSON |
 | **Modo Dual PC/Celular** | ✅ Funcional | Switch debug, rutas, botón Presentar |
 | **Conexión Emisor/Receptor** | ✅ Completa y funcional | gRPC server + mDNS broadcast/discovery + flujo completo: discover, handshake, watchStatus, comandos de navegación, apariencia y envío automático de himno |
 | **gRPC** | ✅ Implementado | GrpcDisplayServer (335 líneas, 7 comandos, handshake, watchStatus streaming). GrpcControlDataSource con keepalive, heartbeat, auto-reconexión |
-| **F11 fullscreen** | ✅ Implementado | FullscreenHandler en projection_app.dart + windowManager.ensureInitialized() en main.dart (recuperado tras revert 22 mayo) |
+| **F11 fullscreen** | ✅ Implementado | FullscreenHandler en projection_app.dart + windowManager.ensureInitialized() en main.dart (iOS guard condicional) |
+| **Fullscreen móvil** | ✅ Implementado | Botón fullscreen en transpose bar (visible solo en phone). GestureDetector + AnimatedSwitcher. FullscreenModeProvider con SystemChrome. |
 | **Título ventana Windows "MQ App"** | ✅ Recuperado | `windows/runner/main.cpp:30` → `L"MQ App"` (revertido 22 mayo, re-implementado manualmente) |
 | **Numeración estrofas presentación** | ✅ Recuperado | `_calcStanzaNumber()` en `live_projection_screen.dart` (revertido 22 mayo, re-implementado manualmente) |
 | **Fondos de video** | ❌ Revertido | Crash irrecuperable en Linux (libmpv 0.41.0). Pendiente para futuro. |
 | **DB auto-update desde assets** | ✅ Implementado | Rama `feature/db-auto-update`. Backup/restore de datos de usuario. |
 | **APK Android (split-per-abi)** | ✅ Optimizado | APKs por arquitectura: arm64-v8a ~24MB, armeabi-v7a ~22MB, x86_64 ~26MB |
-| **Ejecutable Windows** | ✅ Renombrado | `MQ_App.exe` (antes `himnario_id_2.exe`) |
-| **Tests** | ✅ 294 tests | 263 unit/widget + 11 integración + 20 nuevos unit (~11 fallos conocidos) |
-| **APK Android** | ✅ Funcional | Build release con `--split-per-abi`. Script: `scripts/build_apk.sh` |
+| **Ejecutable Windows** | ✅ Renombrado | `MQ_App.exe` (antes `himnario_id_2.exe`). Build en CI (GitHub Actions windows-latest) |
+| **iOS (.ipa)** | ✅ Implementado | Build unsigned via CI (macos-latest). Podfile con gRPC-Core C++17 patch. AppDelegate.swift, Info.plist, Assets. Doc: `doc/guia-build-ios.md` |
+| **Renderizado acordes (Wrap)** | ✅ Implementado | `responsive_chord_widget.dart` — Wrap nativo con Stack+Positioned por segmento. Sin Stack global, sin CustomPainter, sin caché LRU. |
+| **expandToWordSegments** | ✅ Implementado | `chord_parser.dart` — divide texto palabra por palabra para que Wrap pueda cortar en cualquier espacio. |
+| **Anclaje acordes corregido** | ✅ Implementado | `CrossAxisAlignment.start` en Column + `Positioned(left:0,top:0)` + dummy `Text(' ')` transparente. |
+| **Gaps en palabras corregido** | ✅ Implementado | `spacing: 0.0` en Wrap. Sin `Padding(right:4)` en segmentos. |
+| **Tests** | ✅ 294 tests | 263 unit/widget + 11 integración + 20 nuevos unit (~11 fallos conocidos). Chords: 45 tests (27 legacy + 8 stanza + 6 expandToWordSegments + 4 ChordSegment) |
+| **APK Android** | ✅ Funcional | Build release con `--split-per-abi`. Script: `scripts/build_apk.sh`. JDK 17 obligatorio. |
 
 ---
 
@@ -65,9 +71,9 @@
 
 ### 🔴 P0 — Bloqueante / Core
 
-#### ✅ P0.1 — Acordes sobre el texto (COMPLETADO)
-**Archivos**: `chord_parser.dart`, `chord_painter.dart`, `chord_overlay_text.dart`
-**Estado**: ✅ Completado y mergeado a main
+#### ✅ P0.1 — Acordes sobre el texto (COMPLETADO Y REFACTORIZADO)
+**Archivos**: `chord_parser.dart`, `chord_segment.dart`, `responsive_chord_widget.dart`, `expandToWordSegments()`
+**Estado**: ✅ Refactorizado completamente. Se eliminó el sistema legacy (chord_painter.dart, stanza_layout_engine.dart, chord_overlay_text.dart). Nuevo sistema: Wrap nativo + Stack por segmento + word-splitting.
 
 #### ✅ P0.2 — Transposición funcional con UI de acordes
 **Archivos**: `transpose_providers.dart`, `chord_transposer.dart`
@@ -116,10 +122,8 @@
 
 #### P2.6 — CRUD Usuarios backend ✅ Completado (UI removida, lógica conservada)
 
-#### P2.7 — Merge feature/orden-filtros-admin-crud → main
-**Descripción**: Fusionar la rama actual a main tras aprobación.
-
-### 🟡 P1 — Nueva
+#### ✅ P2.7 — Merge feature/renderizador-acordes-responsive → main
+**Descripción**: Fusionado a main el 25 mayo 2026 (commit `e114994`). Incluye: Wrap responsivo, Stack+Positioned por segmento, expandToWordSegments, fix anclaje y fractura de palabras.
 
 #### ✅ P1.3 — DB auto-update (desacoplado de sqflite onUpgrade)
 **Archivos**: `lib/core/database/database_helper.dart`, `lib/core/database/db_version_manager.dart`, `lib/core/database/user_data_backup.dart`, `assets/db/db_version.json`, `assets/db/himnario_id.db`
@@ -177,6 +181,8 @@
 ```
 ✅ P1.2 Split APK ─── Completado 22 mayo
 ✅ P1.3 DB auto-update ─── Completado 22 mayo
+✅ P1.5 Chord renderer refactor ─── Completado 25 mayo (rama feature/renderizador-acordes-responsive)
+✅ P1.6 Fix anclaje + fractura + gaps ─── Completado 25 mayo
 P1.4 CHECK SQL ─── migracion BD (v4→v5)
 P2.8 Etiqueta Personal ─── sin dependencias
 P2.9 Botones separados ─── sin dependencias
@@ -191,13 +197,34 @@ P2.1 Tests core ───→ P3.5 Tests widgets
 - **📄 implementacion.md**: Reporte detallado movido a `doc/`.
 - **🧹 Limpieza raíz**: Solo `README.md` y `PropuestaInterfaz.md` en raíz. Reportes antiguos eliminados. Documentos movidos a `doc/`.
 
+## Novedades 25 mayo 2026 (8ª revisión)
+
+- **✅ Renderizador de acordes responsivo (Wrap)**: Reemplazo completo del sistema Stack+Positioned global por Wrap nativo. Creado `ChordSegment` (inmutable), `ResponsiveChordWidget`, y función `parseChordProStanza()`. Soporte para acordes con paréntesis como `[C#m7(b5)]`. Eliminados: `chord_painter.dart`, `stanza_layout_engine.dart`, `chord_overlay_text.dart` (~350 líneas legacy).
+- **✅ Fix anclaje de acordes**: `CrossAxisAlignment.start` en Column interna para que el acorde se alinee con la primera letra del fragmento. `height: 1.1` en estilos para acercar acorde a letra.
+- **✅ Fix fractura de palabras**: `spacing: 0.0` en Wrap + eliminación de `Padding(right: 4)`. Los acordes ya no inyectan espacios a mitad de palabra.
+- **✅ Fix Caja Ancha (Stack+Positioned)**: El acorde flota dentro de un `Stack(clipBehavior: Clip.none)` + `Positioned(left:0, top:0)` + dummy `Text(' ')` transparente. El ancho de la columna lo dicta la letra, no el acorde.
+- **✅ Fix Efecto Ladrillo (expandToWordSegments)**: Nueva función `expandToWordSegments()` que divide el texto palabra por palabra. Wrap puede cortar líneas en cualquier espacio. No modifica `parseChordProLine` (backward compatible). 6 tests nuevos.
+- **✅ Fullscreen móvil**: Botón fullscreen en barra de transposición (visible solo en phone). `FullscreenModeProvider` con `SystemChrome`. `AnimatedSwitcher` para transición suave. `PopScope` para gesto atrás.
+- **✅ iOS support**: Podfile con gRPC-Core C++17 patch. AppDelegate.swift, Info.plist, Assets. CI pipeline (macos-latest) genera .ipa unsigned (~16MB). Guía en `doc/guia-build-ios.md`. Build verificado 3 veces.
+- **✅ 45 tests de acordes**: 27 legacy + 8 stanza + 6 expandToWordSegments + 4 ChordSegment model. Todos pasando.
+- **📄 ac.md**: Reporte de revisión de @arqui sobre el renderizador de acordes responsivo.
+- **📄 correcciones.md**: Bug report y resolución de Caja Ancha + Efecto Ladrillo.
+- **📄 obs.md**: Bug report y resolución de desalineación y fractura de palabras.
+- **🔨 APK reconstruido 3 veces**: Con cada fix incremental. Build limpio desde `rm -rf build .dart_tool`.
+
 ---
 
-## Incidente DB auto-update (22 mayo 2026)
+## Incidentes
+
+### DB auto-update (22 mayo 2026)
 1. **Revert total a `f666da8`**: El mecanismo de DB auto-update (que comparaba `_assetDbVersion` contra `user_version`) falló porque acopló el número de versión al `version:` de sqflite `openDatabase`, causando que `onUpgrade` se ejecutara siempre.
 2. **3 de 6 cambios recuperados manualmente**: Se re-implementaron Punto 2 (ventana), Punto 3 (estrofas), Punto 5 (F11). No se recuperaron Punto 1 (etiqueta Personal) ni Punto 4 (botones separados).
 3. **Nueva rama**: `feature/db-auto-update` creada desde `main` (commit `f9077af`) para rediseñar el mecanismo con enfoque desacoplado.
 4. **APK release reconstruido** desde `main` (commit `f9077af`). Windows CI disparado desde main (run #26287517141).
+
+### Regresiones en obs.md (25 mayo 2026)
+1. El código propuesto en `obs.md` tenía **5 regresiones**: `_LineBreakPlaceholder(lineSpacing: 10.0)` hardcodeado, `chordStyle?.copyWith(height: 1.1)` sin fallback, `lyricStyle?.copyWith` (nombre incorrecto), `runSpacing: 10.0` hardcodeado, y falta de `TextAlign.right`. Todas corregidas por @arqui antes de implementar.
+2. @curie detectó que el split directo sobre `parseChordProLine` perdía segmentos vacíos. Solución: función separada `expandToWordSegments` que preserva el API de `parseChordProLine`.
 
 ## Notas importantes
 
@@ -206,11 +233,15 @@ P2.1 Tests core ───→ P3.5 Tests widgets
 3. **Fondos copiados a directorio local**: `FileStorageService` en `lib/core/utils/`. Al seleccionar imagen con file_picker, se copia a `{appDocs}/himnario_id/fondos/` con nombre único. Al eliminar el fondo, solo se borra la copia local, nunca el original del usuario.
 4. **Fondos de video REVERTIDOS**: Se implementó con `video_player_media_kit` pero se descartó por crash en Linux. Todo el código fue revertido. La rama `main` está limpia.
 5. **Limpieza de código muerto completada**: 310 líneas eliminadas, 32 archivos. Se eliminaron `FondoPantallaTipo.video`, 3 directorios huérfanos, `login_screen.dart`, barrel files, y 6 providers deprecados.
-6. **274 tests existentes**: 263 unit/widget + 11 integración (~11 fallos conocidos por tabla Pais).
-7. **APK release**: 62MB (fat APK). Con `--split-per-abi` bajaría a ~25MB cada uno.
+6. **~294 tests existentes**: ~11 fallos conocidos (widget tests con asunciones de plataforma).
+7. **APK release**: Split-per-abi: arm64-v8a 24MB, armeabi-v7a 22MB, x86_64 26MB.
 8. **JDK 17 obligatorio** para build Android (JDK 25 no compatible con Gradle 8.14). Ubicación: `/home/melquisedec/jdk17`.
 9. **Infraestructura de red completada**: Servidor gRPC (GrpcDisplayServer, 335 líneas, 7 comandos), broadcast mDNS (BonsoirBroadcastService), descubrimiento (MdnsDiscovery + BonsoirService), detección de plataforma, y orquestación centralizada en AppInitializer con try/catch en cada capa.
 10. **Broadcast mDNS**: Limitado a Windows y Linux (Bonsoir no está disponible en macOS en Flutter desktop). En móvil se usa discovery Bonsoir para encontrar displays.
+11. **Chord rendering**: Sistema legacy (ChordOverlayText + ChordPainter + StanzaLayoutEngine) ELIMINADO. Nuevo sistema: `ResponsiveChordWidget` (Wrap nativo + Stack por segmento) + `expandToWordSegments()` (word-level parsing). 45 tests de acordes.
+12. **iOS build**: Solo posible en macOS (GitHub Actions macos-latest). Genera .ipa unsigned (~16MB) para sideloading. Podfile requiere parche gRPC-Core C++17 para Xcode 16+.
+13. **Renderizado responsivo**: Wrap nativo con `spacing:0.0` + `runSpacing:lineSpacing`. Alignment condicional según `textAlign`. Acordes flotan en Stack sin afectar layout. Palabras se dividen individualmente para wrapping fluido.
+14. **Regla de no copiar ciegamente `obs.md`**: El código propuesto en los reports de bug debe ser evaluado por @arqui antes de implementar — las soluciones propuestas por el usuario pueden contener regresiones.
 
 ---
 
