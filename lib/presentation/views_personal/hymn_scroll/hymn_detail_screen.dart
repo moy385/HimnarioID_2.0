@@ -7,12 +7,11 @@ import 'package:logging/logging.dart';
 import '../../../core/chords/chord_parser.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/utils/chord_transposer.dart';
-import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/audio_repository.dart';
-import '../../shared_widgets/chord_overlay_text.dart';
+import '../../shared_widgets/responsive_chord_widget.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
@@ -483,41 +482,25 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       fontSize: chordFontSize,
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double availableWidth = constraints.maxWidth;
-
-        final processedLyric = StanzaLayoutEngine.processStanza(
-          transposedLyric,
-          maxWidth: availableWidth,
+    // Sin acordes → texto plano con Wrap nativo para reflow
+    if (!appearance.showChords) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(
+          stripChords(transposedLyric),
+          textAlign: TextAlign.justify,
           style: lyricStyle,
-        );
+        ),
+      );
+    }
 
-        final parts = processedLyric.split('\n');
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: parts.map((line) {
-            if (!appearance.showChords) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  stripChords(line),
-                  textAlign: TextAlign.justify,
-                  style: lyricStyle,
-                ),
-              );
-            }
-
-            return ChordOverlayText(
-              chordProLine: line,
-              textStyle: lyricStyle,
-              chordStyle: chordStyle,
-              maxWidth: availableWidth,
-            );
-          }).toList(),
-        );
-      },
+    // Con acordes → widget Wrap responsivo
+    return ResponsiveChordWidget(
+      stanza: transposedLyric,
+      textStyle: lyricStyle,
+      chordStyle: chordStyle,
+      lineSpacing: 4,
+      textAlign: TextAlign.justify,
     );
   }
 

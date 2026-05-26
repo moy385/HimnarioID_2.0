@@ -1,11 +1,12 @@
 import 'chord_line.dart';
+import 'chord_segment.dart';
 
 /// Expresión regular para extraer acordes en formato ChordPro: `[G]`, `[Am7]`, `[C#m]`, `[G/B]`.
 ///
 /// Captura el contenido dentro de corchetes excluyendo los corchetes.
 /// Soporta: raíz (A-G), alteraciones (#/b), sufijos (m, 7, sus, dim, aug, Maj, maj),
 /// números, y acordes con bajo separados por `/`.
-const String chordPatternRaw = r'\[([A-G][#b]?[a-zA-Z0-9+#b]*(?:/[A-G][#b]?)?)\]';
+const String chordPatternRaw = r'\[([A-G][#b]?[a-zA-Z0-9+#b()]*(?:/[A-G][#b]?)?)\]';
 
 /// [RegExp] compilado a partir de [chordPatternRaw] para usar en parseo y transposición.
 final RegExp chordRegex = RegExp(chordPatternRaw);
@@ -81,4 +82,52 @@ List<ChordLine> parseChordProLine(String line) {
 /// Ejemplo: `stripChords('[G]Dios es [C]amor')` → `'Dios es amor'`
 String stripChords(String text) {
   return text.replaceAll(chordRegex, '');
+}
+
+/// Parsea una estrofa completa (multilínea) en formato ChordPro.
+///
+/// Preserva saltos de línea poéticos como [ChordSegment.isLineBreak].
+/// Líneas en blanco entre estrofas producen doble salto (espaciado visual).
+/// Líneas en blanco al inicio/final se ignoran.
+///
+/// functional-style: función pura, sin estado mutable externo.
+///
+/// Ejemplo:
+/// ```dart
+/// parseChordProStanza('[C]Santo\n\n[G]Dios')
+///   → [CS("C","Santo"), CS(⏎), CS(⏎), CS("G","Dios")]
+/// ```
+List<ChordSegment> parseChordProStanza(String text) {
+  if (text.isEmpty) return const [];
+
+  // Trim trailing newlines — blanks al final se ignoran
+  while (text.isNotEmpty && text.endsWith('\n')) {
+    text = text.substring(0, text.length - 1);
+  }
+
+  final result = <ChordSegment>[];
+  var prevWasContent = false;
+
+  for (final line in text.split('\n')) {
+    if (line.isEmpty) {
+      if (prevWasContent) {
+        result.add(const ChordSegment(text: '', isLineBreak: true));
+        result.add(const ChordSegment(text: '', isLineBreak: true));
+      }
+      prevWasContent = false;
+      continue;
+    }
+
+    if (prevWasContent) {
+      result.add(const ChordSegment(text: '', isLineBreak: true));
+    }
+
+    final segments = parseChordProLine(line);
+    for (final seg in segments) {
+      result.add(ChordSegment(chord: seg.chord, text: seg.text));
+    }
+    prevWasContent = true;
+  }
+
+  return result;
 }

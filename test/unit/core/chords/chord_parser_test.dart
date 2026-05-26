@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:himnario_id_2/core/chords/chord_line.dart';
 import 'package:himnario_id_2/core/chords/chord_parser.dart';
+import 'package:himnario_id_2/core/chords/chord_segment.dart';
 
 void main() {
   group('ChordParser - parseChordProLine', () {
@@ -123,6 +124,118 @@ void main() {
     test('no captura acorde inválido H', () {
       final match = chordRegex.firstMatch('[H]');
       expect(match, isNull);
+    });
+
+    test('acorde con paréntesis [C#m7(b5)]', () {
+      final match = chordRegex.firstMatch('[C#m7(b5)]');
+      expect(match?.group(1), 'C#m7(b5)');
+    });
+
+    test('acorde con paréntesis y bajo [F#m7(b5)/B]', () {
+      final match = chordRegex.firstMatch('[F#m7(b5)/B]');
+      expect(match?.group(1), 'F#m7(b5)/B');
+    });
+  });
+
+  group('ChordParser - parseChordProStanza', () {
+    test('estrofa simple con 2 líneas', () {
+      final result = parseChordProStanza('[C]Santo [G]Dios\n[Am]Señor');
+      expect(result.length, 4);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo '));
+      expect(result[1], const ChordSegment(chord: 'G', text: 'Dios'));
+      expect(result[2], const ChordSegment(text: '', isLineBreak: true));
+      expect(result[3], const ChordSegment(chord: 'Am', text: 'Señor'));
+    });
+
+    test('texto vacío retorna lista vacía', () {
+      final result = parseChordProStanza('');
+      expect(result, isEmpty);
+    });
+
+    test('sin acordes multilínea', () {
+      final result = parseChordProStanza('Santo\nDios');
+      expect(result.length, 3);
+      expect(result[0], const ChordSegment(text: 'Santo'));
+      expect(result[1], const ChordSegment(text: '', isLineBreak: true));
+      expect(result[2], const ChordSegment(text: 'Dios'));
+    });
+
+    test('trailing blank line ignorada — solo contenido', () {
+      final result = parseChordProStanza('[C]Santo\n');
+      expect(result.length, 1);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo'));
+    });
+
+    test('múltiples trailing blank lines ignoradas — solo contenido', () {
+      final result = parseChordProStanza('[C]Santo\n\n\n');
+      expect(result.length, 1);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo'));
+    });
+
+    test('leading blank line ignorada — solo contenido', () {
+      final result = parseChordProStanza('\n[C]Santo');
+      expect(result.length, 1);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo'));
+    });
+
+    test('solo blanks retorna vacío', () {
+      expect(parseChordProStanza('\n\n'), isEmpty);
+    });
+
+    test('triple blank line entre estrofas colapsa a doble', () {
+      final result = parseChordProStanza('[C]Santo\n\n\n[G]Dios');
+      expect(result.length, 4);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo'));
+      expect(result[1], const ChordSegment(text: '', isLineBreak: true));
+      expect(result[2], const ChordSegment(text: '', isLineBreak: true));
+      expect(result[3], const ChordSegment(chord: 'G', text: 'Dios'));
+    });
+
+    test('acorde con paréntesis parseChordProLine', () {
+      final result = parseChordProLine('[C#m7(b5)]Santo');
+      expect(result.first.chord, 'C#m7(b5)');
+      expect(result.first.text, 'Santo');
+    });
+  });
+
+  group('ChordSegment - modelo', () {
+    test('== dos segmentos iguales', () {
+      const a = ChordSegment(chord: 'C', text: 'Santo ');
+      const b = ChordSegment(chord: 'C', text: 'Santo ');
+      expect(a, equals(b));
+    });
+
+    test('== segmentos con chord diferente', () {
+      const a = ChordSegment(chord: 'C', text: 'Santo ');
+      const b = ChordSegment(chord: 'G', text: 'Santo ');
+      expect(a, isNot(equals(b)));
+    });
+
+    test('== segmentos con text diferente', () {
+      const a = ChordSegment(chord: 'C', text: 'Santo ');
+      const b = ChordSegment(chord: 'C', text: 'Señor');
+      expect(a, isNot(equals(b)));
+    });
+
+    test('hashCode consistente con ==', () {
+      const a = ChordSegment(chord: 'C', text: 'Santo ');
+      const b = ChordSegment(chord: 'C', text: 'Santo ');
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test('toString línea break', () {
+      const seg = ChordSegment(text: '', isLineBreak: true);
+      expect(seg.toString(), 'ChordSegment(⏎)');
+    });
+
+    test('toString con acorde y texto', () {
+      const seg = ChordSegment(chord: 'C', text: 'Santo ');
+      expect(seg.toString(), 'ChordSegment([C]Santo )');
+    });
+
+    test('toString sin acorde ni texto', () {
+      const seg = ChordSegment(text: '');
+      expect(seg.toString(), 'ChordSegment()');
     });
   });
 }

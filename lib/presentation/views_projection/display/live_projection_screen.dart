@@ -6,10 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/chords/chord_parser.dart';
 import '../../../core/enums/estrofa_tipo.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
-import '../../../core/utils/stanza_layout_engine.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
-import '../../shared_widgets/chord_overlay_text.dart';
+import '../../shared_widgets/responsive_chord_widget.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -268,12 +267,11 @@ class _TitleSlide extends StatelessWidget {
 /// El fontSize es siempre `baseFontSize * 3.5`. Si el contenido no cabe
 /// verticalmente, se envuelve en [SingleChildScrollView] para scroll.
 ///
-/// Mantiene [AnimatedSwitcher] para transiciones suaves,
-/// [StanzaLayoutEngine.processStanza] para el formateo inteligente,
+/// Mantiene [AnimatedSwitcher] para transiciones suaves
 /// y progress indicator (dots) que refleja el total de slides.
 ///
-/// Cuando [appearance.showChords] es `true`, renderiza cada línea con
-/// [ChordOverlayText] para superponer acordes sobre el texto.
+/// Cuando [appearance.showChords] es `true`, renderiza con
+/// [ResponsiveChordWidget] (Wrap nativo con reflow automático).
 /// Cuando es `false`, usa el comportamiento original (texto limpio sin acordes).
 class _LyricsSlide extends StatelessWidget {
   final Estrofa estrofa;
@@ -388,109 +386,32 @@ class _LyricsSlide extends StatelessWidget {
     double width,
     TextStyle style,
   ) {
-    final processed = StanzaLayoutEngine.processStanza(
-      stripChords(content),
-      maxWidth: width,
-      style: style,
-    );
-
     return Text(
-      processed,
+      stripChords(content),
       key: const ValueKey('plain'),
       style: style,
       textAlign: TextAlign.center,
     );
   }
 
-  /// Aplica [StanzaLayoutEngine.processStanza] al contenido ChordPro:
-  /// mide con el texto limpio (sin acordes) para decidir saltos de línea,
-  /// pero preserva los marcadores originales en el resultado.
-  String _reflowChordContent(
-    String content,
-    double width,
-    TextStyle style,
-  ) {
-    if (content.isEmpty || width <= 0) return content;
-
-    final stripped = stripChords(content);
-
-    // Paso 1: obtener el texto plano con saltos optimizados
-    final processed = StanzaLayoutEngine.processStanza(
-      stripped,
-      maxWidth: width,
-      style: style,
-    );
-
-    // Paso 2: reconstruir contenido ChordPro aplicando las mismas uniones
-    final originalLines = content.split('\n');
-    final processedLines = processed.split('\n');
-
-    final result = <String>[];
-    int origIdx = 0;
-
-    for (final targetLine in processedLines) {
-      final buffer = StringBuffer(originalLines[origIdx]);
-      origIdx++;
-
-      while (origIdx < originalLines.length) {
-        if (stripChords(buffer.toString()) == targetLine) break;
-        buffer.write(' ');
-        buffer.write(originalLines[origIdx]);
-        origIdx++;
-      }
-
-      result.add(buffer.toString());
-    }
-
-    return result.join('\n');
-  }
-
-  /// Renderiza el contenido ChordPro línea por línea con [ChordOverlayText].
+  /// Renderiza el contenido ChordPro con [ResponsiveChordWidget].
   ///
-  /// Cada línea se renderiza con alineación izquierda para que los acordes
-  /// se posicionen correctamente. El [Column] se centra como bloque gracias
-  /// al [Center] + [MainAxisAlignment.center] del padre.
+  /// Usa Wrap nativo para reflow automático — no necesita [width] porque
+  /// el Wrap se adapta al ancho disponible del padre.
   Widget _buildChordProContent(
     String content,
     double width,
     TextStyle lyricStyle,
     TextStyle chordStyle,
   ) {
-    // Aplicar reflow inteligente para unir líneas que caben en un mismo
-    // renglón, igual que se hace en _buildPlainContent con processStanza
-    final reflowed = _reflowChordContent(content, width, lyricStyle);
-    final lines = reflowed.split('\n');
-
-    return Column(
+    return ResponsiveChordWidget(
       key: const ValueKey('chords'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: lines.map((line) {
-        if (line.trim().isEmpty) {
-          return SizedBox(height: lyricStyle.fontSize! * 0.8);
-        }
-        // Verificar si la línea tiene acordes
-        final hasChords = chordRegex.hasMatch(line);
-        if (!hasChords) {
-          // Línea sin acordes → texto plano (alineación izquierda para
-          // consistencia visual con las líneas que SÍ tienen acordes)
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Text(
-              line,
-              style: lyricStyle,
-              textAlign: TextAlign.left,
-            ),
-          );
-        }
-        return ChordOverlayText(
-          chordProLine: line,
-          textStyle: lyricStyle,
-          chordStyle: chordStyle,
-          maxWidth: width,
-          textAlign: TextAlign.left,
-          minChordGap: 12.0,
-        );
-      }).toList(),
+      stanza: content,
+      textStyle: lyricStyle,
+      chordStyle: chordStyle,
+      lineSpacing: lyricStyle.fontSize! * 0.4,
+      textAlign: TextAlign.center,
+      runAlignment: WrapAlignment.center,
     );
   }
 
@@ -596,13 +517,8 @@ class _LyricsSlide extends StatelessWidget {
     required double maxWidth,
   }) {
     final stripped = stripChords(text);
-    final processed = StanzaLayoutEngine.processStanza(
-      stripped,
-      maxWidth: maxWidth,
-      style: style,
-    );
     final tp = TextPainter(
-      text: TextSpan(text: processed, style: style),
+      text: TextSpan(text: stripped, style: style),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: maxWidth);
     return tp.height;
@@ -614,35 +530,43 @@ class _LyricsSlide extends StatelessWidget {
     required TextStyle chordStyle,
     required double maxWidth,
   }) {
-    final reflowed = _reflowChordContent(text, maxWidth, style);
-    final lines = reflowed.split('\n');
-    final fontSize = style.fontSize ?? 14;
-    final effectiveLineHeight = (style.height ?? 1.0) * fontSize;
-    double totalHeight = 0;
+    // Agrupa segmentos por línea lógica (saltos de línea poéticos).
+    // Cada línea lógica suma: chordArea (si hay acordes) + textArea.
+    // Estimación conservadora: puede sobrestimar ligeramente si Wrap
+    // coloca varios segmentos en un mismo "run", pero es seguro para
+    // la decisión de scroll.
+    final segments = parseChordProStanza(text);
+    if (segments.isEmpty) return 0;
 
-    for (final line in lines) {
-      if (line.trim().isEmpty) {
-        totalHeight += fontSize * 0.8;
+    final fontSize = style.fontSize ?? 14;
+    final lineHeight = (style.height ?? 1.0) * fontSize;
+    final chordAreaHeight = (chordStyle.fontSize ?? 14) * 1.2;
+
+    double totalHeight = 0;
+    bool hasChordsInLine = false;
+    bool hasTextInLine = false;
+
+    for (final seg in segments) {
+      if (seg.isLineBreak) {
+        // Cerrar línea actual
+        if (hasTextInLine || hasChordsInLine) {
+          totalHeight += (hasChordsInLine ? chordAreaHeight : 0) + lineHeight;
+        }
+        totalHeight += 4; // separación entre párrafos
+        hasChordsInLine = false;
+        hasTextInLine = false;
         continue;
       }
-      final hasChordsInLine = chordRegex.hasMatch(line);
-      final plainText = stripChords(line);
-      final tp = TextPainter(
-        text: TextSpan(text: plainText, style: style),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: maxWidth);
 
-      final numVisualLines =
-          (tp.height / effectiveLineHeight).ceil().clamp(1, 100);
-      final textHeight = numVisualLines * effectiveLineHeight;
-
-      if (!hasChordsInLine) {
-        totalHeight += textHeight + 4;
-      } else {
-        final chordAreaHeight = (chordStyle.fontSize ?? 14) * 1.0 + 6;
-        totalHeight += chordAreaHeight + textHeight + 8;
-      }
+      if (seg.chord != null) hasChordsInLine = true;
+      if (seg.text.isNotEmpty) hasTextInLine = true;
     }
+
+    // Última línea
+    if (hasTextInLine || hasChordsInLine) {
+      totalHeight += (hasChordsInLine ? chordAreaHeight : 0) + lineHeight;
+    }
+
     return totalHeight;
   }
 }
