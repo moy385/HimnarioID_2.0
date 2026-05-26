@@ -238,4 +238,56 @@ void main() {
       expect(seg.toString(), 'ChordSegment()');
     });
   });
+
+  group('ChordParser - expandToWordSegments', () {
+    test('expande línea simple', () {
+      final lines = parseChordProLine('[C]Santo [G]Dios');
+      final result = expandToWordSegments(lines);
+      expect(result.length, 2);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo '));
+      expect(result[1], const ChordSegment(chord: 'G', text: 'Dios'));
+    });
+
+    test('acorde sin texto se preserva', () {
+      final lines = parseChordProLine('[C]Santo [G]');
+      final result = expandToWordSegments(lines);
+      expect(result.length, 2);
+      expect(result[0], const ChordSegment(chord: 'C', text: 'Santo '));
+      expect(result[1], const ChordSegment(chord: 'G', text: ''));
+    });
+
+    test('acordes adyacentes preservan segmentos vacíos', () {
+      final lines = parseChordProLine('[Am][G][F]');
+      final result = expandToWordSegments(lines);
+      expect(result.length, 3);
+      expect(result[0], const ChordSegment(chord: 'Am', text: ''));
+      expect(result[1], const ChordSegment(chord: 'G', text: ''));
+      expect(result[2], const ChordSegment(chord: 'F', text: ''));
+    });
+
+    test('texto antes del primer acorde se expande', () {
+      final lines = parseChordProLine('Intro [C]Santo');
+      final result = expandToWordSegments(lines);
+      expect(result.length, 2);
+      expect(result[0], const ChordSegment(chord: null, text: 'Intro '));
+      expect(result[1], const ChordSegment(chord: 'C', text: 'Santo'));
+    });
+
+    test('línea sin acordes se expande palabra por palabra', () {
+      final lines = parseChordProLine('Santo Dios es amor');
+      final result = expandToWordSegments(lines);
+      expect(result.length, 4);
+      expect(result[0], const ChordSegment(chord: null, text: 'Santo '));
+      expect(result[1], const ChordSegment(chord: null, text: 'Dios '));
+      expect(result[2], const ChordSegment(chord: null, text: 'es '));
+      expect(result[3], const ChordSegment(chord: null, text: 'amor'));
+    });
+
+    test('línea vacía produce segmento vacío', () {
+      final lines = parseChordProLine('');
+      final result = expandToWordSegments(lines);
+      expect(result.length, 1);
+      expect(result[0], const ChordSegment(text: ''));
+    });
+  });
 }

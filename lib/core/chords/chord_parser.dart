@@ -84,6 +84,37 @@ String stripChords(String text) {
   return text.replaceAll(chordRegex, '');
 }
 
+/// Expande una lista de [ChordLine] en segmentos palabra-por-palabra.
+///
+/// Cada palabra del texto se convierte en un [ChordSegment] individual,
+/// permitiendo que Wrap divida líneas en cualquier punto.
+/// Solo la primera palabra de cada [ChordLine] hereda el [chord].
+/// Segmentos con texto vacío se preservan (acorde sin letra).
+///
+/// functional-style: función pura, sin estado mutable externo.
+List<ChordSegment> expandToWordSegments(List<ChordLine> lines) {
+  final result = <ChordSegment>[];
+  for (final line in lines) {
+    if (line.text.isEmpty) {
+      // Acorde sin texto → preservar segmento (ej: [G] al final)
+      result.add(ChordSegment(chord: line.chord, text: ''));
+      continue;
+    }
+    final words = line.text.split(' ');
+    for (int i = 0; i < words.length; i++) {
+      final word = words[i];
+      if (word.isEmpty) continue;
+      // Reconstruir palabra con espacio (excepto última)
+      final wordWithSpace = word + (i < words.length - 1 ? ' ' : '');
+      result.add(ChordSegment(
+        chord: i == 0 ? line.chord : null,
+        text: wordWithSpace,
+      ),);
+    }
+  }
+  return result;
+}
+
 /// Parsea una estrofa completa (multilínea) en formato ChordPro.
 ///
 /// Preserva saltos de línea poéticos como [ChordSegment.isLineBreak].
@@ -122,10 +153,8 @@ List<ChordSegment> parseChordProStanza(String text) {
       result.add(const ChordSegment(text: '', isLineBreak: true));
     }
 
-    final segments = parseChordProLine(line);
-    for (final seg in segments) {
-      result.add(ChordSegment(chord: seg.chord, text: seg.text));
-    }
+    final chordLines = parseChordProLine(line);
+    result.addAll(expandToWordSegments(chordLines));
     prevWasContent = true;
   }
 

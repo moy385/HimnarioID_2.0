@@ -17,7 +17,7 @@ import '../../core/chords/chord_parser.dart';
 /// - Cada [ChordSegment] se renderiza con acorde arriba y texto abajo.
 /// - [ChordSegment.isLineBreak] fuerza salto de línea real con [lineSpacing].
 /// - Usa [Wrap] nativo → reflow automático en cualquier ancho.
-/// - No usa Stack, no usa Positioned, no usa CustomPainter.
+/// - Stack + Positioned evita que acordes anchos estiren la columna.
 class ResponsiveChordWidget extends StatelessWidget {
   final String stanza;
   final TextStyle? textStyle;
@@ -63,11 +63,31 @@ class ResponsiveChordWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          segment.chord != null
-              ? Text(segment.chord!, style: _effectiveChordStyle.copyWith(height: 1.1))
-              : const Text('', style: TextStyle(height: 1.1)),
+          // Stack permite que el acorde flote sin estirar el ancho
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Dummy invisible — reserva altura, ancho mínimo
+              Text(' ',
+                style: _effectiveChordStyle.copyWith(
+                  height: 1.1, color: Colors.transparent,
+                ),
+              ),
+              if (segment.chord != null)
+                Positioned(
+                  left: 0, top: 0,
+                  child: Text(segment.chord!,
+                    style: _effectiveChordStyle.copyWith(height: 1.1),
+                  ),
+                ),
+            ],
+          ),
+          // Letra — dicta el ancho real de la Column
           segment.text.isNotEmpty
-              ? Text(segment.text, style: _effectiveTextStyle.copyWith(height: 1.1), textAlign: textAlign)
+              ? Text(segment.text,
+                  style: _effectiveTextStyle.copyWith(height: 1.1),
+                  textAlign: textAlign,
+                )
               : const SizedBox(height: 0),
         ],
       );
