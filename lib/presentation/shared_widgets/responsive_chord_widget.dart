@@ -52,38 +52,36 @@ class ResponsiveChordWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final segments = parseChordProStanza(stanza);
-    if (segments.isEmpty) return const SizedBox.shrink();
+    if (stanza.trim().isEmpty) return const SizedBox.shrink();
 
-    final children = <Widget>[];
-
-    for (final seg in segments) {
-      if (seg.isLineBreak) {
-        children.add(_LineBreakPlaceholder(lineSpacing: lineSpacing));
-        continue;
+    final children = segments.map((segment) {
+      if (segment.isLineBreak) {
+        return _LineBreakPlaceholder(lineSpacing: lineSpacing);
       }
 
-      children.add(
-        Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Fila del acorde: texto vacío o acorde
-              seg.chord != null
-                  ? Text(seg.chord!, style: _effectiveChordStyle)
-                  : const SizedBox(height: 0),
-              // Fila de la letra
-              seg.text.isNotEmpty
-                  ? Text(seg.text, style: _effectiveTextStyle, textAlign: textAlign)
-                  : const SizedBox(height: 0),
-            ],
-          ),
-        ),
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          segment.chord != null
+              ? Text(segment.chord!, style: _effectiveChordStyle.copyWith(height: 1.1))
+              : const Text('', style: TextStyle(height: 1.1)),
+          segment.text.isNotEmpty
+              ? Text(segment.text, style: _effectiveTextStyle.copyWith(height: 1.1), textAlign: textAlign)
+              : const SizedBox(height: 0),
+        ],
       );
-    }
+    }).toList();
 
     return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.start,
+      spacing: 0.0,
+      runSpacing: lineSpacing,
+      alignment: textAlign == TextAlign.center
+          ? WrapAlignment.center
+          : textAlign == TextAlign.right
+              ? WrapAlignment.end
+              : WrapAlignment.start,
+      crossAxisAlignment: WrapCrossAlignment.end,
       runAlignment: runAlignment,
       children: children,
     );
