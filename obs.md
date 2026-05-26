@@ -1,5 +1,67 @@
 # 🐛 Reporte de Bug UI y Refactorización: Desalineación y Fractura de Acordes
 
+---
+
+## 📌 Resolución — 25 de mayo de 2026
+
+### ✅ Bugs corregidos
+
+| Bug | Causa raíz | Fix |
+|---|---|---|
+| **Pérdida de anclaje** | `Column.crossAxisAlignment` default = `center` | `CrossAxisAlignment.start` para anclar acorde a primera letra |
+| **Fractura de palabras** | `Padding(right: 4)` en cada segmento inyectaba 4px de espacio horizontal | `spacing: 0.0` + eliminar Padding individual |
+
+### 👥 Flujo de trabajo
+
+1. **@arqui** + **@curie** evaluaron el bug y el código propuesto en `obs.md`
+2. **@arqui** identificó **5 regresiones** en el código propuesto que debían evitarse
+3. **@curie** confirmó las 3 reglas de corrección y las 5 regresiones
+4. **@dev** implementó los cambios en `responsive_chord_widget.dart` siguiendo el plan corregido
+5. **@arqui** verificó post-implementación: **✅ APROBADO**
+
+### 🔧 Cambios realizados
+
+**Archivo modificado**: `lib/presentation/shared_widgets/responsive_chord_widget.dart`
+
+| # | Cambio | Línea | Propósito |
+|---|--------|-------|-----------|
+| 1 | `if (stanza.trim().isEmpty)` en vez de `if (segments.isEmpty)` | 55 | Early return más robusto |
+| 2 | Eliminar `Padding(right: 4)` de cada segmento | — | Elimina espacio horizontal que fracturaba palabras |
+| 3 | `crossAxisAlignment: CrossAxisAlignment.start` en Column | 64 | Ancla el acorde a la primera letra |
+| 4 | `_effectiveChordStyle.copyWith(height: 1.1)` | 67 | Acerca acorde a letra con fallback seguro |
+| 5 | `_effectiveTextStyle.copyWith(height: 1.1)` | 70 | Altura consistente en texto |
+| 6 | `spacing: 0.0` en Wrap | 77 | Cero espacio horizontal entre segmentos |
+| 7 | `runSpacing: lineSpacing` | 78 | Espaciado vertical dinámico (no hardcodeado) |
+| 8 | `alignment` condicional (center/right/left) | 79-83 | Respeta alineación horizontal de cada pantalla |
+| 9 | `crossAxisAlignment: WrapCrossAlignment.end` | 84 | Alinea vertical por la parte inferior |
+
+### 🚫 Regresiones de `obs.md` que NO se copiaron
+
+| Regresión | Peligro | Corrección aplicada |
+|-----------|---------|---------------------|
+| `const _LineBreakPlaceholder(lineSpacing: 10.0)` | Ignora `lineSpacing` del widget | Usa `lineSpacing` (variable del constructor) |
+| `chordStyle?.copyWith(height: 1.1)` | Null si `chordStyle` es null | `_effectiveChordStyle.copyWith(height: 1.1)` con fallback |
+| `lyricStyle?.copyWith(height: 1.1)` | Variable no existe + null si `null` | `_effectiveTextStyle.copyWith(height: 1.1)` |
+| `runSpacing: 10.0` | Ignora `lineSpacing` del widget | `runSpacing: lineSpacing` (dinámico) |
+| Falta `TextAlign.right` | Proyección con alineación derecha se rompía | `textAlign == TextAlign.right → WrapAlignment.end` |
+
+### 📊 Resultados de verificación
+
+| Verificación | Resultado |
+|---|---|
+| `flutter analyze` | ✅ **0 issues found** |
+| `flutter test` (39 tests) | ✅ **All tests passed** |
+| Sin referencias a código eliminado | ✅ **0 referencias** |
+| `hymn_detail_screen.dart` usa `textAlign: TextAlign.justify` | ✅ Correcto |
+| `live_projection_screen.dart` usa `textAlign: TextAlign.center` | ✅ Correcto |
+
+### 🏛️ Veredicto de @arqui
+
+> ✅ **APROBADO para merge a `main`.**
+> La implementación es correcta y completa. No se encontraron regresiones, bugs ni desviaciones del plan arquitectural.
+>
+> — @arqui, 2026-05-25
+
 ## 📌 Contexto de la Situación y Diagnóstico
 Actualmente, el `ResponsiveChordWidget` resuelve el diseño responsivo usando `Wrap`, pero presenta dos anomalías visuales críticas al compararlo con las fotografías del himnario físico original:
 
