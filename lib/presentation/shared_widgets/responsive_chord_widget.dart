@@ -46,7 +46,7 @@ class ResponsiveChordWidget extends StatelessWidget {
       const TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.bold,
-        color: Colors.blue,
+        color: Color(0xFFCCA43B),
       );
 
   @override

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/enums/estrofa_tipo.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/enums/himno_tipo.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
@@ -283,13 +284,7 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'MQ App - Proyección',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.indigo,
-            brightness: Brightness.dark,
-          ),
-          scaffoldBackgroundColor: Colors.black,
-        ),
+        theme: AppTheme.projectionTheme,
         home: Scaffold(
           backgroundColor: Colors.black,
           body: liveState.hymn == null

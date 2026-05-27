@@ -930,23 +930,26 @@ class _FondoBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (fondo == null) {
-      return Container(color: bgColor, child: child);
+      return SizedBox.expand(child: Container(color: bgColor, child: child));
     }
     return switch (fondo!.tipo) {
-      FondoPantallaTipo.colorSolido => Container(color: bgColor, child: child),
-      FondoPantallaTipo.imagen => Stack(
-          children: [
-            if (fondo!.rutaArchivo != null)
-              Positioned.fill(
-                child: Image.file(
-                  File(fondo!.rutaArchivo!),
-                  key: ValueKey('img_${fondo!.rutaArchivo}'),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: bgColor),
+      FondoPantallaTipo.colorSolido =>
+        SizedBox.expand(child: Container(color: bgColor, child: child)),
+      FondoPantallaTipo.imagen => SizedBox.expand(
+          child: Stack(
+            children: [
+              if (fondo!.rutaArchivo != null)
+                Positioned.fill(
+                  child: Image.file(
+                    File(fondo!.rutaArchivo!),
+                    key: ValueKey('img_${fondo!.rutaArchivo}'),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: bgColor),
+                  ),
                 ),
-              ),
-            child,
-          ],
+              child,
+            ],
+          ),
         ),
     };
   }

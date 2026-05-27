@@ -25,7 +25,7 @@ class HymnAppearanceState {
     this.bgColor = Colors.transparent,
     this.selectedFondo,
     this.textColor = const Color(0xFF1C1B1F),
-    this.chordColor = const Color(0xFF6750A4),
+    this.chordColor = const Color(0xFFCCA43B),
     this.fontScale = 1.0,
     this.fontFamily = 'Merriweather',
     this.isBold = false,
@@ -92,7 +92,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         isBold: isBold == 'true',
         bgColor: bgColor != null ? _hexToColor(bgColor) : Colors.transparent,
         textColor: textColor != null ? _hexToColor(textColor) : const Color(0xFF1C1B1F),
-        chordColor: chordColor != null ? _hexToColor(chordColor) : const Color(0xFF6750A4),
+        chordColor: chordColor != null ? _hexToColor(chordColor) : const Color(0xFFCCA43B),
         fontScale: fontScale != null ? double.tryParse(fontScale) ?? 1.0 : 1.0,
         projectionFontScale: projectionFontScale != null
             ? double.tryParse(projectionFontScale)?.clamp(0.5, 3.0) ?? 1.0
