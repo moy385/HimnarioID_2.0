@@ -195,7 +195,7 @@ void showBrushSheet(
               child: GlassContainer(
                 backgroundColor: isDark
                     ? const Color(0x1FFFFFFF)
-                    : const Color(0x1A000000),
+                    : const Color(0x30000000),
                 borderColor: isDark
                     ? const Color(0x33FFFFFF)
                     : const Color(0x1A000000),
@@ -245,8 +245,8 @@ void showBrushSheet(
                 return GlassContainer(
                   backgroundColor: isDark
                       ? const Color(0x1FFFFFFF)
-                      : const Color(0x1A000000),
-                  borderColor: isDark
+                      : const Color(0x30000000),
+                borderColor: isDark
                       ? const Color(0x33FFFFFF)
                       : const Color(0x1A000000),
                   borderWidth: 1.0,
@@ -739,7 +739,7 @@ void showNoteSheet(
           child: GlassContainer(
             backgroundColor: isDark
                 ? const Color(0x1FFFFFFF)
-                : const Color(0x1A000000),
+                : const Color(0x30000000),
             borderColor: isDark
                 ? const Color(0x33FFFFFF)
                 : const Color(0x1A000000),
@@ -780,7 +780,7 @@ void showNoteSheet(
         return GlassContainer(
           backgroundColor: isDark
               ? const Color(0x1FFFFFFF)
-              : const Color(0x1A000000),
+              : const Color(0x30000000),
           borderColor: isDark
               ? const Color(0x33FFFFFF)
               : const Color(0x1A000000),
@@ -999,7 +999,7 @@ void showSolfaSheet(
               child: GlassContainer(
                 backgroundColor: isDark
                     ? const Color(0x1FFFFFFF)
-                    : const Color(0x1A000000),
+                    : const Color(0x30000000),
                 borderColor: isDark
                     ? const Color(0x33FFFFFF)
                     : const Color(0x1A000000),
@@ -1047,7 +1047,7 @@ void showSolfaSheet(
             return GlassContainer(
               backgroundColor: isDark
                   ? const Color(0x1FFFFFFF)
-                  : const Color(0x1A000000),
+                  : const Color(0x30000000),
               borderColor: isDark
                   ? const Color(0x33FFFFFF)
                   : const Color(0x1A000000),

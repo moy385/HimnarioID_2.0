@@ -50,7 +50,7 @@ class GlassCard extends StatelessWidget {
     final bgColor = backgroundColor ??
         (isDark
             ? const Color(0x1FFFFFFF)
-            : const Color(0x0F000000));
+            : const Color(0x26000000));
     final border = goldBorder
         ? colorScheme.primary.withValues(alpha: 0.25)
         : (isDark
