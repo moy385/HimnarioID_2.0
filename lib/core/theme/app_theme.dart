@@ -20,10 +20,10 @@ class AppTheme {
     cardTheme: _lightCardTheme,
     floatingActionButtonTheme: _fabTheme,
     navigationBarTheme: _navigationBarTheme,
-    bottomSheetTheme: _bottomSheetTheme,
+    bottomSheetTheme: _lightBottomSheetTheme,
     switchTheme: _switchTheme,
     sliderTheme: _sliderTheme,
-    inputDecorationTheme: _inputDecorationTheme,
+    inputDecorationTheme: _lightInputDecorationTheme,
     textTheme: _textTheme,
   );
 
@@ -37,10 +37,10 @@ class AppTheme {
     cardTheme: _darkCardTheme,
     floatingActionButtonTheme: _fabTheme,
     navigationBarTheme: _navigationBarTheme,
-    bottomSheetTheme: _bottomSheetTheme,
+    bottomSheetTheme: _darkBottomSheetTheme,
     switchTheme: _switchTheme,
     sliderTheme: _sliderTheme,
-    inputDecorationTheme: _inputDecorationTheme,
+    inputDecorationTheme: _darkInputDecorationTheme,
     textTheme: _textTheme,
   );
 
@@ -141,8 +141,21 @@ class AppTheme {
     ),
   );
 
-  // ─── BottomSheet ───
-  static final BottomSheetThemeData _bottomSheetTheme =
+  // ─── BottomSheet — LIGHT ───
+  static final BottomSheetThemeData _lightBottomSheetTheme =
+      BottomSheetThemeData(
+    backgroundColor: AppColors.lightColorScheme.surfaceContainer,
+    surfaceTintColor: Colors.transparent,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(24),
+        topRight: Radius.circular(24),
+      ),
+    ),
+  );
+
+  // ─── BottomSheet — DARK ───
+  static final BottomSheetThemeData _darkBottomSheetTheme =
       BottomSheetThemeData(
     backgroundColor: AppColors.darkColorScheme.surfaceContainer,
     surfaceTintColor: Colors.transparent,
@@ -182,8 +195,35 @@ class AppTheme {
     ),
   );
 
-  // ─── InputDecoration ───
-  static final InputDecorationTheme _inputDecorationTheme =
+  // ─── InputDecoration — LIGHT ───
+  static final InputDecorationTheme _lightInputDecorationTheme =
+      InputDecorationTheme(
+    filled: true,
+    fillColor: AppColors.lightColorScheme.surfaceContainerHighest,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: AppColors.lightColorScheme.outlineVariant,
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(
+        color: Color(0xFFCCA43B),
+        width: 2,
+      ),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: AppColors.lightColorScheme.outlineVariant,
+      ),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  );
+
+  // ─── InputDecoration — DARK ───
+  static final InputDecorationTheme _darkInputDecorationTheme =
       InputDecorationTheme(
     filled: true,
     fillColor: AppColors.darkColorScheme.surfaceContainerHighest,
