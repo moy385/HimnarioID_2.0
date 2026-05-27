@@ -314,7 +314,7 @@ class _LyricsSlide extends StatelessWidget {
       fontFamily: appearance.fontFamily,
       color: appearance.textColor,
       fontSize: baseFontSize * 1.5,
-      height: 1.35,
+      height: 1.18,
       fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
     );
 
@@ -409,7 +409,7 @@ class _LyricsSlide extends StatelessWidget {
       stanza: content,
       textStyle: lyricStyle,
       chordStyle: chordStyle,
-      lineSpacing: lyricStyle.fontSize! * 0.25,
+      lineSpacing: lyricStyle.fontSize! * 0.125,
       textAlign: TextAlign.center,
       runAlignment: WrapAlignment.center,
     );
