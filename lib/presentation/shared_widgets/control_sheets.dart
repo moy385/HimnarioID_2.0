@@ -508,8 +508,8 @@ List<Widget> _brushSheetChildren({
             child: Slider(
               value: appearance.projectionFontScale,
               min: 0.5,
-              max: 3.0,
-              divisions: 10,
+              max: 2.0,
+              divisions: 6,
               label:
                   '${(appearance.projectionFontScale * 100).round()}%',
               onChanged: (value) {
