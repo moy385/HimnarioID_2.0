@@ -159,13 +159,11 @@ class GlassContainer extends StatelessWidget {
               ),
             ),
           ),
-          // Contenido
+          // Contenido (NO posicionado — da tamaño intrínseco al Stack)
           if (child != null)
-            Positioned.fill(
-              child: Padding(
-                padding: padding,
-                child: child!,
-              ),
+            Padding(
+              padding: padding,
+              child: child!,
             ),
         ],
       );
