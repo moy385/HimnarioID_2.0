@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/glassmorphism.dart';
-
-/// Tarjeta con efecto Glassmorphism que emula una [Card] de Material.
+/// Tarjeta sólida que usa los colores del tema.
 ///
-/// Usa [GlassContainer] internamente con valores predeterminados
-/// optimizados para tarjetas de lista (HymnCard) y decoraciones.
+/// Reemplaza el anterior GlassCard (efecto glassmorphism).
+/// Sin transparencias ni degradados — color sólido puro con contraste óptimo.
 ///
-/// Sigue la paleta corporativa Negro/Dorado/Blanco ajustando colores
-/// según el [ColorScheme] del tema activo.
+/// Usa [Card] de Material internamente, heredando [CardThemeData] del tema.
 class GlassCard extends StatelessWidget {
   /// Widget hijo de la tarjeta.
   final Widget child;
@@ -25,10 +22,10 @@ class GlassCard extends StatelessWidget {
   /// Margen externo.
   final EdgeInsetsGeometry? margin;
 
-  /// Si es `true`, usa el borde dorado en lugar del blanco sutil.
+  /// Si es `true`, usa el borde dorado en lugar del color por defecto.
   final bool goldBorder;
 
-  /// Color de fondo con opacidad. Por defecto usa el valor del tema.
+  /// Color de fondo sólido. Por defecto usa [ColorScheme.surfaceContainer].
   final Color? backgroundColor;
 
   const GlassCard({
@@ -45,26 +42,26 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
+    final bgColor =
+        backgroundColor ?? colorScheme.surfaceContainer;
 
-    final bgColor = backgroundColor ??
-        (isDark
-            ? const Color(0x1FFFFFFF)
-            : const Color(0x26000000));
-    final border = goldBorder
-        ? colorScheme.primary.withValues(alpha: 0.25)
-        : (isDark
-            ? const Color(0x33FFFFFF)
-            : const Color(0x1A000000));
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(borderRadius),
+      side: goldBorder
+          ? BorderSide(color: colorScheme.primary, width: 1.5)
+          : BorderSide.none,
+    );
 
-    final card = GlassContainer(
-      backgroundColor: bgColor,
-      borderColor: border,
-      borderWidth: 1.2,
-      borderRadius: borderRadius,
-      blurSigma: 14.0,
-      padding: padding,
-      child: child,
+    final card = Card(
+      color: bgColor,
+      elevation: 1,
+      margin: margin ?? EdgeInsets.zero,
+      shape: shape,
+      surfaceTintColor: Colors.transparent,
+      child: Padding(
+        padding: padding,
+        child: child,
+      ),
     );
 
     if (onTap != null) {

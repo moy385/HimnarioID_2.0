@@ -21,6 +21,7 @@ class AppColors {
   static const Color darkSurfaceDim = Color(0xFF0A0A0A);
 
   // ─── Dark Mode ColorScheme ───
+  // Fondo negro puro (#000000), contraste óptimo sobre fondo oscuro.
   static const ColorScheme darkColorScheme = ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFFCCA43B),
@@ -39,16 +40,16 @@ class AppColors {
     onError: Color(0xFF000000),
     errorContainer: Color(0xFF4A1520),
     onErrorContainer: Color(0xFFF0B0B8),
-    surface: Color(0xFF121212),
+    surface: Color(0xFF000000),
     onSurface: Color(0xFFE6E1E5),
-    surfaceDim: Color(0xFF0A0A0A),
-    surfaceBright: Color(0xFF2A2A2A),
-    surfaceContainerLowest: Color(0xFF080808),
-    surfaceContainerLow: Color(0xFF141414),
-    surfaceContainer: Color(0xFF1E1E1E),
-    surfaceContainerHigh: Color(0xFF282828),
-    surfaceContainerHighest: Color(0xFF333333),
-    onSurfaceVariant: Color(0xFFB0B0B0),
+    surfaceDim: Color(0xFF000000),
+    surfaceBright: Color(0xFF1A1A1A),
+    surfaceContainerLowest: Color(0xFF050505),
+    surfaceContainerLow: Color(0xFF0F0F0F),
+    surfaceContainer: Color(0xFF1A1A1A),
+    surfaceContainerHigh: Color(0xFF252525),
+    surfaceContainerHighest: Color(0xFF303030),
+    onSurfaceVariant: Color(0xFFC4C0C8),
     outline: Color(0xFF8B8B8B),
     outlineVariant: Color(0xFF4A4A4A),
     shadow: Color(0xFF000000),
@@ -60,6 +61,7 @@ class AppColors {
   );
 
   // ─── Light Mode ColorScheme ───
+  // Fondo blanco puro (#FFFFFF), tarjetas y contenedores sólidos.
   static const ColorScheme lightColorScheme = ColorScheme(
     brightness: Brightness.light,
     primary: Color(0xFF8B7330),
@@ -78,18 +80,18 @@ class AppColors {
     onError: Color(0xFFFFFFFF),
     errorContainer: Color(0xFFF0D0D0),
     onErrorContainer: Color(0xFF3A0A0A),
-    surface: Color(0xFFFEFAF0),
+    surface: Color(0xFFFFFFFF),
     onSurface: Color(0xFF1C1B1F),
-    surfaceDim: Color(0xFFE0DCD0),
-    surfaceBright: Color(0xFFFFFBF0),
-    surfaceContainerLowest: Color(0xFFFFF8F0),
-    surfaceContainerLow: Color(0xFFF8F4E8),
-    surfaceContainer: Color(0xFFF0ECE2),
-    surfaceContainerHigh: Color(0xFFE8E4DA),
-    surfaceContainerHighest: Color(0xFFE0DCD2),
+    surfaceDim: Color(0xFFE0DCD6),
+    surfaceBright: Color(0xFFFFFFFF),
+    surfaceContainerLowest: Color(0xFFFFFFFF),
+    surfaceContainerLow: Color(0xFFF8F5F2),
+    surfaceContainer: Color(0xFFF0EDEA),
+    surfaceContainerHigh: Color(0xFFE8E5E2),
+    surfaceContainerHighest: Color(0xFFE0DDDA),
     onSurfaceVariant: Color(0xFF4A4A4A),
     outline: Color(0xFF7A7A7A),
-    outlineVariant: Color(0xFFC4C0B8),
+    outlineVariant: Color(0xFFC4C0BC),
     shadow: Color(0xFF000000),
     scrim: Color(0x66000000),
     inverseSurface: Color(0xFF333333),

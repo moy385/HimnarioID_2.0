@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/glassmorphism.dart';
-
 import '../../../core/utils/flag_utils.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
@@ -187,33 +185,22 @@ void showBrushSheet(
             final appearance = ref.watch(hymnAppearanceProvider);
             final fondosAsync = ref.watch(fondosActivosProvider);
 
-            final isDark = colorScheme.brightness == Brightness.dark;
-
             return Dialog(
-              backgroundColor: Colors.transparent,
+              backgroundColor: colorScheme.surfaceContainerHigh,
               surfaceTintColor: Colors.transparent,
-              child: GlassContainer(
-                backgroundColor: isDark
-                    ? const Color(0x1FFFFFFF)
-                    : const Color(0x30000000),
-                borderColor: isDark
-                    ? const Color(0x33FFFFFF)
-                    : const Color(0x1A000000),
-                borderWidth: 1.0,
-                borderRadius: 24,
-                blurSigma: 14.0,
-                padding: EdgeInsets.zero,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 700, maxWidth: 500),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                    children: _brushSheetChildren(
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      appearance: appearance,
-                      fondosAsync: fondosAsync,
-                      ref: ref,
-                    ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 700, maxWidth: 500),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                  children: _brushSheetChildren(
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    appearance: appearance,
+                    fondosAsync: fondosAsync,
+                    ref: ref,
                   ),
                 ),
               ),
@@ -234,7 +221,6 @@ void showBrushSheet(
             final textTheme = Theme.of(context).textTheme;
             final appearance = ref.watch(hymnAppearanceProvider);
             final fondosAsync = ref.watch(fondosActivosProvider);
-            final isDark = colorScheme.brightness == Brightness.dark;
 
             return DraggableScrollableSheet(
               initialChildSize: 0.85,
@@ -242,42 +228,31 @@ void showBrushSheet(
               maxChildSize: 0.95,
               expand: false,
               builder: (context, scrollController) {
-                return GlassContainer(
-                  backgroundColor: isDark
-                      ? const Color(0x1FFFFFFF)
-                      : const Color(0x30000000),
-                borderColor: isDark
-                      ? const Color(0x33FFFFFF)
-                      : const Color(0x1A000000),
-                  borderWidth: 1.0,
-                  borderRadius: 24,
-                  blurSigma: 14.0,
+                return ListView(
+                  controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                  child: ListView(
-                    controller: scrollController,
-                    children: <Widget>[
-                      // ---- Handle (solo móvil) ----
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                  children: <Widget>[
+                    // ---- Handle (solo móvil) ----
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      ..._brushSheetChildren(
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                        appearance: appearance,
-                        fondosAsync: fondosAsync,
-                        ref: ref,
-                      ),
-                    ],
-                  ),
+                    ),
+                    ..._brushSheetChildren(
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      appearance: appearance,
+                      fondosAsync: fondosAsync,
+                      ref: ref,
+                    ),
+                  ],
                 );
               },
             );
@@ -731,36 +706,26 @@ void showNoteSheet(
         final colorScheme = Theme.of(_).colorScheme;
         final textTheme = Theme.of(_).textTheme;
         final isPlaying = ref.watch(isAudioPlayingProvider);
-        final isDark = colorScheme.brightness == Brightness.dark;
 
         return Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: colorScheme.surfaceContainerHigh,
           surfaceTintColor: Colors.transparent,
-          child: GlassContainer(
-            backgroundColor: isDark
-                ? const Color(0x1FFFFFFF)
-                : const Color(0x30000000),
-            borderColor: isDark
-                ? const Color(0x33FFFFFF)
-                : const Color(0x1A000000),
-            borderWidth: 1.0,
-            borderRadius: 24,
-            blurSigma: 14.0,
-            padding: EdgeInsets.zero,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                child: _noteSheetContent(
-                  colorScheme: colorScheme,
-                  textTheme: textTheme,
-                  ref: ref,
-                  himnoId: himnoId,
-                  currentPistaId: currentPistaId,
-                  isPlaying: isPlaying,
-                  onPlayPista: onPlayPista,
-                  onStop: onStop,
-                ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              child: _noteSheetContent(
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+                ref: ref,
+                himnoId: himnoId,
+                currentPistaId: currentPistaId,
+                isPlaying: isPlaying,
+                onPlayPista: onPlayPista,
+                onStop: onStop,
               ),
             ),
           ),
@@ -775,18 +740,8 @@ void showNoteSheet(
         final colorScheme = Theme.of(_).colorScheme;
         final textTheme = Theme.of(_).textTheme;
         final isPlaying = ref.watch(isAudioPlayingProvider);
-        final isDark = colorScheme.brightness == Brightness.dark;
 
-        return GlassContainer(
-          backgroundColor: isDark
-              ? const Color(0x1FFFFFFF)
-              : const Color(0x30000000),
-          borderColor: isDark
-              ? const Color(0x33FFFFFF)
-              : const Color(0x1A000000),
-          borderWidth: 1.0,
-          borderRadius: 24,
-          blurSigma: 14.0,
+        return Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -991,37 +946,27 @@ void showSolfaSheet(
             final currentTranspose = ref.watch(transposeValueProvider);
             final currentKey = ref.watch(transposedKeyProvider);
             final showChords = ref.watch(hymnAppearanceProvider).showChords;
-            final isDark = colorScheme.brightness == Brightness.dark;
 
             return Dialog(
-              backgroundColor: Colors.transparent,
+              backgroundColor: colorScheme.surfaceContainerHigh,
               surfaceTintColor: Colors.transparent,
-              child: GlassContainer(
-                backgroundColor: isDark
-                    ? const Color(0x1FFFFFFF)
-                    : const Color(0x30000000),
-                borderColor: isDark
-                    ? const Color(0x33FFFFFF)
-                    : const Color(0x1A000000),
-                borderWidth: 1.0,
-                borderRadius: 24,
-                blurSigma: 14.0,
-                padding: EdgeInsets.zero,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                    child: _solfaSheetContent(
-                      context: context,
-                      colorScheme: colorScheme,
-                      textTheme: textTheme,
-                      currentTranspose: currentTranspose,
-                      currentKey: currentKey,
-                      showChords: showChords,
-                      onCreateArrangement: onCreateArrangement,
-                      ref: ref,
-                      setSheetState: setSheetState,
-                    ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                  child: _solfaSheetContent(
+                    context: context,
+                    colorScheme: colorScheme,
+                    textTheme: textTheme,
+                    currentTranspose: currentTranspose,
+                    currentKey: currentKey,
+                    showChords: showChords,
+                    onCreateArrangement: onCreateArrangement,
+                    ref: ref,
+                    setSheetState: setSheetState,
                   ),
                 ),
               ),
@@ -1042,18 +987,8 @@ void showSolfaSheet(
             final currentTranspose = ref.watch(transposeValueProvider);
             final currentKey = ref.watch(transposedKeyProvider);
             final showChords = ref.watch(hymnAppearanceProvider).showChords;
-            final isDark = colorScheme.brightness == Brightness.dark;
 
-            return GlassContainer(
-              backgroundColor: isDark
-                  ? const Color(0x1FFFFFFF)
-                  : const Color(0x30000000),
-              borderColor: isDark
-                  ? const Color(0x33FFFFFF)
-                  : const Color(0x1A000000),
-              borderWidth: 1.0,
-              borderRadius: 24,
-              blurSigma: 14.0,
+            return Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
