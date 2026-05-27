@@ -236,7 +236,7 @@ class _TitleSlide extends StatelessWidget {
               style: textTheme.displayLarge?.copyWith(
                 fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
-                fontSize: baseFontSize * 4.0,
+                fontSize: baseFontSize * 2.0,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
@@ -264,7 +264,7 @@ class _TitleSlide extends StatelessWidget {
 
 /// Slide de letra: contenido de la estrofa con fontSize fijo.
 ///
-/// El fontSize es siempre `baseFontSize * 3.5`. Si el contenido no cabe
+/// El fontSize es siempre `baseFontSize * 1.5`. Si el contenido no cabe
 /// verticalmente, se envuelve en [SingleChildScrollView] para scroll.
 ///
 /// Mantiene [AnimatedSwitcher] para transiciones suaves
@@ -313,7 +313,7 @@ class _LyricsSlide extends StatelessWidget {
         (textTheme.bodyLarge ?? const TextStyle()).copyWith(
       fontFamily: appearance.fontFamily,
       color: appearance.textColor,
-      fontSize: baseFontSize * 3.5,
+      fontSize: baseFontSize * 1.5,
       height: 1.8,
       fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
     );
@@ -323,7 +323,7 @@ class _LyricsSlide extends StatelessWidget {
       fontFamily: appearance.fontFamily,
       color: appearance.chordColor,
       fontWeight: FontWeight.bold,
-      fontSize: (baseFontSize * 3.5 * 0.5).clamp(24.0, 80.0),
+      fontSize: (baseFontSize * 1.5 * 0.5).clamp(24.0, 80.0),
     );
 
     // ── Detección de desbordamiento vertical ──
@@ -591,7 +591,7 @@ class _AmenSlide extends StatelessWidget {
         style: TextStyle(
           fontFamily: appearance.fontFamily,
           color: appearance.textColor,
-          fontSize: baseFontSize * 5.0,
+          fontSize: baseFontSize * 2.0,
           fontWeight: FontWeight.bold,
         ),
         textAlign: TextAlign.center,
