@@ -12,6 +12,7 @@ import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/audio_repository.dart';
 import '../../shared_widgets/responsive_chord_widget.dart';
+import '../../shared_widgets/adaptive_stanza_text.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
@@ -482,17 +483,17 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       fontSize: chordFontSize,
     );
 
-    // Sin acordes → texto plano con Wrap nativo para reflow
+    // Sin acordes → texto plano adaptativo
     if (!appearance.showChords) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Container(
           width: double.infinity,
-          child: Text(
-            stripChords(transposedLyric).replaceAll('\n', ' '),
+          child: AdaptiveStanzaText(
+            // stripChords conserva los \n, el widget decide si colapsarlos
+            text: stripChords(transposedLyric),
             style: lyricStyle,
             textAlign: TextAlign.center,
-            softWrap: true,
           ),
         ),
       );

@@ -9,6 +9,7 @@ import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
 import '../../shared_widgets/responsive_chord_widget.dart';
+import '../../shared_widgets/adaptive_stanza_text.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -380,7 +381,7 @@ class _LyricsSlide extends StatelessWidget {
     );
   }
 
-  /// Renderiza el contenido procesado sin acordes (comportamiento original).
+  /// Renderiza el contenido sin acordes de forma adaptativa.
   Widget _buildPlainContent(
     String content,
     double width,
@@ -388,12 +389,12 @@ class _LyricsSlide extends StatelessWidget {
   ) {
     return Container(
       width: double.infinity,
-      child: Text(
-        stripChords(content).replaceAll('\n', ' '),
+      child: AdaptiveStanzaText(
         key: const ValueKey('plain'),
+        // stripChords conserva los \n, el widget decide si colapsarlos
+        text: stripChords(content),
         style: style,
         textAlign: TextAlign.center,
-        softWrap: true,
       ),
     );
   }
