@@ -149,6 +149,7 @@ void _syncAppearanceToProjection(WidgetRef ref) {
       showChords: appearance.showChords,
       cardOpacity: appearance.cardOpacity,
       projectionFontScale: appearance.projectionFontScale,
+      bgColor: _colorToHex(appearance.bgColor),
     ).catchError((_) => false);
 
     // NUEVO: Enviar fondo seleccionado
