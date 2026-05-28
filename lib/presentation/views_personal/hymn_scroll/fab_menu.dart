@@ -161,6 +161,13 @@ class _FabOption extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
+    // Calcula color de icono con contraste optimo segun el fondo:
+    // - Fondos oscuros → icono dorado (#CCA43B)
+    // - Fondos claros → icono negro (#1A1A1A)
+    final iconColor = color.computeLuminance() > 0.4
+        ? const Color(0xFF1A1A1A)
+        : const Color(0xFFCCA43B);
+
     return Positioned(
       right: 8,
       bottom: 8 + (offset + 1) * 64.0,
@@ -199,6 +206,7 @@ class _FabOption extends StatelessWidget {
               heroTag: 'fab_$label',
               onPressed: onTap,
               backgroundColor: color,
+              foregroundColor: iconColor,
               child: Icon(icon),
             ),
           ],
