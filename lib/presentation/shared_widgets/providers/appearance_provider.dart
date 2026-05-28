@@ -95,7 +95,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
         chordColor: chordColor != null ? _hexToColor(chordColor) : const Color(0xFFCCA43B),
         fontScale: fontScale != null ? double.tryParse(fontScale) ?? 1.0 : 1.0,
         projectionFontScale: projectionFontScale != null
-            ? double.tryParse(projectionFontScale)?.clamp(0.5, 2.0) ?? 1.0
+            ? double.tryParse(projectionFontScale)?.clamp(0.5, 2.5) ?? 1.0
             : 1.0,
         showChords: showChordsStr == 'true',
         cardOpacity: cardOpacityStr != null ? double.tryParse(cardOpacityStr)?.clamp(0.0, 1.0) ?? 0.1 : 0.1,
@@ -202,7 +202,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
   }
 
   void setProjectionFontScale(double scale) {
-    state = state.copyWith(projectionFontScale: scale.clamp(0.5, 2.0));
+    state = state.copyWith(projectionFontScale: scale.clamp(0.5, 2.5));
     _saveToDb();
   }
 
