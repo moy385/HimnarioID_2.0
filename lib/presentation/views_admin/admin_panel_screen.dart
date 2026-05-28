@@ -126,7 +126,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               style: theme.textTheme.headlineMedium,
             ),
             const SizedBox(height: 24),
-            // Card 1: Mensaje de bienvenida
+            // Card 1: Proyecto GitHub
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -136,22 +136,33 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.person_outline, color: colorScheme.primary),
+                    Icon(Icons.code, color: colorScheme.primary),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'Bienvenido, acá puedes configurar y personalizar tu app.',
+                            'HimnarioID 2.0',
                             style: theme.textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Selecciona una opción del menú y prueba.',
+                            'App de himnos con proyección, acordes y audio.',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.open_in_new),
+                            label: const Text('Abrir en GitHub'),
+                            onPressed: () {
+                              launchUrl(
+                                Uri.parse('https://github.com/moy385/HimnarioID_2.0'),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -171,7 +182,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.code, color: colorScheme.primary),
+                    Icon(Icons.engineering, color: colorScheme.primary),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
