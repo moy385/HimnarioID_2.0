@@ -282,7 +282,6 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
             .toList(),
       );
 
-      // ═══ FIX BUG 2: Enviar bgColor en apariencia ═══
       final appearance = ref.read(hymnAppearanceProvider);
       await dataSource.sendSetAppearance(
         textColor: _colorToHex(appearance.textColor),
@@ -292,7 +291,6 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
         showChords: appearance.showChords,
         cardOpacity: appearance.cardOpacity,
         projectionFontScale: appearance.projectionFontScale,
-        bgColor: _colorToHex(appearance.bgColor),
       );
     } catch (_) {
       // Fallo silencioso — el estado local (liveControl) persiste

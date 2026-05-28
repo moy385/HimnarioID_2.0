@@ -99,19 +99,10 @@ String _colorToHex(Color color) {
   return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
 }
 
-/// Mapea [fontScale] al nombre del enum [ProjectionFontSize] legacy.
-String _fontScaleToFontSizeName(double scale) {
-  if (scale <= 0.8) return 'small';
-  if (scale <= 1.2) return 'medium';
-  if (scale <= 1.5) return 'large';
-  return 'extraLarge';
-}
-
 /// Envía el estado actual de [hymnAppearanceProvider] a la ventana
 /// de proyección vía [WindowService.sendMessage] (silencioso).
 void _syncAppearanceToProjection(WidgetRef ref) {
   final appearance = ref.read(hymnAppearanceProvider);
-  final isTransparent = appearance.bgColor.a == 0.0;
   final message = <String, dynamic>{
     'type': 'SET_CONFIG',
     // Nuevos campos de apariencia
@@ -121,18 +112,12 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'isBold': appearance.isBold,
     'fontScale': appearance.fontScale,
     'projectionFontScale': appearance.projectionFontScale,
-    'bgColor': _colorToHex(appearance.bgColor),
     'showChords': appearance.showChords,
     'cardOpacity': appearance.cardOpacity,
     'bgFondoId': appearance.selectedFondo?.id,
     'bgTipo': appearance.selectedFondo?.tipo.value,
     'bgRuta': appearance.selectedFondo?.rutaArchivo,
     'colorHex': appearance.selectedFondo?.colorHex,
-    // Campos legacy (retrocompatibilidad)
-    'backgroundColor': _colorToHex(appearance.bgColor),
-    'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
-    'transitionSpeed': 0.5,
-    'background': isTransparent ? 'black' : 'color',
   };
   // Fire-and-forget silencioso
   ref.read(windowServiceProvider).sendMessage(message);
@@ -149,7 +134,6 @@ void _syncAppearanceToProjection(WidgetRef ref) {
       showChords: appearance.showChords,
       cardOpacity: appearance.cardOpacity,
       projectionFontScale: appearance.projectionFontScale,
-      bgColor: _colorToHex(appearance.bgColor),
     ).catchError((_) => false);
 
     // NUEVO: Enviar fondo seleccionado

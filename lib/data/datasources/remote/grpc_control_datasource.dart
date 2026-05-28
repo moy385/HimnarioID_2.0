@@ -210,7 +210,7 @@ class GrpcControlDataSource {
     return response.success;
   }
 
-  /// Envía la configuración completa de apariencia al display remoto.
+  /// Envía configuración de apariencia (texto, acordes, fuente) al display remoto.
   Future<bool> sendSetAppearance({
     String? textColor,
     String? chordColor,
@@ -219,7 +219,6 @@ class GrpcControlDataSource {
     bool? showChords,
     double? cardOpacity,
     double? projectionFontScale,
-    String? bgColor,
   }) async {
     _ensureConnected();
     try {
@@ -231,7 +230,6 @@ class GrpcControlDataSource {
       if (showChords != null) request.showChords = showChords;
       if (cardOpacity != null) request.cardOpacity = cardOpacity;
       if (projectionFontScale != null) request.projectionFontScale = projectionFontScale;
-      if (bgColor != null) request.bgColor = bgColor;
       final response = await _client!.sendCommand(request);
       return response.success;
     } on GrpcError catch (e) {

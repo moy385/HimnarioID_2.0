@@ -268,7 +268,6 @@ class GrpcDisplayServer extends HymnControlServiceBase {
               if (request.hasShowChords()) notifier.setShowChords(request.showChords);
               if (request.hasCardOpacity()) notifier.setCardOpacity(request.cardOpacity);
               if (request.hasProjectionFontScale()) notifier.setProjectionFontScale(request.projectionFontScale);
-              if (request.hasBgColor()) notifier.setBgColor(_parseHexColor(request.bgColor));
               _log.info('Apariencia actualizada desde control remoto');
             } catch (e) {
               _log.severe('Error al aplicar apariencia remota: $e');
