@@ -23,6 +23,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.41.9'
           cache: true
 
       - name: Enable macOS desktop
@@ -32,38 +33,25 @@ jobs:
         run: flutter pub get
 
       - name: Build macOS release (unsigned)
-        run: flutter build macos --release --no-codesign
+        run: flutter build macos --release
 
       - name: Package .dmg
         run: |
-          APP_BUNDLE="build/macos/Build/Products/Release/Runner.app"
+          APP_NAME="himnario_id_2"
+          APP_BUNDLE="build/macos/Build/Products/Release/${APP_NAME}.app"
           DMG_NAME="MQ_App-macos-x64"
           mkdir -p dist
 
-          # Usar create-dmg para una ventana de instalacion bonita
-          npm install -g create-dmg 2>/dev/null
-          create-dmg \
-            --volname "MQ App" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --app-drop-link 450 170 \
-            --icon "Runner" 150 170 \
-            --no-internet-enable \
-            "${DMG_NAME}.dmg" \
-            "${APP_BUNDLE}" || \
-          # Fallback: hdiutil (viene instalado en macOS)
-          (
-            mkdir -p dmg_temp
-            cp -R "${APP_BUNDLE}" dmg_temp/
-            ln -s /Applications dmg_temp/Applications
-            hdiutil create \
-              -volname "MQ App" \
-              -srcfolder dmg_temp \
-              -ov -format UDZO \
-              "${DMG_NAME}.dmg"
-            rm -rf dmg_temp
-          )
+          # Fallback: hdiutil (viene instalado en macOS, mas confiable)
+          mkdir -p dmg_temp
+          cp -R "${APP_BUNDLE}" dmg_temp/
+          ln -s /Applications dmg_temp/Applications
+          hdiutil create \
+            -volname "MQ App" \
+            -srcfolder dmg_temp \
+            -ov -format UDZO \
+            "${DMG_NAME}.dmg"
+          rm -rf dmg_temp
 
           mv "${DMG_NAME}.dmg" dist/
           ls -lh dist/

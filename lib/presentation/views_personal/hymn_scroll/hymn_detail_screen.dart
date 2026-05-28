@@ -12,6 +12,7 @@ import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/repositories/audio_repository.dart';
 import '../../shared_widgets/responsive_chord_widget.dart';
+import '../../shared_widgets/adaptive_stanza_text.dart';
 import '../../../core/window_manager/window_providers.dart';
 import '../../dual_mode_wrapper/dual_mode_providers.dart';
 import '../../shared_widgets/control_sheets.dart';
@@ -482,14 +483,18 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       fontSize: chordFontSize,
     );
 
-    // Sin acordes → texto plano con Wrap nativo para reflow
+    // Sin acordes → texto plano adaptativo
     if (!appearance.showChords) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Text(
-          stripChords(transposedLyric),
-          textAlign: TextAlign.justify,
-          style: lyricStyle,
+        child: Container(
+          width: double.infinity,
+          child: AdaptiveStanzaText(
+            // stripChords conserva los \n, el widget decide si colapsarlos
+            text: stripChords(transposedLyric),
+            style: lyricStyle,
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
@@ -500,7 +505,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       textStyle: lyricStyle,
       chordStyle: chordStyle,
       lineSpacing: 4,
-      textAlign: TextAlign.justify,
+      textAlign: TextAlign.center,
     );
   }
 
@@ -930,23 +935,26 @@ class _FondoBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (fondo == null) {
-      return Container(color: bgColor, child: child);
+      return SizedBox.expand(child: Container(color: bgColor, child: child));
     }
     return switch (fondo!.tipo) {
-      FondoPantallaTipo.colorSolido => Container(color: bgColor, child: child),
-      FondoPantallaTipo.imagen => Stack(
-          children: [
-            if (fondo!.rutaArchivo != null)
-              Positioned.fill(
-                child: Image.file(
-                  File(fondo!.rutaArchivo!),
-                  key: ValueKey('img_${fondo!.rutaArchivo}'),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: bgColor),
+      FondoPantallaTipo.colorSolido =>
+        SizedBox.expand(child: Container(color: bgColor, child: child)),
+      FondoPantallaTipo.imagen => SizedBox.expand(
+          child: Stack(
+            children: [
+              if (fondo!.rutaArchivo != null)
+                Positioned.fill(
+                  child: Image.file(
+                    File(fondo!.rutaArchivo!),
+                    key: ValueKey('img_${fondo!.rutaArchivo}'),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: bgColor),
+                  ),
                 ),
-              ),
-            child,
-          ],
+              child,
+            ],
+          ),
         ),
     };
   }

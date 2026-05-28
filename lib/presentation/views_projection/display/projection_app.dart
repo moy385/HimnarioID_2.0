@@ -8,13 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/enums/estrofa_tipo.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/enums/himno_tipo.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/fullscreen_handler.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
-import '../providers/projection_providers.dart';
 import 'live_projection_screen.dart';
 
 /// Punto de entrada para la segunda ventana de proyección.
@@ -150,44 +150,9 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
   /// de la proyección (color de fondo, tamaño de fuente, velocidad de
   /// transición, fondo seleccionado, y apariencia de texto).
   void _handleSetConfig(Map<String, dynamic> message) {
-    final configNotifier = ref.read(projectionConfigProvider.notifier);
     final appearanceNotifier = ref.read(hymnAppearanceProvider.notifier);
 
-    // ── Campos legacy (retrocompatibilidad) ──
-    if (message.containsKey('backgroundColor')) {
-      final hex = message['backgroundColor'] as String;
-      try {
-        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
-        configNotifier.setBackgroundColor(color);
-      } catch (_) {
-        // Ignorar color inválido
-      }
-    }
-
-    if (message.containsKey('fontSize')) {
-      final fontSize = message['fontSize'] as String;
-      final parsed = ProjectionFontSize.values.firstWhere(
-        (e) => e.name == fontSize,
-        orElse: () => ProjectionFontSize.medium,
-      );
-      configNotifier.setFontSize(parsed);
-    }
-
-    if (message.containsKey('transitionSpeed')) {
-      final speed = (message['transitionSpeed'] as num).toDouble();
-      configNotifier.setTransitionSpeed(speed);
-    }
-
-    if (message.containsKey('background')) {
-      final bg = message['background'] as String;
-      final parsed = ProjectionBackground.values.firstWhere(
-        (e) => e.name == bg,
-        orElse: () => ProjectionBackground.black,
-      );
-      configNotifier.setBackground(parsed);
-    }
-
-    // ── Nuevos campos de apariencia (Brocha) ──
+    // ── Campos de apariencia (Brocha) ──
 
     if (message.containsKey('textColor')) {
       final hex = message['textColor'] as String;
@@ -225,17 +190,6 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       appearanceNotifier.setProjectionFontScale(
         (message['projectionFontScale'] as num).toDouble(),
       );
-    }
-
-    if (message.containsKey('bgColor')) {
-      final hex = message['bgColor'] as String;
-      try {
-        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
-        appearanceNotifier.setBgColor(color);
-        configNotifier.setBackgroundColor(color);
-      } catch (_) {
-        // Ignorar color inválido
-      }
     }
 
     if (message.containsKey('showChords') && message['showChords'] != null) {
@@ -283,13 +237,7 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'MQ App - Proyección',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.indigo,
-            brightness: Brightness.dark,
-          ),
-          scaffoldBackgroundColor: Colors.black,
-        ),
+        theme: AppTheme.projectionTheme,
         home: Scaffold(
           backgroundColor: Colors.black,
           body: liveState.hymn == null

@@ -33,8 +33,9 @@ const List<Color> _textColors = [
 ];
 
 /// Colores predefinidos para los acordes musicales.
+/// El dorado (#CCA43B) es el color por defecto (paleta corporativa).
 const List<Color> _chordColors = [
-  Color(0xFF6750A4), // púrpura (default)
+  Color(0xFFCCA43B), // dorado (default) — paleta corporativa
   Color(0xFFB3261E), // rojo
   Color(0xFF1A6B8A), // azul
   Color(0xFF1D6F42), // verde
@@ -98,19 +99,10 @@ String _colorToHex(Color color) {
   return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
 }
 
-/// Mapea [fontScale] al nombre del enum [ProjectionFontSize] legacy.
-String _fontScaleToFontSizeName(double scale) {
-  if (scale <= 0.8) return 'small';
-  if (scale <= 1.2) return 'medium';
-  if (scale <= 1.5) return 'large';
-  return 'extraLarge';
-}
-
 /// Envía el estado actual de [hymnAppearanceProvider] a la ventana
 /// de proyección vía [WindowService.sendMessage] (silencioso).
 void _syncAppearanceToProjection(WidgetRef ref) {
   final appearance = ref.read(hymnAppearanceProvider);
-  final isTransparent = appearance.bgColor.a == 0.0;
   final message = <String, dynamic>{
     'type': 'SET_CONFIG',
     // Nuevos campos de apariencia
@@ -120,18 +112,12 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'isBold': appearance.isBold,
     'fontScale': appearance.fontScale,
     'projectionFontScale': appearance.projectionFontScale,
-    'bgColor': _colorToHex(appearance.bgColor),
     'showChords': appearance.showChords,
     'cardOpacity': appearance.cardOpacity,
     'bgFondoId': appearance.selectedFondo?.id,
     'bgTipo': appearance.selectedFondo?.tipo.value,
     'bgRuta': appearance.selectedFondo?.rutaArchivo,
     'colorHex': appearance.selectedFondo?.colorHex,
-    // Campos legacy (retrocompatibilidad)
-    'backgroundColor': _colorToHex(appearance.bgColor),
-    'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
-    'transitionSpeed': 0.5,
-    'background': isTransparent ? 'black' : 'color',
   };
   // Fire-and-forget silencioso
   ref.read(windowServiceProvider).sendMessage(message);
@@ -185,6 +171,11 @@ void showBrushSheet(
             final fondosAsync = ref.watch(fondosActivosProvider);
 
             return Dialog(
+              backgroundColor: colorScheme.surfaceContainerHigh,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 700, maxWidth: 500),
                 child: ListView(
@@ -222,33 +213,31 @@ void showBrushSheet(
               maxChildSize: 0.95,
               expand: false,
               builder: (context, scrollController) {
-                return Container(
+                return ListView(
+                  controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                  child: ListView(
-                    controller: scrollController,
-                    children: <Widget>[
-                      // ---- Handle (solo móvil) ----
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                  children: <Widget>[
+                    // ---- Handle (solo móvil) ----
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      ..._brushSheetChildren(
-                        colorScheme: colorScheme,
-                        textTheme: textTheme,
-                        appearance: appearance,
-                        fondosAsync: fondosAsync,
-                        ref: ref,
-                      ),
-                    ],
-                  ),
+                    ),
+                    ..._brushSheetChildren(
+                      colorScheme: colorScheme,
+                      textTheme: textTheme,
+                      appearance: appearance,
+                      fondosAsync: fondosAsync,
+                      ref: ref,
+                    ),
+                  ],
                 );
               },
             );
@@ -479,8 +468,8 @@ List<Widget> _brushSheetChildren({
             child: Slider(
               value: appearance.projectionFontScale,
               min: 0.5,
-              max: 3.0,
-              divisions: 10,
+              max: 2.5,
+              divisions: 8,
               label:
                   '${(appearance.projectionFontScale * 100).round()}%',
               onChanged: (value) {
@@ -704,6 +693,11 @@ void showNoteSheet(
         final isPlaying = ref.watch(isAudioPlayingProvider);
 
         return Dialog(
+          backgroundColor: colorScheme.surfaceContainerHigh,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
             child: Padding(
@@ -732,7 +726,7 @@ void showNoteSheet(
         final textTheme = Theme.of(_).textTheme;
         final isPlaying = ref.watch(isAudioPlayingProvider);
 
-        return Container(
+        return Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -939,6 +933,11 @@ void showSolfaSheet(
             final showChords = ref.watch(hymnAppearanceProvider).showChords;
 
             return Dialog(
+              backgroundColor: colorScheme.surfaceContainerHigh,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
                 child: Padding(
@@ -974,7 +973,7 @@ void showSolfaSheet(
             final currentKey = ref.watch(transposedKeyProvider);
             final showChords = ref.watch(hymnAppearanceProvider).showChords;
 
-            return Container(
+            return Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

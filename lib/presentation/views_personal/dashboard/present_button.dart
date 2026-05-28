@@ -17,18 +17,22 @@ import '../../views_projection/providers/presentation_providers.dart';
 /// Al presionar "Detener":
 ///  1. Cierra la ventana de proyección vía [WindowService.closeProjectionWindow]
 ///  2. Marca [isPresentingProvider] como `false`
+///
+/// Colores: fondo dorado intenso (#CCA43B), icono/texto negro (#1A1A1A).
 class PresentButton extends ConsumerWidget {
   const PresentButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPresenting = ref.watch(isPresentingProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return FloatingActionButton.extended(
+      heroTag: 'present_button',
       onPressed: () => _togglePresentation(context, ref, isPresenting),
-      backgroundColor:
-          isPresenting ? colorScheme.errorContainer : colorScheme.primaryContainer,
+      backgroundColor: isPresenting
+          ? Theme.of(context).colorScheme.errorContainer
+          : const Color(0xFFCCA43B),
+      foregroundColor: const Color(0xFF1A1A1A),
       icon: Icon(
         isPresenting ? Icons.stop_screen_share : Icons.screen_share,
       ),

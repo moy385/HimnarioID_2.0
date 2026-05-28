@@ -9,6 +9,7 @@ import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/projection_slide.dart';
 import '../../shared_widgets/responsive_chord_widget.dart';
+import '../../shared_widgets/adaptive_stanza_text.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -236,7 +237,7 @@ class _TitleSlide extends StatelessWidget {
               style: textTheme.displayLarge?.copyWith(
                 fontFamily: appearance.fontFamily,
                 color: appearance.textColor,
-                fontSize: baseFontSize * 4.0,
+                fontSize: baseFontSize * 2.0,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
@@ -264,7 +265,7 @@ class _TitleSlide extends StatelessWidget {
 
 /// Slide de letra: contenido de la estrofa con fontSize fijo.
 ///
-/// El fontSize es siempre `baseFontSize * 3.5`. Si el contenido no cabe
+/// El fontSize es siempre `baseFontSize * 1.5`. Si el contenido no cabe
 /// verticalmente, se envuelve en [SingleChildScrollView] para scroll.
 ///
 /// Mantiene [AnimatedSwitcher] para transiciones suaves
@@ -313,8 +314,8 @@ class _LyricsSlide extends StatelessWidget {
         (textTheme.bodyLarge ?? const TextStyle()).copyWith(
       fontFamily: appearance.fontFamily,
       color: appearance.textColor,
-      fontSize: baseFontSize * 3.5,
-      height: 1.8,
+      fontSize: baseFontSize * 1.5,
+      height: 1.18,
       fontWeight: appearance.isBold ? FontWeight.bold : FontWeight.normal,
     );
 
@@ -323,7 +324,7 @@ class _LyricsSlide extends StatelessWidget {
       fontFamily: appearance.fontFamily,
       color: appearance.chordColor,
       fontWeight: FontWeight.bold,
-      fontSize: (baseFontSize * 3.5 * 0.5).clamp(24.0, 80.0),
+      fontSize: (baseFontSize * 1.5 * 0.5).clamp(24.0, 80.0),
     );
 
     // ── Detección de desbordamiento vertical ──
@@ -380,17 +381,21 @@ class _LyricsSlide extends StatelessWidget {
     );
   }
 
-  /// Renderiza el contenido procesado sin acordes (comportamiento original).
+  /// Renderiza el contenido sin acordes de forma adaptativa.
   Widget _buildPlainContent(
     String content,
     double width,
     TextStyle style,
   ) {
-    return Text(
-      stripChords(content),
-      key: const ValueKey('plain'),
-      style: style,
-      textAlign: TextAlign.center,
+    return Container(
+      width: double.infinity,
+      child: AdaptiveStanzaText(
+        key: const ValueKey('plain'),
+        // stripChords conserva los \n, el widget decide si colapsarlos
+        text: stripChords(content),
+        style: style,
+        textAlign: TextAlign.center,
+      ),
     );
   }
 
@@ -409,7 +414,7 @@ class _LyricsSlide extends StatelessWidget {
       stanza: content,
       textStyle: lyricStyle,
       chordStyle: chordStyle,
-      lineSpacing: lyricStyle.fontSize! * 0.4,
+      lineSpacing: lyricStyle.fontSize! * 0.125,
       textAlign: TextAlign.center,
       runAlignment: WrapAlignment.center,
     );
@@ -591,7 +596,7 @@ class _AmenSlide extends StatelessWidget {
         style: TextStyle(
           fontFamily: appearance.fontFamily,
           color: appearance.textColor,
-          fontSize: baseFontSize * 5.0,
+          fontSize: baseFontSize * 2.0,
           fontWeight: FontWeight.bold,
         ),
         textAlign: TextAlign.center,

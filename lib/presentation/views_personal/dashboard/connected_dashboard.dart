@@ -12,6 +12,7 @@ import '../../shared_widgets/search_bar.dart';
 import '../../views_projection/controller/minimal_control_screen.dart';
 import '../../views_projection/providers/active_hymn_providers.dart';
 import '../../views_projection/providers/connection_providers.dart';
+import '../../views_projection/providers/live_control_providers.dart';
 import '../providers/hymn_providers.dart';
 
 /// Dashboard para modo Emisor (conectado a display remoto).
@@ -217,18 +218,17 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
                     final himno = himnos[index];
                     return HymnCard(
                       himno: himno,
-                      onTap: () {
+                      onTap: () async {
                         ref.read(activeHymnIdProvider.notifier).state =
                             himno.id;
-                        // Enviar himno al display remoto inmediatamente
-                        if (ref.read(isConnectedProvider)) {
-                          _sendHymnToDisplay(ref, himno);
+                        await _sendHymnToDisplay(ref, himno);
+                        if (context.mounted) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MinimalControlScreen(),
+                            ),
+                          );
                         }
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const MinimalControlScreen(),
-                          ),
-                        );
                       },
                     );
                   },
@@ -241,7 +241,9 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
     );
   }
 
-  /// Envía el himno completo al display remoto vía gRPC.
+  /// Envía el himno completo al display remoto vía gRPC y actualiza
+  /// el estado local ([liveControlProvider]) para que el control remoto
+  /// muestre el himno correcto inmediatamente.
   Future<void> _sendHymnToDisplay(WidgetRef ref, Himno himno) async {
     try {
       final repo = ref.read(hymnRepositoryProvider);
@@ -249,6 +251,18 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
       if (versionPaisId < 0) return;
       final stanzas = await repo.getStanzas(versionPaisId);
       if (stanzas.isEmpty) return;
+
+      // ═══ FIX BUG 1: Actualizar estado local ANTES de navegar ═══
+      // Esto asegura que MinimalControlScreen ya tenga el himno cargado
+      // cuando se construya, sin depender de ref.listen.
+      ref.read(liveControlProvider.notifier).loadHymn(
+            himno,
+            stanzas,
+            versionPaisId: versionPaisId,
+          );
+
+      // ═══ Enviar por gRPC solo si hay conexión activa ═══
+      if (!ref.read(isConnectedProvider)) return;
 
       final dataSource = ref.read(controlDataSourceProvider);
       await dataSource.sendHymnContent(
@@ -268,7 +282,6 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
             .toList(),
       );
 
-      // También enviar apariencia actual
       final appearance = ref.read(hymnAppearanceProvider);
       await dataSource.sendSetAppearance(
         textColor: _colorToHex(appearance.textColor),
@@ -280,7 +293,7 @@ class _ConnectedDashboardState extends ConsumerState<ConnectedDashboard> {
         projectionFontScale: appearance.projectionFontScale,
       );
     } catch (_) {
-      // Fallo silencioso — el estado local persiste
+      // Fallo silencioso — el estado local (liveControl) persiste
     }
   }
 

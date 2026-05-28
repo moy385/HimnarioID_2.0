@@ -82,7 +82,6 @@ String _colorToHex(Color color) {
 
 /// Construye el payload del mensaje [SET_CONFIG] con la apariencia actual.
 Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
-  final isTransparent = appearance.bgColor.a == 0.0;
   return {
     'type': 'SET_CONFIG',
     // Nuevos campos de apariencia
@@ -91,7 +90,6 @@ Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
     'fontFamily': appearance.fontFamily,
     'isBold': appearance.isBold,
     'fontScale': appearance.fontScale,
-    'bgColor': _colorToHex(appearance.bgColor),
     'showChords': appearance.showChords,
     'cardOpacity': appearance.cardOpacity,
     // Campos de fondo seleccionado
@@ -99,20 +97,7 @@ Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
     'bgTipo': appearance.selectedFondo?.tipo.value,
     'bgRuta': appearance.selectedFondo?.rutaArchivo,
     'colorHex': appearance.selectedFondo?.colorHex,
-    // Campos legacy (retrocompatibilidad)
-    'backgroundColor': _colorToHex(appearance.bgColor),
-    'fontSize': _fontScaleToFontSizeName(appearance.fontScale),
-    'transitionSpeed': 0.5,
-    'background': isTransparent ? 'black' : 'color',
   };
-}
-
-/// Mapea [fontScale] al nombre del enum [ProjectionFontSize] legacy.
-String _fontScaleToFontSizeName(double scale) {
-  if (scale <= 0.8) return 'small';
-  if (scale <= 1.2) return 'medium';
-  if (scale <= 1.5) return 'large';
-  return 'extraLarge';
 }
 
 

@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'crud_hymns/hymn_list_screen.dart';
 import 'crud_catalogs/catalog_panel_screen.dart';
-import '../views_personal/dashboard/home_screen.dart';
 
 /// Pantalla principal del panel de configuración con navegación tipo Drawer.
 ///
@@ -34,9 +33,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   String get _title => _titles[_selectedDrawerIndex + 1];
 
   void _goHome() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+    Navigator.of(context).pop();
   }
 
   @override
@@ -129,7 +126,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               style: theme.textTheme.headlineMedium,
             ),
             const SizedBox(height: 24),
-            // Card 1: Mensaje de bienvenida
+            // Card 1: Pagina web oficial
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -139,22 +136,33 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.person_outline, color: colorScheme.primary),
+                    Icon(Icons.language, color: colorScheme.primary),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'Bienvenido, acá puedes configurar y personalizar tu app.',
+                            'Pagina web oficial',
                             style: theme.textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Selecciona una opción del menú y prueba.',
+                            'melquisedec-ark.github.io',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.open_in_new),
+                            label: const Text('Visitar'),
+                            onPressed: () {
+                              launchUrl(
+                                Uri.parse('https://melquisedec-ark.github.io'),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -174,7 +182,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.code, color: colorScheme.primary),
+                    Icon(Icons.engineering, color: colorScheme.primary),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
