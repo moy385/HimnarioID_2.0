@@ -18,6 +18,7 @@ Los archivos estan en `.github/workflows/`. Errores comunes:
 | Workflow | Error conocido | Fix |
 |----------|---------------|-----|
 | `build_linux.yml` | `gstreamer-1.0 not found` | Agregar `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev` al `apt-get install` |
+| `build_linux.yml` | `no matches found for MQ_App-linux-x64.tar.gz` en upload | El tar.gz se crea en `build/` pero el upload lo busca en la raiz. Usar `tar -czf MQ_App-linux-x64.tar.gz -C build/linux/x64/release bundle/` en vez de `cd` |
 | `build_macos.yml` | `--no-codesign` no existe | Quitar el flag `--no-codesign` |
 | `build_linux.yml` / `build_macos.yml` | Swift Package Manager / plugin incompatibility con Flutter 3.44+ | Pinear `flutter-version: '3.41.9'` en el step de `subosito/flutter-action` |
 
