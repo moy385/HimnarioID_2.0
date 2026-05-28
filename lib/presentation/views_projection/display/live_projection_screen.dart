@@ -386,11 +386,15 @@ class _LyricsSlide extends StatelessWidget {
     double width,
     TextStyle style,
   ) {
-    return Text(
-      stripChords(content),
-      key: const ValueKey('plain'),
-      style: style,
-      textAlign: TextAlign.center,
+    return Container(
+      width: double.infinity,
+      child: Text(
+        stripChords(content).replaceAll('\n', ' '),
+        key: const ValueKey('plain'),
+        style: style,
+        textAlign: TextAlign.center,
+        softWrap: true,
+      ),
     );
   }
 

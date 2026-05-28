@@ -486,10 +486,14 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     if (!appearance.showChords) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Text(
-          stripChords(transposedLyric),
-          textAlign: TextAlign.justify,
-          style: lyricStyle,
+        child: Container(
+          width: double.infinity,
+          child: Text(
+            stripChords(transposedLyric).replaceAll('\n', ' '),
+            style: lyricStyle,
+            textAlign: TextAlign.center,
+            softWrap: true,
+          ),
         ),
       );
     }
@@ -500,7 +504,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       textStyle: lyricStyle,
       chordStyle: chordStyle,
       lineSpacing: 4,
-      textAlign: TextAlign.justify,
+      textAlign: TextAlign.center,
     );
   }
 
