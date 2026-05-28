@@ -126,7 +126,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               style: theme.textTheme.headlineMedium,
             ),
             const SizedBox(height: 24),
-            // Card 1: Proyecto GitHub
+            // Card 1: Pagina web oficial
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -136,19 +136,19 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.code, color: colorScheme.primary),
+                    Icon(Icons.language, color: colorScheme.primary),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'HimnarioID 2.0',
+                            'Pagina web oficial',
                             style: theme.textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'App de himnos con proyección, acordes y audio.',
+                            'melquisedec-ark.github.io',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -156,10 +156,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                           const SizedBox(height: 8),
                           OutlinedButton.icon(
                             icon: const Icon(Icons.open_in_new),
-                            label: const Text('Abrir en GitHub'),
+                            label: const Text('Visitar'),
                             onPressed: () {
                               launchUrl(
-                                Uri.parse('https://github.com/moy385/HimnarioID_2.0'),
+                                Uri.parse('https://melquisedec-ark.github.io'),
                                 mode: LaunchMode.externalApplication,
                               );
                             },
