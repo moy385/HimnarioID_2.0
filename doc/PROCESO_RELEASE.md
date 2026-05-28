@@ -19,6 +19,7 @@ Los archivos estan en `.github/workflows/`. Errores comunes:
 |----------|---------------|-----|
 | `build_linux.yml` | `gstreamer-1.0 not found` | Agregar `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev` al `apt-get install` |
 | `build_macos.yml` | `--no-codesign` no existe | Quitar el flag `--no-codesign` |
+| `build_linux.yml` / `build_macos.yml` | Swift Package Manager / plugin incompatibility con Flutter 3.44+ | Pinear `flutter-version: '3.41.9'` en el step de `subosito/flutter-action` |
 
 Siempre verifica que los workflows pasen antes de crear el tag.
 
