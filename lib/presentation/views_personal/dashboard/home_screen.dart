@@ -168,7 +168,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const Text('MQ App'),
         leading: IconButton(
           icon: const Icon(Icons.settings_rounded),
-          onPressed: () => Navigator.pushReplacement(
+          onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
           ),

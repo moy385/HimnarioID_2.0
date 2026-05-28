@@ -18,15 +18,13 @@ import '../../views_projection/providers/presentation_providers.dart';
 ///  1. Cierra la ventana de proyección vía [WindowService.closeProjectionWindow]
 ///  2. Marca [isPresentingProvider] como `false`
 ///
-/// Colores: fondo dorado intenso (#CCA43B) cuando inactivo, texto/icono
-/// dorados en modo oscuro para mantener coherencia con el toggle de tema.
+/// Colores: fondo dorado intenso (#CCA43B), icono/texto negro (#1A1A1A).
 class PresentButton extends ConsumerWidget {
   const PresentButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPresenting = ref.watch(isPresentingProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return FloatingActionButton.extended(
       heroTag: 'present_button',
@@ -34,9 +32,7 @@ class PresentButton extends ConsumerWidget {
       backgroundColor: isPresenting
           ? Theme.of(context).colorScheme.errorContainer
           : const Color(0xFFCCA43B),
-      foregroundColor: isDark
-          ? const Color(0xFFCCA43B)
-          : const Color(0xFF1A1A1A),
+      foregroundColor: const Color(0xFF1A1A1A),
       icon: Icon(
         isPresenting ? Icons.stop_screen_share : Icons.screen_share,
       ),

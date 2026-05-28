@@ -18,12 +18,11 @@ class ThemeModeToggleButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return FloatingActionButton(
       heroTag: 'theme_mode_toggle',
       backgroundColor: const Color(0xFFCCA43B),
-      foregroundColor: isDark ? const Color(0xFFCCA43B) : const Color(0xFF1A1A1A),
+      foregroundColor: const Color(0xFF1A1A1A),
       onPressed: () => ref.read(themeModeProvider.notifier).cycleMode(),
       tooltip: _tooltip(themeMode),
       child: Icon(_icon(themeMode)),

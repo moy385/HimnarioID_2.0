@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'crud_hymns/hymn_list_screen.dart';
 import 'crud_catalogs/catalog_panel_screen.dart';
-import '../views_personal/dashboard/home_screen.dart';
 
 /// Pantalla principal del panel de configuración con navegación tipo Drawer.
 ///
@@ -34,9 +33,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   String get _title => _titles[_selectedDrawerIndex + 1];
 
   void _goHome() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+    Navigator.of(context).pop();
   }
 
   @override
