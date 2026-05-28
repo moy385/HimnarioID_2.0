@@ -42,9 +42,7 @@ jobs:
 
       - name: Package tar.gz
         run: |
-          cd build/linux/x64/release
-          tar -czf ../../../MQ_App-linux-x64.tar.gz bundle/
-          cd ../../..
+          tar -czf MQ_App-linux-x64.tar.gz -C build/linux/x64/release bundle/
           ls -lh MQ_App-linux-x64.tar.gz
 
       - name: Upload to GitHub Release
