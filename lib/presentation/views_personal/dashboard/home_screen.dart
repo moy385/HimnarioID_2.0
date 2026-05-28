@@ -22,7 +22,6 @@ import '../../views_admin/admin_panel_screen.dart';
 import '../providers/hymn_providers.dart';
 import '../../providers/wakelock_provider.dart';
 import 'connected_dashboard.dart';
-import 'present_button.dart';
 
 /// Tipos de filtro para himnos.
 enum HymnFilter {
@@ -165,9 +164,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     return Scaffold(
-      floatingActionButton:
-          isDesktop && !isPresenting ? const PresentButton() : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: AppBar(
         title: const Text('MQ App'),
         leading: IconButton(

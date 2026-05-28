@@ -8,6 +8,7 @@ import '../shared_widgets/fullscreen_handler.dart';
 import '../shared_widgets/theme_mode_toggle_button.dart';
 import '../shared_widgets/providers/theme_mode_provider.dart';
 import '../views_personal/dashboard/home_screen.dart';
+import '../views_personal/dashboard/present_button.dart';
 import '../views_personal/hymn_scroll/arrangement_editor_screen.dart';
 import '../views_personal/hymn_scroll/hymn_detail_screen.dart';
 import '../views_projection/controller/live_control_screen.dart';
@@ -75,9 +76,40 @@ class HimnarioDualApp extends ConsumerWidget {
             if (isDesktop && isPresenting)
               const PresentControlBar(),
             const DeviceSwitch(),
-            if (role != ConnectionRole.receiver) const ThemeModeToggleButton(),
+            if (role != ConnectionRole.receiver)
+              const _BottomRightButtons(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Botones flotantes en la esquina inferior derecha.
+///
+/// Contiene el toggle de tema y el botón Presentar, posicionados
+/// con 5px de separación para evitar superposición.
+class _BottomRightButtons extends ConsumerWidget {
+  const _BottomRightButtons();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDesktop = ref.watch(deviceModeProvider) == DeviceMode.desktop;
+    final isPresenting = ref.watch(isPresentingProvider);
+
+    return Positioned(
+      right: 16,
+      bottom: 16,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const ThemeModeToggleButton(),
+          if (isDesktop && !isPresenting) ...[
+            const SizedBox(height: 5),
+            const PresentButton(),
+          ],
+        ],
       ),
     );
   }
