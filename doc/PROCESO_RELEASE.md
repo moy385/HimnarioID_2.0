@@ -44,32 +44,54 @@ git commit -m "chore: bump version to 2.0.1"
 git push origin feature/nueva-interfaz-paleta-corporativa
 ```
 
-### 5. Crear tag
+### 5. Probar builds UNO POR UNO (workflow_dispatch)
+
+No hagas tag push todavia. Primero prueba cada build individualmente con `workflow_dispatch`
+para verificar que compilan bien. Esto evita saturarse con 3 builds fallando a la vez.
 
 ```bash
-# Desde la feature branch
-git checkout feature/nueva-interfaz-paleta-corporativa
+# Probar Windows
+gh workflow run build_windows.yml --ref feature/nueva-interfaz-paleta-corporativa -f version=2.0.1
+
+# Esperar a que termine y verificar
+gh run list --workflow build_windows.yml --limit 1 --json status,conclusion
+
+# Si pasa, probar Linux
+gh workflow run build_linux.yml --ref feature/nueva-interfaz-paleta-corporativa -f version=2.0.1
+
+# Esperar y verificar...
+
+# Si pasa, probar macOS
+gh workflow run build_macos.yml --ref feature/nueva-interfaz-paleta-corporativa -f version=2.0.1
+```
+
+> :warning: En `workflow_dispatch` el step de upload a GitHub Release **se salta**
+> (porque `github.ref` no es un tag). Solo se prueba la compilacion.
+
+### 6. Descargar artifacts de los builds exitosos
+
+```bash
+# Windows
+gh run download <run-id> --dir /tmp/artifacts
+# Linux
+gh run download <run-id> --dir /tmp/artifacts
+# macOS
+gh run download <run-id> --dir /tmp/artifacts
+```
+
+### 7. Crear tag + release
+
+```bash
 git tag v2.0.1
 git push origin v2.0.1
+gh release create v2.0.1 --latest --title "MQ App v2.0.1" --notes "Release v2.0.1"
 ```
 
-Esto activa los workflows `build_linux.yml`, `build_macos.yml` y `build_windows.yml` (todos tienen `on: push: tags: 'v*.*.*'`).
+> :warning: **NO confiar en los workflows de tag push para subir assets.** El upload via
+> `gh release upload` en tag push falla porque GitHub crea el release draft de forma
+> asincrona y el workflow se ejecuta antes de que exista. Es mas confiable subir manualmente.
 
-### 6. Monitorear los builds
-
-```bash
-gh run list --limit 10
-```
-
-Verificar que pasen:
-- **Windows build**: `MQ_App-windows-x64_v2.0.1.zip` se sube automaticamente al release
-- **Linux build**: `MQ_App-linux-x64.tar.gz` se sube automaticamente al release
-- **macOS build**: `MQ_App-macos-x64.dmg` se sube automaticamente al release
-
-> :warning: Si un build falla, arreglar el workflow, hacer commit en la feature branch, y volver al paso 4.
-> Los assets ya subidos no se pierden (gh release upload usa --clobber).
-
-### 7. Build APKs Android (local)
+### 8. Build APKs Android (local)
 
 ```bash
 ./scripts/build_apk.sh 2.0.1
@@ -80,16 +102,22 @@ Esto genera:
 - `build/app/outputs/flutter-apk/mq-app-armeabi-v7a-2.0.1.apk`
 - `build/app/outputs/flutter-apk/mq-app-x86_64-2.0.1.apk`
 
-### 8. Subir APKs al release
+### 9. Subir TODOS los assets al release (manual)
 
 ```bash
+# APKs Android
 cd build/app/outputs/flutter-apk
 gh release upload v2.0.1 mq-app-arm64-v8a-2.0.1.apk --clobber
 gh release upload v2.0.1 mq-app-armeabi-v7a-2.0.1.apk --clobber
 gh release upload v2.0.1 mq-app-x86_64-2.0.1.apk --clobber
+
+# Desktop (artifacts de CI descargados en paso 6)
+gh release upload v2.0.1 /tmp/artifacts/*/MQ_App-windows-x64.zip --clobber
+gh release upload v2.0.1 /tmp/artifacts/*/MQ_App-linux-x64.tar.gz --clobber
+gh release upload v2.0.1 /tmp/artifacts/*/MQ_App-macos-x64.dmg --clobber
 ```
 
-### 9. Verificar landing page
+### 10. Verificar landing page
 
 La landing page (melquisedec-ark.github.io) usa la API de GitHub para listar los assets del ultimo release:
 
@@ -109,9 +137,9 @@ Solo hay que refrescar la pagina. Los nombres de los assets deben coincidir con 
 | `mq-app-arm64-v8a-<version>.apk` | Android (celulares modernos) | `scripts/build_apk.sh` (local) |
 | `mq-app-armeabi-v7a-<version>.apk` | Android (celulares antiguos) | `scripts/build_apk.sh` (local) |
 | `mq-app-x86_64-<version>.apk` | Android (emuladores) | `scripts/build_apk.sh` (local) |
-| `MQ_App-windows-x64.zip` | Windows | CI workflow (tag push) |
-| `MQ_App-linux-x64.tar.gz` | Linux | CI workflow (tag push) |
-| `MQ_App-macos-x64.dmg` | macOS | CI workflow (tag push) |
+| `MQ_App-windows-x64.zip` | Windows | CI workflow_dispatch + descargar artifact |
+| `MQ_App-linux-x64.tar.gz` | Linux | CI workflow_dispatch + descargar artifact |
+| `MQ_App-macos-x64.dmg` | macOS | CI workflow_dispatch + descargar artifact |
 
 ---
 
@@ -141,6 +169,22 @@ run: flutter build macos --release
 
 Los workflows de Windows requieren `windows-latest` runner. El tag push lo activa.
 Si no se ejecuto, verificar que el tag tenga `v` al inicio (ej: `v2.0.1`).
+
+### "El upload a GitHub Release falla con 'release not found' en tag push"
+
+Esto ocurre porque cuando se pushea un tag, GitHub crea el release draft de forma
+**asincrona**. El workflow corre antes de que el release exista oficialmente, y
+`gh release upload` falla porque no encuentra el release.
+
+**Solucion**: No confiar en el tag push para subir assets. Usar workflow_dispatch para
+probar la compilacion, descargar artifacts manualmente, y subirlos con `gh release upload`.
+
+### "El build compila en workflow_dispatch pero falla en tag push"
+
+Es el mismo problema de arriba. El build en si compila bien (el mismo commit).
+La unica diferencia es que en tag push se ejecuta el step de "Upload to GitHub Release"
+(el `if: startsWith(github.ref, 'refs/tags/')` lo activa), y ese step falla porque el
+release no existe aun.
 
 ---
 
