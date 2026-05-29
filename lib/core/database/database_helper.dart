@@ -1,4 +1,5 @@
 import 'dart:io' show Platform, File;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:sqflite/sqflite.dart' as mobile;
 import 'package:sqflite_common/sqlite_api.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as desktop;
@@ -63,7 +64,11 @@ class DatabaseHelper {
     final localVersion = await DbVersionManager.readLocalVersion(dir.path);
 
     // ── 2. Verificar si necesita reemplazo ───────────────────────
-    final needsReplace = !localFile.existsSync() ||
+    // En debug siempre se reemplaza desde assets para que cambios hechos
+    // con DB Browser se reflejen al hacer 'flutter run' sin tener que
+    // subir db_version.json. En release se usa el comportamiento normal.
+    final needsReplace = kDebugMode ||
+        !localFile.existsSync() ||
         DbVersionManager.needsUpdate(assetVersion, localVersion);
 
     if (needsReplace) {
