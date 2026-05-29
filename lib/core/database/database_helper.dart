@@ -1,4 +1,4 @@
-import 'dart:io' show Platform, File;
+import 'dart:io' show Platform, File, Directory;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:sqflite/sqflite.dart' as mobile;
 import 'package:sqflite_common/sqlite_api.dart';
@@ -55,20 +55,35 @@ class DatabaseHelper {
   /// 3. Abre la BD definitiva con onCreate/onUpgrade.
   Future<Database> _initDatabase() async {
     final stopwatch = Stopwatch()..start();
+
+    // ── Modo desarrollo (desktop + debug): usar la BD del proyecto ──
+    // En flutter run -d linux, el directorio actual es la raiz del proyecto.
+    // Todas las escrituras van directo a assets/db/himnario_id.db,
+    // asi los cambios persisten en el arbol fuente y se empaquetan en
+    // el proximo build.
+    if (kDebugMode && !Platform.isAndroid && !Platform.isIOS) {
+      final projectDb = p.join(
+        Directory.current.path,
+        'assets/db/himnario_id.db',
+      );
+      _log.info('Debug mode: using project DB at $projectDb');
+      final db = await _openDatabasePlatform(projectDb);
+      _log.info(
+        'Database opened (schema v$SCHEMA_VERSION) in '
+        '${stopwatch.elapsedMilliseconds}ms',
+      );
+      return db;
+    }
+
+    // ── Modo release / mobile: copiar desde assets ─────────────
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dir.path, 'himnario_id.db');
     final localFile = File(dbPath);
 
-    // ── 1. Leer versiones ────────────────────────────────────────
     final assetVersion = await DbVersionManager.readAssetVersion();
     final localVersion = await DbVersionManager.readLocalVersion(dir.path);
 
-    // ── 2. Verificar si necesita reemplazo ───────────────────────
-    // En debug siempre se reemplaza desde assets para que cambios hechos
-    // con DB Browser se reflejen al hacer 'flutter run' sin tener que
-    // subir db_version.json. En release se usa el comportamiento normal.
-    final needsReplace = kDebugMode ||
-        !localFile.existsSync() ||
+    final needsReplace = !localFile.existsSync() ||
         DbVersionManager.needsUpdate(assetVersion, localVersion);
 
     if (needsReplace) {
@@ -76,7 +91,7 @@ class DatabaseHelper {
         'DB update: assetVersion=$assetVersion, localVersion=$localVersion',
       );
 
-      // 2a. Backup de datos de usuario
+      // Backup de datos de usuario
       Map<String, List<Map<String, dynamic>>>? userData;
       if (localFile.existsSync()) {
         try {
@@ -92,7 +107,7 @@ class DatabaseHelper {
         }
       }
 
-      // 2b. Copiar nuevo .db desde assets
+      // Copiar nuevo .db desde assets
       try {
         final bytes = await DbVersionManager.assetDbBytes();
         if (bytes.isEmpty) {
@@ -102,35 +117,32 @@ class DatabaseHelper {
           _log.info('New DB copied from assets (${bytes.length} bytes)');
         }
       } catch (_) {
-        // Sin asset (desktop development): se creará BD vacía con onCreate
         _log.info('No asset DB available, will create fresh schema');
       }
 
-      // 2c. Escribir versión local
+      // Escribir versión local
       if (assetVersion > 0) {
         await DbVersionManager.writeLocalVersion(dir.path, assetVersion);
         _log.info('Local version written: $assetVersion');
       }
 
-      // 2d. Re-importar datos de usuario
+      // Re-importar datos de usuario
       if (userData != null && userData.isNotEmpty) {
         try {
           final newDb = await _openDatabaseRaw(dbPath);
           await UserDataBackup.importUserData(newDb, userData);
           await newDb.close();
-          _log.info(
-            'User data restored: ${userData.length} tables',
-          );
+          _log.info('User data restored: ${userData.length} tables');
         } catch (e) {
           _log.warning('Could not restore user data: $e');
         }
       }
     }
 
-    // ── 3. Abrir BD definitiva con onCreate/onUpgrade ────────────
     final db = await _openDatabasePlatform(dbPath);
     _log.info(
-      'Database opened (schema v$SCHEMA_VERSION) in ${stopwatch.elapsedMilliseconds}ms',
+      'Database opened (schema v$SCHEMA_VERSION) in '
+      '${stopwatch.elapsedMilliseconds}ms',
     );
     return db;
   }
