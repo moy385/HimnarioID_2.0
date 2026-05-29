@@ -10,6 +10,7 @@ import '../shared_widgets/providers/theme_mode_provider.dart';
 import '../views_personal/dashboard/home_screen.dart';
 import '../views_personal/dashboard/present_button.dart';
 import '../views_personal/hymn_scroll/arrangement_editor_screen.dart';
+import '../views_personal/hymn_scroll/arrangement_list_screen.dart';
 import '../views_personal/hymn_scroll/hymn_detail_screen.dart';
 import '../views_projection/controller/live_control_screen.dart';
 import '../views_projection/controller/present_control_bar.dart';
@@ -60,9 +61,14 @@ class HimnarioDualApp extends ConsumerWidget {
           },
           '/arrangement-editor': (context) {
             final args = ModalRoute.of(context)?.settings.arguments;
-            if (args is! Himno) return const HomeScreen();
-            return ArrangementEditorScreen(himno: args);
+            if (args is Himno) {
+              return ArrangementEditorScreen(himno: args);
+            } else if (args is int) {
+              return ArrangementEditorScreen(arregloId: args);
+            }
+            return const HomeScreen();
           },
+          '/arrangement-list': (context) => const ArrangementListScreen(),
         },
 
         // Punto de entrada basado en el modo dual y estado de presentación

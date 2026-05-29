@@ -24,6 +24,7 @@ import '../providers/audio_providers.dart';
 import '../../providers/fullscreen_mode_provider.dart';
 import '../providers/hymn_providers.dart';
 import '../providers/transpose_providers.dart';
+import '../providers/arreglo_providers.dart';
 import 'arrangement_editor_screen.dart';
 import 'fab_menu.dart';
 
@@ -47,6 +48,7 @@ class HymnDetailScreen extends ConsumerStatefulWidget {
 class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     with WidgetsBindingObserver {
   bool _isPlaying = false;
+  bool _showingArreglo = false;
   int? _currentPistaId;
   late final ScrollController _scrollController;
 
@@ -58,6 +60,14 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeKeyFromHymn();
     });
+  }
+
+  @override
+  void didUpdateWidget(HymnDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.himno.id != widget.himno.id) {
+      setState(() => _showingArreglo = false);
+    }
   }
 
   @override
@@ -74,13 +84,12 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
   void _initializeKeyFromHymn() {
     if (!mounted) return;
     // 1. Usar tonalidad de la BD si está disponible y no es 'C' (default)
-    var tonalidad = widget.himno.versiones
-        .firstOrNull
-        ?.tonalidadOriginal ?? '';
+    var tonalidad = widget.himno.versiones.firstOrNull?.tonalidadOriginal ?? '';
     if (tonalidad.isEmpty || tonalidad == 'C') {
       // 2. Si no hay tonalidad explícita, detectar del primer acorde del himno
-      final primeraEstrofa = widget.himno.versiones
-          .firstOrNull?.estrofas.firstOrNull?.contenido ?? '';
+      final primeraEstrofa =
+          widget.himno.versiones.firstOrNull?.estrofas.firstOrNull?.contenido ??
+              '';
       if (primeraEstrofa.isNotEmpty) {
         final chordRegex = RegExp(r'\[([A-G][#b]?m?)\]');
         final match = chordRegex.firstMatch(primeraEstrofa);
@@ -157,7 +166,20 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     final appearance = ref.watch(hymnAppearanceProvider);
     final transposeValue = ref.watch(transposeValueProvider);
     final transposedKey = ref.watch(transposedKeyProvider);
-    final stanzasAsync = ref.watch(stanzasProvider(widget.himno.primaryVersionPaisId));
+    final origStanzasAsync = ref.watch(
+      stanzasProvider(widget.himno.primaryVersionPaisId),
+    );
+    final arregloAsync = ref.watch(
+      arregloByHymnProvider(widget.himno.primaryVersionPaisId),
+    );
+    final arreglo = arregloAsync.valueOrNull;
+    final hasArreglo = arreglo != null;
+    final arregloId = arreglo?.id ?? -1;
+    final arregloStanzasAsync =
+        ref.watch(arregloEstrofasViewProvider(arregloId));
+    final stanzasAsync =
+        _showingArreglo ? arregloStanzasAsync : origStanzasAsync;
+
     final isDesktop = ref.watch(isDesktopModeProvider);
     final isPhone = ref.watch(isPhoneModeProvider);
     final isMobileFullscreen = ref.watch(fullscreenModeProvider);
@@ -169,6 +191,11 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       children: [
         // Cabecera del himno
         _buildHeader(context, widget.himno, colorScheme, textTheme, appearance),
+        // Toggle Original / Mi arreglo (solo si hay arreglo del usuario)
+        // El toggle solo tiene sentido cuando se muestran acordes,
+        // pues el valor del arreglo está en su personalización armónica
+        if (hasArreglo && appearance.showChords)
+          _buildArregloToggle(colorScheme: colorScheme),
         const SizedBox(height: 24),
 
         // Renderizado de letra desde provider
@@ -277,30 +304,48 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
                   // ── Botón Presentar (solo desktop) ──
                   if (isDesktop)
                     IconButton(
-                      icon: Icon(isPresenting ? Icons.stop_screen_share : Icons.screen_share),
-                      tooltip: isPresenting ? 'Detener presentación' : 'Presentar',
+                      icon: Icon(isPresenting
+                          ? Icons.stop_screen_share
+                          : Icons.screen_share),
+                      tooltip:
+                          isPresenting ? 'Detener presentación' : 'Presentar',
                       onPressed: _presentCurrentHymn,
                     ),
                   // Menú de opciones
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert),
                     onSelected: (value) {
-                      if (value == 'arreglo') {
+                      if (value == 'crear-arreglo') {
                         Navigator.pushNamed(
                           context,
                           '/arrangement-editor',
                           arguments: widget.himno,
                         );
+                      } else if (value == 'mis-arreglos') {
+                        Navigator.pushNamed(
+                          context,
+                          '/arrangement-list',
+                        );
                       }
                     },
                     itemBuilder: (context) => [
                       const PopupMenuItem(
-                        value: 'arreglo',
+                        value: 'crear-arreglo',
                         child: Row(
                           children: [
-                            Icon(Icons.edit_note),
+                            Icon(Icons.add_circle_outline),
                             SizedBox(width: 12),
                             Text('Crear Arreglo'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'mis-arreglos',
+                        child: Row(
+                          children: [
+                            Icon(Icons.list_alt),
+                            SizedBox(width: 12),
+                            Text('Mis Arreglos'),
                           ],
                         ),
                       ),
@@ -390,6 +435,65 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     );
   }
 
+  /// Toggle para alternar entre la letra original del himno y el arreglo
+  /// personal del usuario.
+  Widget _buildArregloToggle({required ColorScheme colorScheme}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _toggleChip(
+            label: 'Original',
+            selected: !_showingArreglo,
+            colorScheme: colorScheme,
+            onTap: () => setState(() => _showingArreglo = false),
+          ),
+          const SizedBox(width: 8),
+          _toggleChip(
+            label: 'Mi arreglo',
+            selected: _showingArreglo,
+            colorScheme: colorScheme,
+            onTap: () => setState(() => _showingArreglo = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggleChip({
+    required String label,
+    required bool selected,
+    required ColorScheme colorScheme,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? colorScheme.primaryContainer
+              : colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          border: selected
+              ? Border.all(color: colorScheme.primary, width: 1.5)
+              : Border.all(color: Colors.transparent),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            color: selected
+                ? colorScheme.onPrimaryContainer
+                : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStanza(
     BuildContext context,
     Estrofa estrofa,
@@ -467,7 +571,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     final double chordFontSize = (baseFontSize * 0.6).clamp(8.0, 13.0);
 
     // Estilo base de la letra
-    final TextStyle lyricStyle = (textTheme.bodyLarge ?? const TextStyle()).copyWith(
+    final TextStyle lyricStyle =
+        (textTheme.bodyLarge ?? const TextStyle()).copyWith(
       fontFamily: appearance.fontFamily,
       color: appearance.textColor,
       fontSize: baseFontSize,
@@ -519,7 +624,11 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 8),
+      padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 8,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 8),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -537,12 +646,21 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       ),
       child: SafeArea(
         top: false,
-        child: _isPlaying ? _buildPlayerBar(context, colorScheme, textTheme) : _buildTransposeBar(context, transposeValue, transposedKey, colorScheme, textTheme, isPhone),
+        child: _isPlaying
+            ? _buildPlayerBar(context, colorScheme, textTheme)
+            : _buildTransposeBar(context, transposeValue, transposedKey,
+                colorScheme, textTheme, isPhone),
       ),
     );
   }
 
-  Widget _buildTransposeBar(BuildContext context, int transposeValue, String transposedKey, ColorScheme colorScheme, TextTheme textTheme, bool isPhone) {
+  Widget _buildTransposeBar(
+      BuildContext context,
+      int transposeValue,
+      String transposedKey,
+      ColorScheme colorScheme,
+      TextTheme textTheme,
+      bool isPhone) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Reduce gap between buttons on very narrow screens (<360px)
@@ -559,7 +677,9 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue - 1).clamp(-6, 6),
+                      onPressed: () => ref
+                          .read(transposeValueProvider.notifier)
+                          .state = (transposeValue - 1).clamp(-6, 6),
                       icon: const Icon(Icons.remove),
                       tooltip: 'Bajar tono',
                     ),
@@ -569,14 +689,21 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Tono', style: textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                            Text(transposedKey, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                            Text('Tono',
+                                style: textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant)),
+                            Text(transposedKey,
+                                style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface)),
                           ],
                         ),
                       ),
                     ),
                     IconButton(
-                      onPressed: () => ref.read(transposeValueProvider.notifier).state = (transposeValue + 1).clamp(-6, 6),
+                      onPressed: () => ref
+                          .read(transposeValueProvider.notifier)
+                          .state = (transposeValue + 1).clamp(-6, 6),
                       icon: const Icon(Icons.add),
                       tooltip: 'Subir tono',
                     ),
@@ -608,7 +735,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     );
   }
 
-  Widget _buildPlayerBar(BuildContext context, ColorScheme colorScheme, TextTheme textTheme) {
+  Widget _buildPlayerBar(
+      BuildContext context, ColorScheme colorScheme, TextTheme textTheme) {
     return _AudioPlayerBar(
       key: const ValueKey('player_bar'),
       repo: ref.read(audioRepositoryProvider),
@@ -625,10 +753,12 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
   }) {
     return GestureDetector(
       key: key,
-      onDoubleTap: () => ref.read(fullscreenModeProvider.notifier).exitFullscreen(),
+      onDoubleTap: () =>
+          ref.read(fullscreenModeProvider.notifier).exitFullscreen(),
       behavior: HitTestBehavior.translucent,
       child: _FondoBackground(
-        key: ValueKey('fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
+        key: ValueKey(
+            'fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
         fondo: appearance.selectedFondo,
         bgColor: appearance.bgColor,
         // Fullscreen: scroll sin padding para que el contenido ocupe toda la pantalla
@@ -655,7 +785,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       children: [
         Expanded(
           child: _FondoBackground(
-            key: ValueKey('fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
+            key: ValueKey(
+                'fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
             fondo: appearance.selectedFondo,
             bgColor: appearance.bgColor,
             child: bodyContent,
@@ -805,7 +936,8 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       if (!mounted) return;
       // Buscar el objeto Himno completo desde el repositorio
       try {
-        final himno = await ref.read(hymnRepositoryProvider).getHymnById(result);
+        final himno =
+            await ref.read(hymnRepositoryProvider).getHymnById(result);
         if (mounted) {
           Navigator.pushReplacementNamed(
             context,
@@ -885,8 +1017,8 @@ class _AudioPlayerBarState extends State<_AudioPlayerBar> {
                     });
                   },
                   onChangeEnd: (v) {
-                    widget.repo.seek(
-                        Duration(milliseconds: (v * durationSec * 1000).round()));
+                    widget.repo.seek(Duration(
+                        milliseconds: (v * durationSec * 1000).round()));
                     setState(() => _isSliding = false);
                   },
                 ),

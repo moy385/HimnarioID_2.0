@@ -99,7 +99,7 @@ abstract class HymnRepository {
   /// Elimina una categoría por su ID.
   Future<void> deleteCategoria(int id);
 
-  /// Crea un nuevo arreglo musical personalizado (fork).
+  @Deprecated('Usar ArregloRepository.createArreglo en su lugar')
   Future<int> createArrangement({
     required int versionPaisId,
     required int usuarioId,

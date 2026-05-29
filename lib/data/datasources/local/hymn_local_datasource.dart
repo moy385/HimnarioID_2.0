@@ -673,8 +673,7 @@ class HymnLocalDataSource {
     }
   }
 
-  /// Crea un arreglo musical personalizado (fork) con sus estrofas.
-  /// Retorna el ID del nuevo arreglo.
+  @Deprecated('Usar ArregloLocalDataSource.createArreglo en su lugar')
   Future<int> createArrangement({
     required int versionPaisId,
     required int usuarioId,
@@ -715,7 +714,6 @@ class HymnLocalDataSource {
       );
     }
   }
-}
 
   /// Carga versiones y categorías para una lista de himnos usando solo
   /// **2 consultas SQL** en lugar de 2 por himno (elimina el N+1).
@@ -769,4 +767,5 @@ class HymnLocalDataSource {
       himno.categorias = catsByHymnId[himno.id] ?? [];
     }
   }
+}
 

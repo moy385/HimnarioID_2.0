@@ -33,13 +33,20 @@ class ArregloLocalDataSource {
     try {
       final db = await _db;
       return await db.transaction((txn) async {
-        // toJson() incluye 'estrofas' que no es una columna de la tabla
-        final json = arreglo.toJson()..remove('estrofas');
+        // toJson() incluye 'estrofas' e 'id' (0 para nuevos) que no deben
+        // insertarse: 'estrofas' no es columna, 'id' debe auto-incrementarse
+        final json = arreglo.toJson()
+          ..remove('estrofas')
+          ..remove('id');
         final id = await txn.insert('Arreglo_Musical', json);
 
         for (final estrofa in estrofas) {
           await txn.insert('Estrofa_Arreglo', {
-            ...estrofa.toJson(),
+            // Remover 'id' para que SQLite auto-incremente, y
+            // 'arreglo_musical_id' porque lo sobreescribimos abajo
+            ...estrofa.toJson()
+              ..remove('id')
+              ..remove('arreglo_musical_id'),
             'arreglo_musical_id': id,
           });
         }
@@ -145,9 +152,16 @@ class ArregloLocalDataSource {
       final db = await _db;
       await db.transaction((txn) async {
         final json = arreglo.toJson()..remove('estrofas');
+
+        // Incrementar versión y actualizar fecha de modificación
         await txn.update(
           'Arreglo_Musical',
-          json,
+          {
+            ...json,
+            'version': arreglo.version + 1,
+            'fecha_modificacion':
+                DateTime.now().toIso8601String().split('T').first,
+          },
           where: 'id = ?',
           whereArgs: [arreglo.id],
         );
@@ -160,7 +174,9 @@ class ArregloLocalDataSource {
 
         for (final estrofa in estrofas) {
           await txn.insert('Estrofa_Arreglo', {
-            ...estrofa.toJson(),
+            ...estrofa.toJson()
+              ..remove('id')
+              ..remove('arreglo_musical_id'),
             'arreglo_musical_id': arreglo.id,
           });
         }
