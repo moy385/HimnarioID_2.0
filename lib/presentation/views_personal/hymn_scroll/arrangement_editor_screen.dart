@@ -1,29 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/utils/chord_transposer.dart';
-import '../../../domain/entities/estrofa.dart';
+import '../../../core/enums/estrofa_tipo.dart';
+import '../../../domain/entities/arreglo_musical.dart';
+import '../../../domain/entities/estrofa_arreglo.dart';
 import '../../../domain/entities/himno.dart';
+import '../../views_admin/crud_hymns/stanza_block_editor.dart';
+import '../providers/arreglo_providers.dart';
 import '../providers/hymn_providers.dart';
-import '../providers/transpose_providers.dart';
 
-/// Pantalla 4: Editor de Arreglos.
+// ─────────────────────────────────────────────────────────────────────────────
+// Inner helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Representación mutable de una estrofa durante la edición.
 ///
-/// Permite al usuario modificar los acordes de un himno y guardar
-/// el arreglo como una versión personalizada (fork) en la tabla
-/// `Estrofa_Arreglo`, vinculada al `Usuario` actual.
+/// [tempId] es un identificador local para las keys de widgets;
+/// no debe confundirse con el ID persistente de [EstrofaArreglo].
+class _EditableStanza {
+  int tempId;
+  EstrofaTipo tipo;
+  String contenido;
+
+  _EditableStanza({
+    required this.tempId,
+    required this.tipo,
+    required this.contenido,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Pantalla de edición/creación de arreglos musicales.
 ///
-/// Basado en Interfaz.md §3-4:
-/// - Lienzo de Letra: cada palabra es "tocable" para insertar acordes
-/// - Selector Musical: teclado/rueda para elegir acordes
-/// - Botón Guardar: persiste el arreglo
+/// Soporta dos modos de operación:
+/// - **Creación** ([himno] != null): parte de las estrofas del himno original.
+/// - **Edición**  ([arregloId] != null): carga un arreglo existente.
 class ArrangementEditorScreen extends ConsumerStatefulWidget {
-  final Himno himno;
+  final Himno? himno;
+  final int? arregloId;
 
   const ArrangementEditorScreen({
     super.key,
-    required this.himno,
-  });
+    this.himno,
+    this.arregloId,
+  }) : assert(
+          (himno != null) ^ (arregloId != null),
+          'Debe proporcionar himno (creación) o arregloId (edición), no ambos.',
+        );
 
   @override
   ConsumerState<ArrangementEditorScreen> createState() =>
@@ -32,616 +58,476 @@ class ArrangementEditorScreen extends ConsumerStatefulWidget {
 
 class _ArrangementEditorScreenState
     extends ConsumerState<ArrangementEditorScreen> {
-  /// Mapa de estrofas editadas: key = "estrofaId:linea", value = texto editado
-  final Map<String, String> _editedStanzas = {};
+  // ── Estado interno ──────────────────────────────────────────────────────
 
-  /// Índice de la estrofa que se está editando actualmente
-  int _editingStanzaIndex = -1;
+  /// `null` = modo creación, no-null = modo edición (ID del arreglo).
+  int? _arregloId;
 
-  /// Índice de la línea dentro de la estrofa que se está editando
-  int _editingLineIndex = -1;
+  /// Controlador del campo de nombre del arreglo.
+  final TextEditingController _nameCtrl = TextEditingController();
 
-  /// Acorde seleccionado en el selector musical
-  String _selectedChord = '';
+  /// Lista mutable de estrofas que el usuario está editando.
+  final List<_EditableStanza> _estrofas = [];
 
-  /// Nombre del arreglo
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Mi Arreglo');
+  /// Contador para asignar [tempId] únicos a cada [_EditableStanza].
+  int _nextTempId = 0;
+
+  /// Evita guardados duplicados (anti-doble-click).
+  bool _isSaving = false;
+
+  /// Estado de carga inicial (mientras se obtienen datos de BD).
+  bool _isLoading = true;
+
+  /// `true` cuando el usuario ha modificado algo sin guardar.
+  bool _isDirty = false;
+
+  /// Tonalidad original del himno (se mantiene fija).
+  String _tonalidadBase = '';
+
+  /// ID de la versión de país sobre la que se basa el arreglo.
+  int _versionPaisId = 0;
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    _arregloId = widget.arregloId;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeData());
+  }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _nameCtrl.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final stanzasAsync = ref.watch(stanzasProvider(widget.himno.primaryVersionPaisId));
-    final transposeValue = ref.watch(transposeValueProvider);
+  // ── Inicialización ──────────────────────────────────────────────────────
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Editor: ${widget.himno.titulo}'),
-        actions: [
-          // Botón Guardar
-          IconButton(
-            onPressed:
-                _editingStanzaIndex >= 0 ? () => _saveArrangement() : null,
-            icon: const Icon(Icons.save_rounded),
-            tooltip: 'Guardar Arreglo',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Nombre del arreglo
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del Arreglo',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.music_note),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
+  /// Carga los datos iniciales según el modo (creación o edición).
+  Future<void> _initializeData() async {
+    setState(() => _isLoading = true);
 
-          // Lienzo de letra editable
-          Expanded(
-            child: stanzasAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
-              data: (estrofas) {
-                if (estrofas.isEmpty) {
-                  return const Center(
-                    child: Text('No hay estrofas disponibles'),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: estrofas.length,
-                  itemBuilder: (context, index) {
-                    return _buildEditableStanza(
-                      context,
-                      estrofas[index],
-                      index,
-                      transposeValue,
-                      colorScheme,
-                      textTheme,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-
-          // Selector Musical (rueda/teclado de acordes)
-          if (_editingStanzaIndex >= 0) _buildChordSelector(colorScheme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEditableStanza(
-    BuildContext context,
-    Estrofa estrofa,
-    int index,
-    int transposeValue,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    final isChorus = estrofa.isChorus;
-    final isSelected = _editingStanzaIndex == index;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? colorScheme.primaryContainer.withValues(alpha: 0.2)
-            : isChorus
-                ? colorScheme.primaryContainer.withValues(alpha: 0.1)
-                : colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: isSelected
-            ? Border.all(color: colorScheme.primary, width: 2)
-            : isChorus
-                ? Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.3),
-                  )
-                : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cabecera de la estrofa + botón editar
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  estrofa.tipo.value.toUpperCase(),
-                  style: textTheme.labelSmall?.copyWith(
-                    color: isSelected
-                        ? colorScheme.onPrimary
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              if (!isSelected)
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _editingStanzaIndex = index;
-                    });
-                  },
-                  icon: const Icon(Icons.edit, size: 16),
-                  label: const Text('Editar'),
-                ),
-              if (isSelected)
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _editingStanzaIndex = -1;
-                      _editingLineIndex = -1;
-                    });
-                  },
-                  icon: const Icon(Icons.check, size: 16),
-                  label: const Text('Listo'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Líneas de la estrofa (cada línea es "tocable")
-          ..._buildEditableLines(
-            estrofa,
-            index,
-            transposeValue,
-            colorScheme,
-            textTheme,
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildEditableLines(
-    Estrofa estrofa,
-    int stanzaIndex,
-    int transposeValue,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    // Obtener el contenido (posiblemente editado)
-    final content =
-        _editedStanzas['${estrofa.id}_content'] ?? estrofa.contenido;
-    final transposedContent = transposeChordPro(content, transposeValue);
-    final lines = transposedContent.split('\n');
-
-    return List.generate(lines.length, (lineIndex) {
-      final line = lines[lineIndex];
-      final isLineEditing =
-          _editingStanzaIndex == stanzaIndex && _editingLineIndex == lineIndex;
-
-      return GestureDetector(
-        onTap: _editingStanzaIndex == stanzaIndex
-            ? () {
-                setState(() {
-                  _editingLineIndex = lineIndex;
-                  // Extraer acorde actual si existe
-                  final chordMatch =
-                      RegExp(r'\[([A-G][#b]?[a-zA-Z0-9+#b]*(?:/[A-G][#b]?)?)\]')
-                          .firstMatch(line);
-                  _selectedChord = chordMatch?.group(1) ?? _selectedChord;
-                });
-              }
-            : null,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: isLineEditing
-                ? colorScheme.primaryContainer.withValues(alpha: 0.4)
-                : null,
-            borderRadius: BorderRadius.circular(4),
-            border:
-                isLineEditing ? Border.all(color: colorScheme.primary) : null,
-          ),
-          child: _buildChordProLine(
-            line,
-            isLineEditing,
-            colorScheme,
-            textTheme,
-          ),
-        ),
+    try {
+      if (widget.himno != null) {
+        await _initForCreation();
+      } else if (widget.arregloId != null) {
+        await _initForEdition();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar datos: $e')),
       );
-    });
-  }
-
-  /// Renderiza una línea con acordes ChordPro en formato RichText.
-  Widget _buildChordProLine(
-    String line,
-    bool isEditing,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    final chordRegex =
-        RegExp(r'\[([A-G][#b]?[a-zA-Z0-9+#b]*(?:/[A-G][#b]?)?)\]');
-    final matches = chordRegex.allMatches(line);
-
-    if (matches.isEmpty) {
-      return Text(
-        line,
-        style: textTheme.bodyLarge?.copyWith(
-          color: colorScheme.onSurface,
-          height: 1.6,
-        ),
-      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
 
-    final spans = <InlineSpan>[];
-    int lastEnd = 0;
+  Future<void> _initForCreation() async {
+    final himno = widget.himno!;
+    _versionPaisId = himno.primaryVersionPaisId;
+    _tonalidadBase =
+        himno.versiones.firstOrNull?.tonalidadOriginal ?? '';
 
-    for (final match in matches) {
-      // Texto antes del acorde
-      if (match.start > lastEnd) {
-        spans.add(
-          TextSpan(
-            text: line.substring(lastEnd, match.start),
+    if (_versionPaisId <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('El himno no tiene versiones de país disponibles.'),
           ),
         );
       }
+      return;
+    }
 
-      // Acorde renderizado destacado
-      final chord = match.group(1) ?? '';
-      spans.add(
-        WidgetSpan(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: isEditing
-                  ? colorScheme.primary.withValues(alpha: 0.15)
-                  : colorScheme.tertiaryContainer.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              chord,
-              style: textTheme.bodyMedium?.copyWith(
-                color: isEditing ? colorScheme.primary : colorScheme.tertiary,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-              ),
-            ),
+    final stanzas = await ref.read(stanzasProvider(_versionPaisId).future);
+
+    if (!mounted) return;
+    setState(() {
+      _estrofas.addAll(
+        stanzas.map(
+          (s) => _EditableStanza(
+            tempId: _nextTempId++,
+            tipo: s.tipo,
+            contenido: s.contenido,
+          ),
+        ),
+      );
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _initForEdition() async {
+    final arreglo =
+        await ref.read(arregloDetailProvider(widget.arregloId!).future);
+    final estrofas =
+        await ref.read(arregloEstrofasProvider(widget.arregloId!).future);
+
+    if (!mounted) return;
+
+    if (arreglo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Arreglo no encontrado.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _nameCtrl.text = arreglo.nombreArreglo;
+      _tonalidadBase = arreglo.tonalidadBase;
+      _versionPaisId = arreglo.versionPaisId;
+
+      _estrofas.addAll(
+        estrofas.map(
+          (e) => _EditableStanza(
+            tempId: _nextTempId++,
+            tipo: e.tipo,
+            contenido: e.contenido,
           ),
         ),
       );
 
-      lastEnd = match.end;
-    }
-
-    // Texto restante
-    if (lastEnd < line.length) {
-      spans.add(TextSpan(text: line.substring(lastEnd)));
-    }
-
-    return RichText(
-      text: TextSpan(
-        style: textTheme.bodyLarge?.copyWith(
-          color: colorScheme.onSurface,
-          height: 1.6,
-        ),
-        children: spans,
-      ),
-    );
+      _isLoading = false;
+    });
   }
 
-  /// Selector musical: teclado de acordes que aparece al editar una línea.
-  Widget _buildChordSelector(ColorScheme colorScheme) {
-    // Notas base
-    const notas = [
-      'C',
-      'C#',
-      'D',
-      'D#',
-      'E',
-      'F',
-      'F#',
-      'G',
-      'G#',
-      'A',
-      'A#',
-      'B',
-    ];
+  // ── Mutaciones de estrofas ──────────────────────────────────────────────
 
-    // Sufijos de acorde
-    const sufijos = ['', 'm', '7', 'm7', 'dim', 'aug', 'sus4', 'maj7'];
+  void _updateTipo(int tempId, EstrofaTipo nuevoTipo) {
+    final idx = _estrofas.indexWhere((e) => e.tempId == tempId);
+    if (idx == -1) return;
+    setState(() {
+      _estrofas[idx].tipo = nuevoTipo;
+      _isDirty = true;
+    });
+  }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Fila de notas base
-          SizedBox(
-            height: 48,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: notas.length,
-              itemBuilder: (context, index) {
-                final nota = notas[index];
-                final isSelected = _selectedChord.startsWith(nota);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(nota),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      setState(() {
-                        // Mantener el sufijo actual si existe
-                        final currentChord = _selectedChord;
-                        final suffix = currentChord.length > 1
-                            ? currentChord.substring(
-                                currentChord.startsWith(RegExp(r'[A-G][#b]'))
-                                    ? (currentChord[1] == '#' ||
-                                            currentChord[1] == 'b'
-                                        ? 2
-                                        : 1)
-                                    : 1,
-                              )
-                            : '';
-                        _selectedChord = '$nota$suffix';
-                      });
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Fila de sufijos
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: sufijos.length,
-              itemBuilder: (context, index) {
-                final sufijo = sufijos[index];
-                final displayLabel = sufijo.isEmpty ? 'Mayor' : sufijo;
-                // Determinar cuál es la raíz de _selectedChord
-                final root = _selectedChord.length >= 2 &&
-                        (_selectedChord[1] == '#' || _selectedChord[1] == 'b')
-                    ? _selectedChord.substring(0, 2)
-                    : _selectedChord.isNotEmpty
-                        ? _selectedChord[0]
-                        : 'C';
-                final fullChord = root + sufijo;
-                final isSelected = _selectedChord == fullChord;
+  void _updateContenido(int tempId, String nuevoContenido) {
+    final idx = _estrofas.indexWhere((e) => e.tempId == tempId);
+    if (idx == -1) return;
+    setState(() {
+      _estrofas[idx].contenido = nuevoContenido;
+      _isDirty = true;
+    });
+  }
 
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(
-                      displayLabel,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedChord = fullChord;
-                      });
-                    },
-                  ),
-                );
-              },
-            ),
+  void _moveStanza(int tempId, int delta) {
+    final idx = _estrofas.indexWhere((e) => e.tempId == tempId);
+    if (idx == -1) return;
+    final target = idx + delta;
+    if (target < 0 || target >= _estrofas.length) return;
+    setState(() {
+      final item = _estrofas.removeAt(idx);
+      _estrofas.insert(target, item);
+      _isDirty = true;
+    });
+  }
+
+  Future<void> _deleteStanza(int tempId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar estrofa'),
+        content: const Text('¿Estás seguro de eliminar esta estrofa?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
           ),
-          const SizedBox(height: 8),
-          // Botón para insertar acorde en la línea seleccionada
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _editingLineIndex >= 0 ? _insertChordAtLine : null,
-                  icon: const Icon(Icons.add),
-                  label: Text('Insertar [$_selectedChord]'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: _editingLineIndex >= 0 ? _removeChordAtLine : null,
-                child: const Text('Quitar'),
-              ),
-            ],
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
     );
-  }
 
-  /// Inserta el acorde seleccionado al inicio de la línea en edición.
-  void _insertChordAtLine() {
-    if (_editingStanzaIndex < 0 || _editingLineIndex < 0) return;
+    if (confirm != true) return;
 
-    final stanzasAsync = ref.read(stanzasProvider(widget.himno.primaryVersionPaisId));
-    stanzasAsync.whenData((estrofas) {
-      if (_editingStanzaIndex >= estrofas.length) return;
-      final estrofa = estrofas[_editingStanzaIndex];
-      // Usar contenido editado si existe, si no el original
-      final key = '${estrofa.id}_content';
-      final content = _editedStanzas[key] ?? estrofa.contenido;
-      final lines = content.split('\n');
-      if (_editingLineIndex >= lines.length) return;
-
-      final line = lines[_editingLineIndex];
-      final newLine = '[$_selectedChord]$line';
-
-      lines[_editingLineIndex] = newLine;
-      final newContent = lines.join('\n');
-
-      setState(() {
-        _editedStanzas[key] = newContent;
-      });
+    setState(() {
+      _estrofas.removeWhere((e) => e.tempId == tempId);
+      _isDirty = true;
     });
   }
 
-  /// Elimina el primer acorde de la línea en edición.
-  void _removeChordAtLine() {
-    if (_editingStanzaIndex < 0 || _editingLineIndex < 0) return;
-
-    final stanzasAsync = ref.read(stanzasProvider(widget.himno.primaryVersionPaisId));
-    stanzasAsync.whenData((estrofas) {
-      if (_editingStanzaIndex >= estrofas.length) return;
-      final estrofa = estrofas[_editingStanzaIndex];
-      // Usar contenido editado si existe, si no el original
-      final key = '${estrofa.id}_content';
-      final content = _editedStanzas[key] ?? estrofa.contenido;
-      final lines = content.split('\n');
-      if (_editingLineIndex >= lines.length) return;
-
-      final line = lines[_editingLineIndex];
-      // Eliminar el primer marcador [Acorde] al inicio de la línea
-      final newLine = line.replaceFirst(
-        RegExp(r'^\[[A-G][#b]?[a-zA-Z0-9+#b]*(?:/[A-G][#b]?)?\]'),
-        '',
+  void _addEmptyStanza() {
+    setState(() {
+      _estrofas.add(
+        _EditableStanza(
+          tempId: _nextTempId++,
+          tipo: EstrofaTipo.estrofa,
+          contenido: '',
+        ),
       );
-
-      if (newLine == line) {
-        // No había acorde al inicio
-        return;
-      }
-
-      lines[_editingLineIndex] = newLine;
-      final newContent = lines.join('\n');
-
-      setState(() {
-        _editedStanzas[key] = newContent;
-      });
+      _isDirty = true;
     });
   }
 
-  /// Guarda el arreglo en la base de datos.
+  // ── Guardado ────────────────────────────────────────────────────────────
+
   Future<void> _saveArrangement() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
+    final nombre = _nameCtrl.text.trim();
+
+    if (nombre.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ingresa un nombre para el arreglo')),
       );
       return;
     }
 
-    // Validar que el himno tenga al menos una versión de país
-    final version = widget.himno.versiones.firstOrNull;
-    if (version == null) {
+    if (_estrofas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Este himno no tiene versiones de país'),
-        ),
+        const SnackBar(content: Text('Agrega al menos una estrofa')),
       );
       return;
     }
 
-    // Mostrar indicador de carga
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Text('Guardando arreglo...'),
-          ],
-        ),
-        duration: Duration(seconds: 30),
-      ),
-    );
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
 
     try {
-      // Obtener las estrofas originales desde el provider
-      final stanzasAsync = ref.read(stanzasProvider(widget.himno.primaryVersionPaisId));
-      final estrofas = stanzasAsync.when(
-        loading: () => <Estrofa>[],
-        error: (_, __) => <Estrofa>[],
-        data: (list) => list,
-      );
+      final repo = ref.read(arregloRepositoryProvider);
+      final userId = ref.read(currentUserIdProvider);
 
-      if (estrofas.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No hay estrofas para guardar'),
-          ),
+      if (_arregloId == null) {
+        // ── Crear nuevo arreglo ─────────────────────────────────
+        final arreglo = ArregloMusical(
+          id: 0, // la BD asigna AUTOINCREMENT
+          versionPaisId: _versionPaisId,
+          usuarioId: userId,
+          nombreArreglo: nombre,
+          tonalidadBase: _tonalidadBase,
         );
-        return;
+
+        final estrofas = _estrofas.asMap().entries.map(
+          (e) => EstrofaArreglo(
+                id: 0, // la BD asigna AUTOINCREMENT
+                arregloMusicalId: 0, // se asigna tras insertar el arreglo
+                tipo: e.value.tipo,
+                orden: e.key,
+                contenido: e.value.contenido,
+              ),
+        ).toList();
+
+        await repo.createArreglo(arreglo, estrofas);
+      } else {
+        // ── Actualizar arreglo existente ────────────────────────
+        final arreglo = ArregloMusical(
+          id: _arregloId!,
+          versionPaisId: _versionPaisId,
+          usuarioId: userId,
+          nombreArreglo: nombre,
+          tonalidadBase: _tonalidadBase,
+        );
+
+        final estrofas = _estrofas.asMap().entries.map(
+          (e) => EstrofaArreglo(
+                id: 0, // el datasource reemplaza mediante delete+insert
+                arregloMusicalId: _arregloId!,
+                tipo: e.value.tipo,
+                orden: e.key,
+                contenido: e.value.contenido,
+              ),
+        ).toList();
+
+        await repo.updateArreglo(arreglo, estrofas);
       }
 
-      // Construir lista de estrofas con ediciones mergeadas
-      final estrofasData = estrofas.map((e) {
-        // Usar contenido editado si existe, si no el original
-        final key = '${e.id}_content';
-        final contenido = _editedStanzas[key] ?? e.contenido;
-        return (
-          tipo: e.tipo.value,
-          orden: e.orden,
-          contenido: contenido,
-        );
-      }).toList();
+      // Invalidar lista de arreglos del usuario para que se refetchee
+      ref.invalidate(userArreglosProvider);
 
-      // Guardar el arreglo
-      final repo = ref.read(hymnRepositoryProvider);
-      final arrangementId = await repo.createArrangement(
-        versionPaisId: version.id,
-        usuarioId: 1, // Usuario por defecto (Admin) hasta implementar auth
-        nombreArreglo: name,
-        tonalidadBase: version.tonalidadOriginal,
-        estrofas: estrofasData,
-      );
-
-      // Éxito
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Arreglo "$name" guardado (ID #$arrangementId)'),
+          content: Text('Arreglo "$nombre" guardado exitosamente'),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
       Navigator.pop(context);
     } catch (e) {
-      // Error
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al guardar: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  // ── Diálogo de salida sin guardar ─────────────────────────────────────
+
+  Future<bool> _onWillPop() async {
+    if (!_isDirty) return true;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Seguir editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final titulo = widget.himno?.titulo ?? 'Arreglo #$_arregloId';
+
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop) {
+          final shouldPop = await _onWillPop();
+          if (shouldPop && context.mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Arreglo: $titulo'),
+          actions: [
+            IconButton(
+              icon: _isSaving
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Icon(Icons.save_rounded),
+              tooltip: 'Guardar',
+              onPressed: _isSaving ? null : _saveArrangement,
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _buildEditorBody(colorScheme),
+      ),
+    );
+  }
+
+  Widget _buildEditorBody(ColorScheme colorScheme) {
+    return Column(
+      children: [
+        // ── Nombre del arreglo ─────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: TextField(
+            controller: _nameCtrl,
+            onChanged: (_) {
+              if (!_isDirty) setState(() => _isDirty = true);
+            },
+            decoration: const InputDecoration(
+              labelText: 'Nombre del arreglo',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.music_note),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // ── Lista de estrofas editables ────────────────────────
+        Expanded(
+          child: _estrofas.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.library_music_outlined,
+                        size: 48,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No hay estrofas',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Usa el botón inferior para añadir una',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: _estrofas.length,
+                  itemBuilder: (context, index) {
+                    final e = _estrofas[index];
+                    // IMPORTANTE: index y total se calculan con indexOf
+                    // para que los botones de reordenar funcionen correctamente
+                    // tras inserciones/eliminaciones.
+                    final effectiveIndex = _estrofas.indexOf(e);
+                    final total = _estrofas.length;
+
+                    return StanzaBlockEditor(
+                      index: effectiveIndex,
+                      total: total,
+                      tipo: e.tipo,
+                      contenido: e.contenido,
+                      onTipoChanged: (t) => _updateTipo(e.tempId, t),
+                      onContenidoChanged: (c) => _updateContenido(e.tempId, c),
+                      onMoveUp: effectiveIndex > 0
+                          ? () => _moveStanza(e.tempId, -1)
+                          : null,
+                      onMoveDown: effectiveIndex < total - 1
+                          ? () => _moveStanza(e.tempId, 1)
+                          : null,
+                      onDelete: () => _deleteStanza(e.tempId),
+                    );
+                  },
+                ),
+        ),
+
+        // ── Botón "Añadir estrofa" ─────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _addEmptyStanza,
+              icon: const Icon(Icons.add),
+              label: const Text('Añadir Estrofa'),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

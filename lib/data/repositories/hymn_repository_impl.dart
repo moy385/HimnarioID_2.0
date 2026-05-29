@@ -236,6 +236,7 @@ class HymnRepositoryImpl implements HymnRepository {
   }
 
   @override
+  @Deprecated('Usar ArregloRepositoryImpl.createArreglo en su lugar')
   Future<int> createArrangement({
     required int versionPaisId,
     required int usuarioId,
