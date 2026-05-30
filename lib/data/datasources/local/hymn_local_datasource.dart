@@ -55,6 +55,9 @@ class HymnLocalDataSource {
 
     _log.info('Inicializando índice de búsqueda...');
 
+    // Limpiar índice existente para empezar desde cero
+    await db.execute('DELETE FROM Himno_Busqueda');
+
     // Obtener todos los himnos activos
     final hymns = await db.rawQuery(
       'SELECT id, titulo_principal FROM Himno WHERE activo = 1',
@@ -84,20 +87,24 @@ class HymnLocalDataSource {
       contentByHymn[hid]!.add(row['contenido'] as String);
     }
 
-    await db.transaction((txn) async {
-      for (final h in hymns) {
-        final id = h['id'] as int;
-        final titulo = h['titulo_principal'] as String;
-        final stanzas = contentByHymn[id] ?? <String>[];
-        final allText = stanzas.join(' ');
+      await db.transaction((txn) async {
+        for (final h in hymns) {
+          final id = h['id'] as int;
+          final titulo = h['titulo_principal'] as String;
+          final stanzas = contentByHymn[id] ?? <String>[];
+          final allText = stanzas.join(' ');
 
-        await txn.insert('Himno_Busqueda', {
-          'himno_id': id,
-          'titulo_normalizado': StringUtils.normalizeForSearch(titulo),
-          'contenido_normalizado': StringUtils.normalizeForSearch(allText),
-        });
-      }
-    });
+          await txn.insert(
+            'Himno_Busqueda',
+            {
+              'himno_id': id,
+              'titulo_normalizado': StringUtils.normalizeForSearch(titulo),
+              'contenido_normalizado': StringUtils.normalizeForSearch(allText),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      });
 
     _searchIndexInitialized = true;
     _log
