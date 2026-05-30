@@ -174,11 +174,15 @@ class DatabaseHelper {
 
       for (final assetHymn in assetHymns) {
         final numeroOficial = assetHymn['numero_oficial'] as int;
+        final tipo = assetHymn['tipo'] as int;
 
+        // Usamos clave compuesta (numero_oficial, tipo) para evitar que
+        // himnos de convencion (tipo=3) sobrescriban himnos oficiales (tipo=1)
+        // cuando comparten el mismo numero_oficial.
         final localHymns = await localDb.query(
           'Himno',
-          where: 'numero_oficial = ?',
-          whereArgs: [numeroOficial],
+          where: 'numero_oficial = ? AND tipo = ?',
+          whereArgs: [numeroOficial, tipo],
         );
 
         int localHymnId;
@@ -189,7 +193,7 @@ class DatabaseHelper {
           localHymnId = await localDb.insert('Himno', {
             'titulo_principal': assetHymn['titulo_principal'],
             'numero_oficial': numeroOficial,
-            'tipo': assetHymn['tipo'],
+            'tipo': tipo,
             'activo': assetHymn['activo'],
             if (assetHymn['evento'] != null) 'evento': assetHymn['evento'],
           });
@@ -201,7 +205,7 @@ class DatabaseHelper {
             'Himno',
             {
               'titulo_principal': assetHymn['titulo_principal'],
-              'tipo': assetHymn['tipo'],
+              'tipo': tipo,
               'activo': assetHymn['activo'],
               if (assetHymn['evento'] != null) 'evento': assetHymn['evento'],
             },
