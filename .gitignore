@@ -37,6 +37,7 @@ web/build/
 # Android (build artifacts)
 android/.gradle/
 android/local.properties
+android/key.properties
 android/app/build/
 android/app/src/main/java/io/flutter/plugins/
 
