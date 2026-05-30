@@ -200,6 +200,13 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       appearanceNotifier.setCardOpacity((message['cardOpacity'] as num).toDouble());
     }
 
+    if (message.containsKey('glassBlurSigma') && message['glassBlurSigma'] != null) {
+      appearanceNotifier.setGlassBlurSigma((message['glassBlurSigma'] as num).toDouble());
+    }
+    if (message.containsKey('glassEnabled') && message['glassEnabled'] != null) {
+      appearanceNotifier.setGlassEnabled(message['glassEnabled'] as bool);
+    }
+
     // ── Fondo seleccionado (imagen o color) ──
     if (message.containsKey('bgFondoId')) {
       if (message['bgFondoId'] != null) {

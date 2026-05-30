@@ -8,6 +8,7 @@ import '../providers/connection_providers.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/presentation_providers.dart';
 import '../providers/projection_providers.dart';
+import '../../shared_widgets/providers/appearance_provider.dart';
 
 /// Pantalla de Control en Vivo (Live Control).
 /// Botonera táctica diseñada para operar sin mirar la pantalla.
@@ -416,6 +417,7 @@ class LiveControlScreen extends ConsumerWidget {
         return Consumer(
           builder: (sheetContext, ref, _) {
             final currentConfig = ref.watch(projectionConfigProvider);
+            final appearance = ref.watch(hymnAppearanceProvider);
 
             return Padding(
               padding: const EdgeInsets.all(24),
@@ -495,6 +497,125 @@ class LiveControlScreen extends ConsumerWidget {
                       const Text('Rápida'),
                     ],
                   ),
+
+                  // ─────────────────────────────────────────
+                  // Efecto Glass (solo visible en fondo Imagen)
+                  // ─────────────────────────────────────────
+                  if (currentConfig.background == ProjectionBackground.image) ...[
+                    const SizedBox(height: 24),
+                    const Divider(
+                      color: Color(0xFF4A4A4A),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Toggle principal
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        Icons.blur_on_rounded,
+                        color: const Color(0xFFCCA43B),
+                      ),
+                      title: const Text('Efecto Glass'),
+                      subtitle: Text(
+                        'Panel semitransparente con blur',
+                        style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      value: appearance.glassEnabled,
+                      onChanged: (value) {
+                        ref
+                            .read(hymnAppearanceProvider.notifier)
+                            .setGlassEnabled(value);
+                      },
+                    ),
+
+                    if (appearance.glassEnabled) ...[
+                      const SizedBox(height: 16),
+
+                      // Opacidad del panel
+                      Text(
+                        'Opacidad del panel',
+                        style: Theme.of(sheetContext).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.opacity, size: 18),
+                          Expanded(
+                            child: Slider(
+                              value: appearance.cardOpacity,
+                              min: 0.05,
+                              max: 0.60,
+                              divisions: 55,
+                              label:
+                                  '${(appearance.cardOpacity * 100).round()}%',
+                              onChanged: (value) {
+                                ref
+                                    .read(hymnAppearanceProvider.notifier)
+                                    .setCardOpacity(value);
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 40,
+                            child: Text(
+                              '${(appearance.cardOpacity * 100).round()}%',
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: colorScheme.onSurface,
+                                  ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Intensidad de blur
+                      Text(
+                        'Intensidad de blur',
+                        style: Theme.of(sheetContext).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.blur_circular, size: 18),
+                          Expanded(
+                            child: Slider(
+                              value: appearance.glassBlurSigma,
+                              min: 0.0,
+                              max: 20.0,
+                              divisions: 40,
+                              label:
+                                  '${appearance.glassBlurSigma.toStringAsFixed(1)}px',
+                              onChanged: (value) {
+                                ref
+                                    .read(hymnAppearanceProvider.notifier)
+                                    .setGlassBlurSigma(value);
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 48,
+                            child: Text(
+                              '${appearance.glassBlurSigma.toStringAsFixed(1)}px',
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: colorScheme.onSurface,
+                                  ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ],
               ),
             );

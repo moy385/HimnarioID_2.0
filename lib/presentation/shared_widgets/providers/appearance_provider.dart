@@ -20,6 +20,8 @@ class HymnAppearanceState {
   final double projectionFontScale;
   final bool showChords;
   final double cardOpacity;
+  final double glassBlurSigma;
+  final bool glassEnabled;
 
   const HymnAppearanceState({
     this.bgColor = Colors.transparent,
@@ -32,6 +34,8 @@ class HymnAppearanceState {
     this.projectionFontScale = 1.0,
     this.showChords = true,
     this.cardOpacity = 0.1,
+    this.glassBlurSigma = 10.0,
+    this.glassEnabled = true,
   });
 
   static const _fondoSentinel = Object();
@@ -47,6 +51,8 @@ class HymnAppearanceState {
     double? projectionFontScale,
     bool? showChords,
     double? cardOpacity,
+    double? glassBlurSigma,
+    bool? glassEnabled,
   }) {
     return HymnAppearanceState(
       bgColor: bgColor ?? this.bgColor,
@@ -61,6 +67,8 @@ class HymnAppearanceState {
       projectionFontScale: projectionFontScale ?? this.projectionFontScale,
       showChords: showChords ?? this.showChords,
       cardOpacity: cardOpacity ?? this.cardOpacity,
+      glassBlurSigma: glassBlurSigma ?? this.glassBlurSigma,
+      glassEnabled: glassEnabled ?? this.glassEnabled,
     );
   }
 }
@@ -86,6 +94,8 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
 
       final showChordsStr = await _dbHelper.getConfig('show_chords');
       final cardOpacityStr = await _dbHelper.getConfig('card_opacity');
+      final glassBlurSigmaStr = await _dbHelper.getConfig('glass_blur_sigma');
+      final glassEnabledStr = await _dbHelper.getConfig('glass_enabled');
 
       state = state.copyWith(
         fontFamily: fontFamily ?? 'Merriweather',
@@ -99,6 +109,10 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
             : 1.0,
         showChords: showChordsStr == 'true',
         cardOpacity: cardOpacityStr != null ? double.tryParse(cardOpacityStr)?.clamp(0.0, 1.0) ?? 0.1 : 0.1,
+        glassBlurSigma: glassBlurSigmaStr != null
+            ? double.tryParse(glassBlurSigmaStr)?.clamp(0.0, 20.0) ?? 10.0
+            : 10.0,
+        glassEnabled: glassEnabledStr == 'true',
       );
       // Cargar fondo seleccionado
       final fondoIdStr = await _dbHelper.getConfig('bg_fondo_id');
@@ -137,6 +151,8 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
       );
       await _dbHelper.setConfig('show_chords', state.showChords.toString());
       await _dbHelper.setConfig('card_opacity', state.cardOpacity.toString());
+      await _dbHelper.setConfig('glass_blur_sigma', state.glassBlurSigma.toString());
+      await _dbHelper.setConfig('glass_enabled', state.glassEnabled.toString());
       await _dbHelper.setConfig('bg_fondo_id', state.selectedFondo?.id.toString() ?? '');
     } catch (e) {
       // Silent fail en escritura
@@ -233,6 +249,21 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
 
   void setCardOpacity(double value) {
     state = state.copyWith(cardOpacity: value.clamp(0.0, 1.0));
+    _saveToDb();
+  }
+
+  void setGlassBlurSigma(double value) {
+    state = state.copyWith(glassBlurSigma: value.clamp(0.0, 20.0));
+    _saveToDb();
+  }
+
+  void setGlassEnabled(bool value) {
+    state = state.copyWith(glassEnabled: value);
+    _saveToDb();
+  }
+
+  void toggleGlass() {
+    state = state.copyWith(glassEnabled: !state.glassEnabled);
     _saveToDb();
   }
 

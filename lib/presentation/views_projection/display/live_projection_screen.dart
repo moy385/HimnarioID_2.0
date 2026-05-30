@@ -7,9 +7,11 @@ import '../../../core/chords/chord_parser.dart';
 import '../../../core/enums/estrofa_tipo.dart';
 import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../domain/entities/estrofa.dart';
+import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/projection_slide.dart';
 import '../../shared_widgets/responsive_chord_widget.dart';
 import '../../shared_widgets/adaptive_stanza_text.dart';
+import '../../shared_widgets/glass_container.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
 import '../providers/projection_providers.dart';
@@ -65,17 +67,20 @@ class LiveProjectionScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: _buildFondo(appearance, Stack(
-        children: [
-          slideContent,
-          // ── Indicador de conexión (esquina inferior derecha) ──
-          Positioned(
-            right: 24,
-            bottom: 24,
-            child: _buildConnectionChip(colors, textTheme, serverInfo),
-          ),
-        ],
-      )),
+      body: _buildFondo(
+        appearance,
+        Stack(
+          children: [
+            slideContent,
+            // ── Indicador de conexión (esquina inferior derecha) ──
+            Positioned(
+              right: 24,
+              bottom: 24,
+              child: _buildConnectionChip(colors, textTheme, serverInfo),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -87,20 +92,39 @@ class LiveProjectionScreen extends ConsumerWidget {
     }
     return switch (fondo.tipo) {
       FondoPantallaTipo.colorSolido => slideContent,
-      FondoPantallaTipo.imagen => Stack(
-          children: [
-            if (fondo.rutaArchivo != null)
-              Positioned.fill(
-                child: Image.file(
-                  File(fondo.rutaArchivo!),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            slideContent,
-          ],
-        ),
+      FondoPantallaTipo.imagen => _buildImageBackground(fondo, appearance, slideContent),
     };
+  }
+
+  /// Construye el fondo de imagen con efecto glassmorphism opcional.
+  Widget _buildImageBackground(FondoPantalla fondo, HymnAppearanceState appearance, Widget slideContent) {
+    if (fondo.rutaArchivo == null) return slideContent;
+
+    final imageWidget = Positioned.fill(
+      child: Image.file(
+        File(fondo.rutaArchivo!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      ),
+    );
+
+    if (!appearance.glassEnabled) {
+      return Stack(children: [imageWidget, slideContent]);
+    }
+
+    return Stack(
+      children: [
+        imageWidget,
+        GlassContainer(
+          blurSigma: appearance.glassBlurSigma,
+          opacity: appearance.cardOpacity,
+          overlayColor: Colors.black,
+          padding: EdgeInsets.zero,
+          borderRadius: 0,
+          child: slideContent,
+        ),
+      ],
+    );
   }
 
   /// Delega la renderización al widget especializado según el tipo de slide.
@@ -387,7 +411,7 @@ class _LyricsSlide extends StatelessWidget {
     double width,
     TextStyle style,
   ) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: AdaptiveStanzaText(
         key: const ValueKey('plain'),
