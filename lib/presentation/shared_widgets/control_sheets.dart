@@ -24,7 +24,7 @@ import 'providers/fondo_options_provider.dart';
 
 /// Colores predefinidos para el texto de la letra.
 const List<Color> _textColors = [
-  Color(0xFF1C1B1F), // casi negro
+  Color(0xFF000000), // negro puro
   Color(0xFFFFFFFF), // blanco
   Color(0xFFB3261E), // rojo
   Color(0xFF1D6F42), // verde
