@@ -87,6 +87,9 @@ class _ArrangementEditorScreenState
   /// ID de la versión de país sobre la que se basa el arreglo.
   int _versionPaisId = 0;
 
+  /// Versión actual del arreglo (para preservar en edición).
+  int _currentVersion = 1;
+
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
@@ -177,6 +180,7 @@ class _ArrangementEditorScreenState
       _nameCtrl.text = arreglo.nombreArreglo;
       _tonalidadBase = arreglo.tonalidadBase;
       _versionPaisId = arreglo.versionPaisId;
+      _currentVersion = arreglo.version;
 
       _estrofas.addAll(
         estrofas.map(
@@ -320,6 +324,7 @@ class _ArrangementEditorScreenState
           usuarioId: userId,
           nombreArreglo: nombre,
           tonalidadBase: _tonalidadBase,
+          version: _currentVersion,
         );
 
         final estrofas = _estrofas.asMap().entries.map(
@@ -335,8 +340,15 @@ class _ArrangementEditorScreenState
         await repo.updateArreglo(arreglo, estrofas);
       }
 
-      // Invalidar lista de arreglos del usuario para que se refetchee
+      // Invalidar providers para que la UI refleje los cambios
       ref.invalidate(userArreglosProvider);
+      if (_arregloId != null) {
+        ref.invalidate(arregloDetailProvider(_arregloId!));
+        ref.invalidate(arregloEstrofasProvider(_arregloId!));
+      }
+
+      // Marcar como no sucio para que el PopScope no pregunte al salir
+      if (mounted) setState(() => _isDirty = false);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
