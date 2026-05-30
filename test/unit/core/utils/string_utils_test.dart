@@ -71,11 +71,18 @@ void main() {
       });
 
       test('elimina marcadores ChordPro: [G]Dios es [C]amor', () {
-        // normalizeForSearch quita [] pero conserva las letras G/C
-        // convirtiendo "[G]Dios es [C]amor" → "gdios es camor"
+        // normalizeForSearch llama a stripChords() primero,
+        // convirtiendo "[G]Dios es [C]amor" → "dios es amor"
         expect(
           StringUtils.normalizeForSearch('[G]Dios es [C]amor'),
-          'gdios es camor',
+          'dios es amor',
+        );
+      });
+
+      test('elimina acordes con bajo: [D/F#]Cuán precioso', () {
+        expect(
+          StringUtils.normalizeForSearch('[D/F#]Cuán precioso es el n[E]ombre de Jesú[A]s'),
+          'cuan precioso es el nombre de jesus',
         );
       });
 

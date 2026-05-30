@@ -1,3 +1,5 @@
+import '../chords/chord_parser.dart';
+
 /// Utilidad para normalizar strings, usada principalmente para
 /// ordenamiento inteligente que ignore acentos, diéresis y símbolos.
 class StringUtils {
@@ -46,7 +48,8 @@ class StringUtils {
   /// "Santa Biblia (Salmo 23)" → "santa biblia salmo 23"
   /// "[G]Dios es [C]amor" → "dios es amor"
   static String normalizeForSearch(String text) {
-    var result = text.toLowerCase().trim();
+    var result = stripChords(text);  // Eliminar acordes ChordPro primero
+    result = result.toLowerCase().trim();
     // Quitar acentos
     result = result.split('').map((c) => _accents[c] ?? c).join();
     // Quitar caracteres no alfanuméricos (excepto espacios)

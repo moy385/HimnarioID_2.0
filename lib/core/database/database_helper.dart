@@ -8,8 +8,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:logging/logging.dart';
 
 import 'db_version_manager.dart';
-import 'user_data_backup.dart';
-
 /// Logger estructurado para eventos de base de datos.
 final _log = Logger('DatabaseHelper');
 
@@ -34,7 +32,7 @@ class DatabaseHelper {
   /// SCHEMA_VERSION: controla las migraciones estructurales de la BD
   /// mediante onUpgrade(). Es independiente de la versión del asset
   /// (db_version.json) que controla actualizaciones de seed data.
-  static const int SCHEMA_VERSION = 6;
+  static const int SCHEMA_VERSION = 7;
 
   /// Obtiene la instancia de la base de datos, inicializándola si es necesario.
   Future<Database> get database async {
@@ -43,24 +41,25 @@ class DatabaseHelper {
     return _database!;
   }
 
-  /// Inicializa la base de datos con soporte de auto-update desde assets.
+  /// Inicializa la base de datos con merge automático desde assets.
+  ///
+  /// A diferencia del enfoque anterior (backup + reemplazar + restore),
+  /// este metodo NUNCA reemplaza la BD local del usuario. En su lugar,
+  /// solo AGREGA los himnos nuevos del asset, preservando intactos:
+  ///   - Arreglos musicales del usuario (con sus FK)
+  ///   - Himnos creados por el usuario
+  ///   - Fondos de pantalla personalizados
+  ///   - Configuracion, historial, etc.
   ///
   /// Flujo:
-  /// 1. Lee assetVersion (db_version.json) y localVersion (db_version.txt).
-  /// 2. Si assetVersion > localVersion o la BD local no existe:
-  ///    a. Backup de datos de usuario (Usuario, Arreglos, etc.).
-  ///    b. Copia nuevo .db desde assets.
-  ///    c. Escribe db_version.txt con la nueva versión.
-  ///    d. Re-importa datos de usuario.
-  /// 3. Abre la BD definitiva con onCreate/onUpgrade.
+  /// 1. Si la BD local no existe → se copia desde assets (primera instalacion).
+  /// 2. Se abre con onCreate/onUpgrade (migraciones de esquema).
+  /// 3. Si assetVersion > localVersion → solo se mergean los himnos nuevos.
+  /// 4. Se escribe db_version.txt.
   Future<Database> _initDatabase() async {
     final stopwatch = Stopwatch()..start();
 
-    // ── Modo desarrollo (desktop + debug): usar la BD del proyecto ──
-    // En flutter run -d linux, el directorio actual es la raiz del proyecto.
-    // Todas las escrituras van directo a assets/db/himnario_id.db,
-    // asi los cambios persisten en el arbol fuente y se empaquetan en
-    // el proximo build.
+    // ── Modo desarrollo (desktop + debug): BD directa del proyecto ──
     if (kDebugMode && !Platform.isAndroid && !Platform.isIOS) {
       final projectDb = p.join(
         Directory.current.path,
@@ -75,76 +74,257 @@ class DatabaseHelper {
       return db;
     }
 
-    // ── Modo release / mobile: copiar desde assets ─────────────
+    // ── Modo release / mobile ───────────────────────────────────
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dir.path, 'himnario_id.db');
     final localFile = File(dbPath);
 
-    final assetVersion = await DbVersionManager.readAssetVersion();
-    final localVersion = await DbVersionManager.readLocalVersion(dir.path);
-
-    final needsReplace = !localFile.existsSync() ||
-        DbVersionManager.needsUpdate(assetVersion, localVersion);
-
-    if (needsReplace) {
-      _log.info(
-        'DB update: assetVersion=$assetVersion, localVersion=$localVersion',
-      );
-
-      // Backup de datos de usuario
-      Map<String, List<Map<String, dynamic>>>? userData;
-      if (localFile.existsSync()) {
-        try {
-          final oldDb = await _openDatabaseRaw(dbPath);
-          userData = await UserDataBackup.exportUserData(oldDb);
-          await oldDb.close();
-          _log.info(
-            'User data backed up: ${userData.length} tables, '
-            '${userData.values.fold(0, (sum, rows) => sum + rows.length)} rows',
-          );
-        } catch (e) {
-          _log.warning('Could not backup user data: $e');
-        }
-      }
-
-      // Copiar nuevo .db desde assets
+    // 1. Si no existe BD local, copiar desde assets (primera instalacion)
+    if (!localFile.existsSync()) {
+      _log.info('No local DB found, copying from assets...');
       try {
         final bytes = await DbVersionManager.assetDbBytes();
-        if (bytes.isEmpty) {
-          _log.info('Asset DB is empty/absent — schema will be created fresh');
-        } else {
+        if (bytes.isNotEmpty) {
           await localFile.writeAsBytes(bytes);
-          _log.info('New DB copied from assets (${bytes.length} bytes)');
+          _log.info('Fresh DB copied from assets (${bytes.length} bytes)');
         }
       } catch (_) {
         _log.info('No asset DB available, will create fresh schema');
       }
+    }
 
-      // Escribir versión local
+    // 2. Abrir BD local (con onCreate/onUpgrade para migraciones de esquema)
+    final db = await _openDatabasePlatform(dbPath);
+
+    // 3. Merge de himnos nuevos desde el asset (sin tocar datos de usuario)
+    final assetVersion = await DbVersionManager.readAssetVersion();
+    final localVersion = await DbVersionManager.readLocalVersion(dir.path);
+
+    if (DbVersionManager.needsUpdate(assetVersion, localVersion)) {
+      _log.info(
+        'Merging seed data: assetVersion=$assetVersion, '
+        'localVersion=$localVersion',
+      );
+      try {
+        await _mergeNewHymnsFromAsset(db);
+        _log.info('Seed data merged successfully');
+      } catch (e) {
+        _log.severe('Failed to merge seed data: $e');
+        // Si falla el merge, la app continua con los datos que tenga.
+        // En el proximo inicio se reintentara.
+      }
+
+      // 4. Escribir version local
       if (assetVersion > 0) {
         await DbVersionManager.writeLocalVersion(dir.path, assetVersion);
         _log.info('Local version written: $assetVersion');
       }
-
-      // Re-importar datos de usuario
-      if (userData != null && userData.isNotEmpty) {
-        try {
-          final newDb = await _openDatabaseRaw(dbPath);
-          await UserDataBackup.importUserData(newDb, userData);
-          await newDb.close();
-          _log.info('User data restored: ${userData.length} tables');
-        } catch (e) {
-          _log.warning('Could not restore user data: $e');
-        }
-      }
     }
 
-    final db = await _openDatabasePlatform(dbPath);
     _log.info(
       'Database opened (schema v$SCHEMA_VERSION) in '
       '${stopwatch.elapsedMilliseconds}ms',
     );
     return db;
+  }
+
+  /// Mergea datos del asset DB a la BD local del usuario.
+  ///
+  /// Tres operaciones, en este orden:
+  /// 1. **Pais y Categoria** — INSERT de nuevos registros (para integridad FK).
+  /// 2. **Himno** — Si `numero_oficial` NO existe en local → INSERT (himno nuevo).
+  ///    Si existe → UPDATE en el mismo registro (corrige titulo, tipo, etc.).
+  ///    El `id` del himno NUNCA cambia, preservando FK de Version_Pais.
+  /// 3. **Version_Pais y Estrofa** — UPDATE en el mismo registro cuando
+  ///    coincide (himno_id+pais_id o version_pais_id+orden), INSERT si es nuevo.
+  ///    Nunca se borran registros locales, para no romper arreglos del usuario.
+  ///
+  /// Las tablas de usuario (Arreglo_Musical, Estrofa_Arreglo, Usuario,
+  /// Fondo_Pantalla, Preferencias, Historial) NO se tocan.
+  Future<void> _mergeNewHymnsFromAsset(Database localDb) async {
+    final assetBytes = await DbVersionManager.assetDbBytes();
+    if (assetBytes.isEmpty) return;
+
+    final tempDir = await getApplicationDocumentsDirectory();
+    final tempPath = p.join(tempDir.path, 'himnario_id_asset_temp.db');
+    await File(tempPath).writeAsBytes(assetBytes);
+
+    Database? assetDb;
+    try {
+      assetDb = await _openDatabaseRaw(tempPath);
+
+      // ── 1. Pais y Categoria (nuevos, para integridad FK) ──────
+      final assetCountries = await assetDb.query('Pais');
+      for (final c in assetCountries) {
+        await localDb.insert('Pais', c, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+      final assetCategories = await assetDb.query('Categoria');
+      for (final c in assetCategories) {
+        await localDb.insert('Categoria', c, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+
+      // ── 2. Himno ────────────────────────────────────────────────
+      final assetHymns = await assetDb.query(
+        'Himno',
+        where: 'numero_oficial IS NOT NULL',
+      );
+      if (assetHymns.isEmpty) return;
+
+      int inserted = 0, updated = 0;
+
+      for (final assetHymn in assetHymns) {
+        final numeroOficial = assetHymn['numero_oficial'] as int;
+
+        final localHymns = await localDb.query(
+          'Himno',
+          where: 'numero_oficial = ?',
+          whereArgs: [numeroOficial],
+        );
+
+        int localHymnId;
+        final oldAssetHymnId = assetHymn['id'] as int;
+
+        if (localHymns.isEmpty) {
+          // Himno NUEVO → INSERT con id auto-generado
+          localHymnId = await localDb.insert('Himno', {
+            'titulo_principal': assetHymn['titulo_principal'],
+            'numero_oficial': numeroOficial,
+            'tipo': assetHymn['tipo'],
+            'activo': assetHymn['activo'],
+            if (assetHymn['evento'] != null) 'evento': assetHymn['evento'],
+          });
+          inserted++;
+        } else {
+          // Himno EXISTENTE → UPDATE (correcciones: titulo, acordes, etc.)
+          localHymnId = localHymns.first['id'] as int;
+          await localDb.update(
+            'Himno',
+            {
+              'titulo_principal': assetHymn['titulo_principal'],
+              'tipo': assetHymn['tipo'],
+              'activo': assetHymn['activo'],
+              if (assetHymn['evento'] != null) 'evento': assetHymn['evento'],
+            },
+            where: 'id = ?',
+            whereArgs: [localHymnId],
+          );
+          updated++;
+        }
+
+        // ── 3. Version_Pais ───────────────────────────────────────
+        // Mapeo: id del asset → id local (para estrofas)
+        final versionMap = <int, int>{};
+
+        final assetVersions = await assetDb.query(
+          'Version_Pais',
+          where: 'himno_id = ?',
+          whereArgs: [oldAssetHymnId],
+        );
+
+        for (final assetVersion in assetVersions) {
+          final paisId = assetVersion['pais_id'] as int;
+          final oldAssetVersionId = assetVersion['id'] as int;
+
+          final localVersions = await localDb.query(
+            'Version_Pais',
+            where: 'himno_id = ? AND pais_id = ?',
+            whereArgs: [localHymnId, paisId],
+          );
+
+          if (localVersions.isEmpty) {
+            // Version NUEVA → INSERT
+            final newVersionId = await localDb.insert('Version_Pais', {
+              'himno_id': localHymnId,
+              'pais_id': paisId,
+              'tonalidad_original': assetVersion['tonalidad_original'],
+              'activo': assetVersion['activo'],
+            });
+            versionMap[oldAssetVersionId] = newVersionId;
+          } else {
+            // Version EXISTENTE → UPDATE (tonalidad, activo)
+            final localVersionId = localVersions.first['id'] as int;
+            await localDb.update(
+              'Version_Pais',
+              {
+                'tonalidad_original': assetVersion['tonalidad_original'],
+                'activo': assetVersion['activo'],
+              },
+              where: 'id = ?',
+              whereArgs: [localVersionId],
+            );
+            versionMap[oldAssetVersionId] = localVersionId;
+          }
+        }
+
+        // ── Estrofa ───────────────────────────────────────────────
+        for (final entry in versionMap.entries) {
+          final oldAssetVersionId = entry.key;
+          final localVersionId = entry.value;
+
+          final assetStanzas = await assetDb.query(
+            'Estrofa',
+            where: 'version_pais_id = ?',
+            whereArgs: [oldAssetVersionId],
+            orderBy: 'orden ASC',
+          );
+
+          for (final assetStanza in assetStanzas) {
+            final orden = assetStanza['orden'] as int;
+
+            final localStanzas = await localDb.query(
+              'Estrofa',
+              where: 'version_pais_id = ? AND orden = ?',
+              whereArgs: [localVersionId, orden],
+            );
+
+            if (localStanzas.isEmpty) {
+              // Estrofa NUEVA → INSERT
+              await localDb.insert('Estrofa', {
+                'version_pais_id': localVersionId,
+                'tipo': assetStanza['tipo'],
+                'orden': orden,
+                'contenido': assetStanza['contenido'],
+              });
+            } else {
+              // Estrofa EXISTENTE → UPDATE (contenido corregido)
+              await localDb.update(
+                'Estrofa',
+                {
+                  'tipo': assetStanza['tipo'],
+                  'contenido': assetStanza['contenido'],
+                },
+                where: 'version_pais_id = ? AND orden = ?',
+                whereArgs: [localVersionId, orden],
+              );
+            }
+          }
+        }
+
+        // ── Himno_Categoria ───────────────────────────────────────
+        final assetCats = await assetDb.query(
+          'Himno_Categoria',
+          where: 'himno_id = ?',
+          whereArgs: [oldAssetHymnId],
+        );
+        for (final ac in assetCats) {
+          await localDb.insert(
+            'Himno_Categoria',
+            {'himno_id': localHymnId, 'categoria_id': ac['categoria_id']},
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+      }
+
+      _log.info(
+        'Merge complete: $inserted inserted, $updated updated, '
+        '${assetHymns.length} total hymns processed',
+      );
+    } finally {
+      await assetDb?.close();
+      try {
+        await File(tempPath).delete();
+      } catch (_) {}
+    }
   }
 
   /// Abre una base de datos SQLite sin gestión de versiones.
@@ -548,6 +728,13 @@ class DatabaseHelper {
       );
       await db.execute('DROP TABLE Fondo_Pantalla');
       await db.execute('ALTER TABLE Fondo_Pantalla_v6 RENAME TO Fondo_Pantalla');
+    }
+
+    if (oldVersion < 7) {
+      // Forzar reindexación del contenido de búsqueda para ignorar acordes ChordPro.
+      // La tabla Himno_Busqueda se reconstruye automáticamente en el próximo
+      // searchHymns() vía _doInitializeSearchIndex().
+      await db.execute('DELETE FROM Himno_Busqueda');
     }
   }
 
