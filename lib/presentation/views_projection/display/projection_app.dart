@@ -206,6 +206,15 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
     if (message.containsKey('glassEnabled') && message['glassEnabled'] != null) {
       appearanceNotifier.setGlassEnabled(message['glassEnabled'] as bool);
     }
+    if (message.containsKey('glassOverlayColor') && message['glassOverlayColor'] != null) {
+      final hex = message['glassOverlayColor'] as String;
+      try {
+        final color = Color(int.parse(hex.substring(1), radix: 16) | 0xFF000000);
+        appearanceNotifier.setGlassOverlayColor(color);
+      } catch (_) {
+        // Ignorar color inválido
+      }
+    }
 
     // ── Fondo seleccionado (imagen o color) ──
     if (message.containsKey('bgFondoId')) {

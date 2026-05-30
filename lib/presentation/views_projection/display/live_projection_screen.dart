@@ -118,7 +118,7 @@ class LiveProjectionScreen extends ConsumerWidget {
         GlassContainer(
           blurSigma: appearance.glassBlurSigma,
           opacity: appearance.cardOpacity,
-          overlayColor: Colors.black,
+          overlayColor: appearance.glassOverlayColor,
           padding: EdgeInsets.zero,
           borderRadius: 0,
           child: slideContent,

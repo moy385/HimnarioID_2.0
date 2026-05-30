@@ -114,6 +114,9 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'projectionFontScale': appearance.projectionFontScale,
     'showChords': appearance.showChords,
     'cardOpacity': appearance.cardOpacity,
+    'glassBlurSigma': appearance.glassBlurSigma,
+    'glassEnabled': appearance.glassEnabled,
+    'glassOverlayColor': _colorToHex(appearance.glassOverlayColor),
     'bgFondoId': appearance.selectedFondo?.id,
     'bgTipo': appearance.selectedFondo?.tipo.value,
     'bgRuta': appearance.selectedFondo?.rutaArchivo,
@@ -363,54 +366,161 @@ List<Widget> _brushSheetChildren({
     const SizedBox(height: 20),
 
     // ==========================================
-    // 2. Opacidad de tarjetas de estrofa
+    // 2. Efecto Glass (vidrio full-screen)
     // ==========================================
-    Text(
-      'Opacidad de tarjetas',
-      style: textTheme.labelLarge?.copyWith(
-        color: colorScheme.onSurfaceVariant,
+    SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: Icon(
+        Icons.blur_on_rounded,
+        color: const Color(0xFFCCA43B),
       ),
-    ),
-    const SizedBox(height: 4),
-    Text(
-      'Ajusta la transparencia de las tarjetas que contienen las estrofas',
-      style: textTheme.bodySmall?.copyWith(
-        color: colorScheme.onSurfaceVariant,
+      title: const Text('Efecto Glass'),
+      subtitle: Text(
+        'Fondo full-screen con blur y overlay de color',
+        style: textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
       ),
+      value: appearance.glassEnabled,
+      onChanged: (value) {
+        ref.read(hymnAppearanceProvider.notifier).setGlassEnabled(value);
+        _syncAppearanceToProjection(ref);
+      },
     ),
-    const SizedBox(height: 4),
-    Row(
-      children: <Widget>[
-        const Icon(Icons.opacity, size: 18),
-        Expanded(
-          child: Slider(
-            value: appearance.cardOpacity,
-            min: 0.0,
-            max: 1.0,
-            divisions: 20,
-            label: '${(appearance.cardOpacity * 100).round()}%',
-            onChanged: (value) {
+
+    if (appearance.glassEnabled) ...[
+      const SizedBox(height: 16),
+
+      // Opacidad del vidrio
+      Text(
+        'Opacidad del vidrio',
+        style: textTheme.labelLarge?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Controla qué tanto se ve la imagen a través del vidrio',
+        style: textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Row(
+        children: <Widget>[
+          const Icon(Icons.opacity, size: 18),
+          Expanded(
+            child: Slider(
+              value: appearance.cardOpacity,
+              min: 0.0,
+              max: 1.0,
+              divisions: 20,
+              label: '${(appearance.cardOpacity * 100).round()}%',
+              onChanged: (value) {
+                ref
+                    .read(hymnAppearanceProvider.notifier)
+                    .setCardOpacity(value);
+                _syncAppearanceToProjection(ref);
+              },
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: Text(
+              '${(appearance.cardOpacity * 100).round()}%',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+
+      // Intensidad de blur
+      Text(
+        'Intensidad de blur',
+        style: textTheme.labelLarge?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Row(
+        children: <Widget>[
+          const Icon(Icons.blur_circular, size: 18),
+          Expanded(
+            child: Slider(
+              value: appearance.glassBlurSigma,
+              min: 0.0,
+              max: 20.0,
+              divisions: 40,
+              label: '${appearance.glassBlurSigma.toStringAsFixed(1)}px',
+              onChanged: (value) {
+                ref
+                    .read(hymnAppearanceProvider.notifier)
+                    .setGlassBlurSigma(value);
+                _syncAppearanceToProjection(ref);
+              },
+            ),
+          ),
+          SizedBox(
+            width: 48,
+            child: Text(
+              '${appearance.glassBlurSigma.toStringAsFixed(1)}px',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 16),
+
+      // Color del overlay del vidrio
+      Text(
+        'Color del overlay',
+        style: textTheme.labelLarge?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Tonalidad del vidrio (elige el color que se mezcla con el fondo)',
+        style: textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          Colors.white,
+          Colors.black,
+          const Color(0xFFB3261E), // rojo
+          const Color(0xFF1D6F42), // verde
+          const Color(0xFF1A6B8A), // azul
+          const Color(0xFF6750A4), // púrpura
+          const Color(0xFFCCA43B), // dorado
+          const Color(0xFFFF8F00), // naranja
+        ].map((color) {
+          final isSelected = color.toARGB32() == appearance.glassOverlayColor.toARGB32();
+          return _ColorCircle(
+            color: color,
+            isSelected: isSelected,
+            onTap: () {
               ref
                   .read(hymnAppearanceProvider.notifier)
-                  .setCardOpacity(value);
+                  .setGlassOverlayColor(color);
               _syncAppearanceToProjection(ref);
-              
             },
-          ),
-        ),
-        SizedBox(
-          width: 40,
-          child: Text(
-            '${(appearance.cardOpacity * 100).round()}%',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface,
-            ),
-            textAlign: TextAlign.end,
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 8),
+          );
+        }).toList(),
+      ),
+    ],
 
     const SizedBox(height: 20),
 

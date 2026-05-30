@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -502,9 +503,62 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
     TextTheme textTheme,
     HymnAppearanceState appearance, {
     int? stanzaNumber,
-  }) {
+  }  ) {
     final isChorus = estrofa.isChorus;
+    final bool useGlass =
+        appearance.glassEnabled &&
+        appearance.selectedFondo?.tipo == FondoPantallaTipo.imagen;
 
+    final label = Text(
+      isChorus ? 'CORO' : 'ESTROFA ${stanzaNumber ?? estrofa.orden}',
+      style: (useGlass
+              ? textTheme.labelSmall?.copyWith(
+                  color: appearance.textColor.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.w600,
+                )
+              : textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                )) ??
+          const TextStyle(),
+    );
+
+    final lyrics = _buildLyricWithChords(
+      context,
+      estrofa.contenido,
+      transposeValue,
+      colorScheme,
+      textTheme,
+      appearance,
+    );
+
+    // Sin tarjeta: contenido limpio sobre el vidrio full-screen
+    if (useGlass) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: isChorus
+            ? Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: appearance.chordColor.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [label, const SizedBox(height: 8), lyrics],
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [label, const SizedBox(height: 8), lyrics],
+              ),
+      );
+    }
+
+    // Con tarjeta: container blanco semitransparente (modo clásico)
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
@@ -521,7 +575,6 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Etiqueta de tipo de estrofa (gris con texto blanco)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -539,15 +592,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
             ),
           ),
           const SizedBox(height: 12),
-          // Letra con acordes transpuestos
-          _buildLyricWithChords(
-            context,
-            estrofa.contenido,
-            transposeValue,
-            colorScheme,
-            textTheme,
-            appearance,
-          ),
+          lyrics,
         ],
       ),
     );
@@ -761,6 +806,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
             'fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
         fondo: appearance.selectedFondo,
         bgColor: appearance.bgColor,
+        appearance: appearance,
         // Fullscreen: scroll sin padding para que el contenido ocupe toda la pantalla
         child: SingleChildScrollView(
           padding: EdgeInsets.zero,
@@ -789,6 +835,7 @@ class _HymnDetailScreenState extends ConsumerState<HymnDetailScreen>
                 'fondo_bg_${appearance.selectedFondo?.rutaArchivo ?? appearance.selectedFondo?.id}'),
             fondo: appearance.selectedFondo,
             bgColor: appearance.bgColor,
+            appearance: appearance,
             child: bodyContent,
           ),
         ),
@@ -1056,12 +1103,14 @@ class _FondoBackground extends StatelessWidget {
   final FondoPantalla? fondo;
   final Color bgColor;
   final Widget child;
+  final HymnAppearanceState? appearance;
 
   const _FondoBackground({
     super.key,
     required this.fondo,
     required this.bgColor,
     required this.child,
+    this.appearance,
   });
 
   @override
@@ -1082,6 +1131,25 @@ class _FondoBackground extends StatelessWidget {
                     key: ValueKey('img_${fondo!.rutaArchivo}'),
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(color: bgColor),
+                  ),
+                ),
+              // Full-screen glass overlay
+              if (appearance != null &&
+                  appearance!.glassEnabled &&
+                  fondo!.rutaArchivo != null)
+                Positioned.fill(
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(
+                        sigmaX: appearance!.glassBlurSigma,
+                        sigmaY: appearance!.glassBlurSigma,
+                      ),
+                      child: Container(
+                        color: appearance!.glassOverlayColor.withValues(
+                          alpha: appearance!.cardOpacity.clamp(0.0, 1.0),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               child,
