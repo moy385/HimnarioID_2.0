@@ -87,6 +87,16 @@ class DatabaseHelper {
         if (bytes.isNotEmpty) {
           await localFile.writeAsBytes(bytes);
           _log.info('Fresh DB copied from assets (${bytes.length} bytes)');
+
+          // Escribir localVersion INMEDIATAMENTE para que needsUpdate()
+          // retorne false (assetVersion == localVersion) y se SKIPEE
+          // el merge en primera instalacion — es innecesario porque
+          // la BD recien copiada ya contiene todos los datos del asset.
+          final assetVer = await DbVersionManager.readAssetVersion();
+          if (assetVer > 0) {
+            await DbVersionManager.writeLocalVersion(dir.path, assetVer);
+            _log.info('Local version written early: $assetVer (merge skipped)');
+          }
         }
       } catch (_) {
         _log.info('No asset DB available, will create fresh schema');
@@ -132,9 +142,10 @@ class DatabaseHelper {
   ///
   /// Tres operaciones, en este orden:
   /// 1. **Pais y Categoria** — INSERT de nuevos registros (para integridad FK).
-  /// 2. **Himno** — Si `numero_oficial` NO existe en local → INSERT (himno nuevo).
-  ///    Si existe → UPDATE en el mismo registro (corrige titulo, tipo, etc.).
-  ///    El `id` del himno NUNCA cambia, preservando FK de Version_Pais.
+  /// 2. **Himno** — Match por `id` (PRIMARY KEY). Si no coincide el id,
+  ///    intenta fallback por `(numero_oficial, tipo)` para compatibilidad
+  ///    con BD anteriores a v2.1.2. Si no existe → INSERT con id explicito
+  ///    del asset. Si existe → UPDATE en el mismo registro.
   /// 3. **Version_Pais y Estrofa** — UPDATE en el mismo registro cuando
   ///    coincide (himno_id+pais_id o version_pais_id+orden), INSERT si es nuevo.
   ///    Nunca se borran registros locales, para no romper arreglos del usuario.
@@ -173,24 +184,37 @@ class DatabaseHelper {
       int inserted = 0, updated = 0;
 
       for (final assetHymn in assetHymns) {
+        final oldAssetHymnId = assetHymn['id'] as int;
         final numeroOficial = assetHymn['numero_oficial'] as int;
         final tipo = assetHymn['tipo'] as int;
 
-        // Usamos clave compuesta (numero_oficial, tipo) para evitar que
-        // himnos de convencion (tipo=3) sobrescriban himnos oficiales (tipo=1)
-        // cuando comparten el mismo numero_oficial.
-        final localHymns = await localDb.query(
+        // 1. Match por id (PRIMARY KEY única, segura incluso para himnos
+        //    que comparten numero_oficial+tipo — ej: himno 290 tiene dos
+        //    himnos oficiales con distintos paises e ids).
+        var localHymns = await localDb.query(
           'Himno',
-          where: 'numero_oficial = ? AND tipo = ?',
-          whereArgs: [numeroOficial, tipo],
+          where: 'id = ?',
+          whereArgs: [oldAssetHymnId],
         );
 
+        // 2. Fallback por (numero_oficial, tipo) para compatibilidad
+        //    con BD locales creadas antes de v2.1.2 donde el merge
+        //    anterior pudo haber insertado himnos con id diferente.
+        if (localHymns.isEmpty) {
+          localHymns = await localDb.query(
+            'Himno',
+            where: 'numero_oficial = ? AND tipo = ?',
+            whereArgs: [numeroOficial, tipo],
+          );
+        }
+
         int localHymnId;
-        final oldAssetHymnId = assetHymn['id'] as int;
 
         if (localHymns.isEmpty) {
-          // Himno NUEVO → INSERT con id auto-generado
+          // Himno NUEVO → INSERT con id explicito del asset
+          // para que futuros merges matcheen correctamente por id.
           localHymnId = await localDb.insert('Himno', {
+            'id': oldAssetHymnId,
             'titulo_principal': assetHymn['titulo_principal'],
             'numero_oficial': numeroOficial,
             'tipo': tipo,
