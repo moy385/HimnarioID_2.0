@@ -121,6 +121,14 @@ void _syncAppearanceToProjection(WidgetRef ref) {
   // Fire-and-forget silencioso
   ref.read(windowServiceProvider).sendMessage(message);
 
+  // Sincronizar fondo seleccionado por separado (SET_CONFIG no transporta fondo)
+  if (appearance.selectedFondo != null) {
+    ref.read(windowServiceProvider).sendMessage({
+      'type': 'SET_BACKGROUND',
+      'bgFondoId': appearance.selectedFondo!.id.toString(),
+    });
+  }
+
   // NUEVO: Enviar por gRPC si estamos conectados como emisor
   final isConnected = ref.read(isConnectedProvider);
   if (isConnected) {
@@ -142,10 +150,11 @@ void _syncAppearanceToProjection(WidgetRef ref) {
       ).catchError((_) => false);
     }
 
-    // NUEVO: Enviar escala de fuente local
-    dataSource.sendSetFontSize(
-      appearance.fontScale * 48.0,
-    ).catchError((_) => false);
+    // NOTA: fontScale se envía en SET_CONFIG (WindowService → subproceso).
+    // No se envía sendSetFontSize separado porque:
+    // 1. El subproceso ya recibe fontScale vía SET_CONFIG
+    // 2. sendSetFontSize en el proceso principal dispara _saveToDb()
+    //    que sobreescribe bg_fondo_id = '' en la BD (contaminación)
   }
 }
 

@@ -10,9 +10,11 @@ import '../../../core/enums/himno_tipo.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
+import '../../../domain/entities/fondo_pantalla.dart';
 import '../../shared_widgets/fullscreen_handler.dart';
 import '../../shared_widgets/providers/appearance_provider.dart';
 import '../providers/live_control_providers.dart';
+import '../providers/projection_providers.dart';
 import 'live_projection_screen.dart';
 
 /// Punto de entrada para la segunda ventana de proyección.
@@ -97,6 +99,11 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
           notifier.goToSlide(index + 1); // +1 por TitleSlide
         case 'SET_CONFIG':
           _handleSetConfig(message);
+        case 'SET_BACKGROUND':
+          final bgId = message['bgFondoId'] as String?;
+          if (bgId != null) {
+            _handleSetBackground(bgId);
+          }
         case 'BLACKOUT':
           final enabled = message['enabled'] as bool;
           if (enabled) {
@@ -218,6 +225,27 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
     // mensajes dedicados: SET_BACKGROUND (gRPC) o bgFondoId en SET_CONFIG
     // desde la ventana de proyección. SET_CONFIG del emisor NO transporta
     // fondo para evitar que se borre al cambiar apariencia.
+  }
+
+  /// Procesa un mensaje SET_BACKGROUND: carga y aplica el fondo
+  /// de pantalla por ID en el subproceso de proyección.
+  ///
+  /// Busca el [FondoPantalla] en el repositorio local y lo asigna
+  /// al [hymnAppearanceProvider] para que se renderice en pantalla.
+  void _handleSetBackground(String bgId) {
+    final id = int.tryParse(bgId);
+    if (id == null) return;
+    try {
+      final repo = ref.read(fondoRepositoryProvider);
+      repo.getAll().then((fondos) {
+        final fondo = fondos.where((f) => f.id == id).firstOrNull;
+        if (fondo != null) {
+          ref.read(hymnAppearanceProvider.notifier).setFondo(fondo);
+        }
+      });
+    } catch (_) {
+      // Ignorar errores de carga del fondo
+    }
   }
 
   @override

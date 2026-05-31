@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/enums/estrofa_tipo.dart';
 import '../../../core/enums/himno_tipo.dart';
+import '../../../core/window_manager/window_providers.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../../domain/entities/projection_slide.dart';
@@ -240,6 +241,7 @@ class GrpcDisplayServer extends HymnControlServiceBase {
               if (fondo != null) {
                 _container.read(hymnAppearanceProvider.notifier).setFondo(fondo);
                 _log.info('Fondo cambiado a: ${fondo.nombre}');
+                _syncBackgroundToSubprocess(bgId);
               } else {
                 _log.warning('Fondo con ID $bgId no encontrado');
               }
@@ -254,6 +256,7 @@ class GrpcDisplayServer extends HymnControlServiceBase {
             final scale = request.fontSize / 48.0;
             _container.read(hymnAppearanceProvider.notifier).setFontScale(scale);
             _log.info('Tamaño de fuente cambiado a escala: $scale');
+            _syncAppearanceToSubprocess();
           }
           break;
 
@@ -269,6 +272,7 @@ class GrpcDisplayServer extends HymnControlServiceBase {
               if (request.hasCardOpacity()) notifier.setCardOpacity(request.cardOpacity);
               if (request.hasProjectionFontScale()) notifier.setProjectionFontScale(request.projectionFontScale);
               _log.info('Apariencia actualizada desde control remoto');
+              _syncAppearanceToSubprocess();
             } catch (e) {
               _log.severe('Error al aplicar apariencia remota: $e');
             }
@@ -506,5 +510,63 @@ class GrpcDisplayServer extends HymnControlServiceBase {
     if (hex.length == 6) buffer.write('FF');
     buffer.write(hex);
     return Color(int.parse(buffer.toString(), radix: 16));
+  }
+
+  /// Convierte [Color] a string hexadecimal con prefijo `#`.
+  static String _colorToHex(Color color) {
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
+  }
+
+  /// Sincroniza la apariencia actual con la ventana de proyección (subproceso).
+  ///
+  /// Envía un mensaje SET_CONFIG al [WindowService] para que el subproceso
+  /// de proyección reciba los cambios de apariencia que llegaron por gRPC.
+  /// bgFondoId se omite intencionalmente (se maneja vía SET_BACKGROUND).
+  void _syncAppearanceToSubprocess() {
+    if (_container == null) return;
+    try {
+      final appearance = _container.read(hymnAppearanceProvider);
+      final message = <String, dynamic>{
+        'type': 'SET_CONFIG',
+        'textColor': _colorToHex(appearance.textColor),
+        'chordColor': _colorToHex(appearance.chordColor),
+        'fontFamily': appearance.fontFamily,
+        'isBold': appearance.isBold,
+        'fontScale': appearance.fontScale,
+        'projectionFontScale': appearance.projectionFontScale,
+        'showChords': appearance.showChords,
+        'cardOpacity': appearance.cardOpacity,
+        'glassBlurSigma': appearance.glassBlurSigma,
+        'glassEnabled': appearance.glassEnabled,
+        'glassOverlayColor': _colorToHex(appearance.glassOverlayColor),
+      };
+      _container.read(windowServiceProvider).sendMessage(message);
+
+      // Sincronizar fondo si hay uno seleccionado (SET_CONFIG no transporta fondo)
+      if (appearance.selectedFondo != null) {
+        _syncBackgroundToSubprocess(appearance.selectedFondo!.id);
+      }
+
+      _log.fine('Apariencia sincronizada con subproceso');
+    } catch (e) {
+      _log.warning('Error al sincronizar apariencia con subproceso: $e');
+    }
+  }
+
+  /// Sincroniza el fondo seleccionado con la ventana de proyección (subproceso).
+  ///
+  /// Envía un mensaje SET_BACKGROUND al [WindowService] para que el subproceso
+  /// cargue el mismo fondo que se seleccionó vía gRPC.
+  void _syncBackgroundToSubprocess(int bgId) {
+    if (_container == null) return;
+    try {
+      _container.read(windowServiceProvider).sendMessage({
+        'type': 'SET_BACKGROUND',
+        'bgFondoId': bgId.toString(),
+      });
+      _log.fine('Fondo sincronizado con subproceso: $bgId');
+    } catch (e) {
+      _log.warning('Error al sincronizar fondo con subproceso: $e');
+    }
   }
 }
