@@ -117,10 +117,6 @@ void _syncAppearanceToProjection(WidgetRef ref) {
     'glassBlurSigma': appearance.glassBlurSigma,
     'glassEnabled': appearance.glassEnabled,
     'glassOverlayColor': _colorToHex(appearance.glassOverlayColor),
-    'bgFondoId': appearance.selectedFondo?.id,
-    'bgTipo': appearance.selectedFondo?.tipo.value,
-    'bgRuta': appearance.selectedFondo?.rutaArchivo,
-    'colorHex': appearance.selectedFondo?.colorHex,
   };
   // Fire-and-forget silencioso
   ref.read(windowServiceProvider).sendMessage(message);

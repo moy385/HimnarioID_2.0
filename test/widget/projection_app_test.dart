@@ -378,7 +378,7 @@ void main() {
         await stdinCtrl.close();
       });
 
-      testWidgets('14. bgColor — actualiza fondo en ambos providers',
+      testWidgets('14. bgColor — SET_CONFIG ya no procesa bgColor (fix fondo)',
           (tester) async {
         final stdinCtrl = StreamController<String>.broadcast();
         await tester.pumpWidget(
@@ -386,6 +386,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        // bgColor en SET_CONFIG ya no se procesa (ver BUG_FONDO_RESET.md).
+        // El fondo solo se cambia mediante mensajes dedicados (SET_BACKGROUND).
         stdinCtrl.add(jsonEncode({
           'type': 'SET_CONFIG',
           'bgColor': '#FF1D6F42',
@@ -395,13 +397,9 @@ void main() {
         final container =
             ProviderScope.containerOf(tester.element(find.byType(ProjectionApp)));
 
-        // Verificar en hymnAppearanceProvider
+        // bgColor NO debe cambiar; permanece en default (transparent)
         final appearance = container.read(hymnAppearanceProvider);
-        expect(appearance.bgColor, const Color(0xFF1D6F42));
-
-        // Verificar en projectionConfigProvider (compatibilidad)
-        final config = container.read(projectionConfigProvider);
-        expect(config.backgroundColor, const Color(0xFF1D6F42));
+        expect(appearance.bgColor, Colors.transparent);
 
         await stdinCtrl.close();
       });

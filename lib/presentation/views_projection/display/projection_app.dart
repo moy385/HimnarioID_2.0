@@ -6,10 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/enums/estrofa_tipo.dart';
-import '../../../core/enums/fondo_pantalla_tipo.dart';
 import '../../../core/enums/himno_tipo.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../domain/entities/fondo_pantalla.dart';
 import '../../../domain/entities/estrofa.dart';
 import '../../../domain/entities/himno.dart';
 import '../../shared_widgets/fullscreen_handler.dart';
@@ -216,27 +214,10 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
       }
     }
 
-    // ── Fondo seleccionado (imagen o color) ──
-    if (message.containsKey('bgFondoId')) {
-      if (message['bgFondoId'] != null) {
-        final fondoId = message['bgFondoId'] as int;
-        final tipoStr = message['bgTipo'] as String? ?? 'color_solido';
-        final ruta = message['bgRuta'] as String?;
-        final hex = message['colorHex'] as String?;
-        final fondo = FondoPantalla(
-          id: fondoId,
-          nombre: '',
-          tipo: FondoPantallaTipo.fromValue(tipoStr),
-          rutaArchivo: ruta,
-          colorHex: hex,
-        );
-        appearanceNotifier.setFondo(fondo);
-      } else {
-        // bgFondoId es null → limpiar fondo seleccionado (cambio a color sólido)
-        final currentBgColor = ref.read(hymnAppearanceProvider).bgColor;
-        appearanceNotifier.setBgColor(currentBgColor);
-      }
-    }
+    // ── Fondo: NO se procesa aquí. El fondo solo se cambia mediante ──
+    // mensajes dedicados: SET_BACKGROUND (gRPC) o bgFondoId en SET_CONFIG
+    // desde la ventana de proyección. SET_CONFIG del emisor NO transporta
+    // fondo para evitar que se borre al cambiar apariencia.
   }
 
   @override

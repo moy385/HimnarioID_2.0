@@ -92,11 +92,6 @@ Map<String, dynamic> _buildSetConfigMessage(HymnAppearanceState appearance) {
     'fontScale': appearance.fontScale,
     'showChords': appearance.showChords,
     'cardOpacity': appearance.cardOpacity,
-    // Campos de fondo seleccionado
-    'bgFondoId': appearance.selectedFondo?.id,
-    'bgTipo': appearance.selectedFondo?.tipo.value,
-    'bgRuta': appearance.selectedFondo?.rutaArchivo,
-    'colorHex': appearance.selectedFondo?.colorHex,
   };
 }
 
