@@ -162,9 +162,19 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
       await _dbHelper.setConfig('glass_blur_sigma', state.glassBlurSigma.toString());
       await _dbHelper.setConfig('glass_enabled', state.glassEnabled.toString());
       await _dbHelper.setConfig('glass_overlay_color', _colorToHex(state.glassOverlayColor));
-      await _dbHelper.setConfig('bg_fondo_id', state.selectedFondo?.id.toString() ?? '');
     } catch (e) {
       // Silent fail en escritura
+    }
+  }
+
+  /// Guarda exclusivamente el fondo seleccionado en la BD.
+  /// Separado de _saveToDb() para evitar que setters de apariencia
+  /// (textColor, fontScale, etc.) sobrescriban bg_fondo_id = ''.
+  Future<void> _saveBgFondoId(String? id) async {
+    try {
+      await _dbHelper.setConfig('bg_fondo_id', id ?? '');
+    } catch (e) {
+      // Silent fail
     }
   }
 
@@ -185,6 +195,7 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
   void setBgColor(Color color) {
     state = state.copyWith(bgColor: color, selectedFondo: null);
     _saveToDb();
+    _saveBgFondoId(null);
   }
 
   void setFondo(FondoPantalla fondo) {
@@ -203,12 +214,14 @@ class HymnAppearanceNotifier extends StateNotifier<HymnAppearanceState> {
       selectedFondo: fondo,
     );
     _saveToDb();
+    _saveBgFondoId(fondo.id.toString());
   }
 
   /// Limpia el fondo seleccionado dejando solo el color sólido.
   void clearFondo() {
     state = state.copyWith(selectedFondo: null);
     _saveToDb();
+    _saveBgFondoId(null);
   }
 
   void setTextColor(Color color) {

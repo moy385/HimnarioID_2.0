@@ -242,6 +242,8 @@ class _ProjectionAppState extends ConsumerState<ProjectionApp> {
         if (fondo != null) {
           ref.read(hymnAppearanceProvider.notifier).setFondo(fondo);
         }
+      }).catchError((_) {
+        // Ignorar errores asíncronos de carga del fondo
       });
     } catch (_) {
       // Ignorar errores de carga del fondo

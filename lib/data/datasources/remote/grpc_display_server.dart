@@ -542,10 +542,9 @@ class GrpcDisplayServer extends HymnControlServiceBase {
       };
       _container.read(windowServiceProvider).sendMessage(message);
 
-      // Sincronizar fondo si hay uno seleccionado (SET_CONFIG no transporta fondo)
-      if (appearance.selectedFondo != null) {
-        _syncBackgroundToSubprocess(appearance.selectedFondo!.id);
-      }
+      // Sincronizar fondo SIEMPRE (SET_CONFIG no transporta fondo).
+      // Si selectedFondo es null, envía '0' como señal de "sin fondo".
+      _syncBackgroundToSubprocess(appearance.selectedFondo?.id ?? 0);
 
       _log.fine('Apariencia sincronizada con subproceso');
     } catch (e) {
