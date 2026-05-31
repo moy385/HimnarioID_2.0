@@ -11,6 +11,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -43,11 +46,14 @@ jobs:
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath MQ_App-windows-x64.zip
 
       - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload ${{ github.ref_name }} MQ_App-windows-x64.zip --clobber
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          fi
+          gh release upload "$TAG" MQ_App-windows-x64.zip --clobber
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

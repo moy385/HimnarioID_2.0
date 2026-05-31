@@ -11,6 +11,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,11 +49,14 @@ jobs:
           ls -lh MQ_App-linux-x64.tar.gz
 
       - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload ${{ github.ref_name }} MQ_App-linux-x64.tar.gz --clobber
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          fi
+          gh release upload "$TAG" MQ_App-linux-x64.tar.gz --clobber
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

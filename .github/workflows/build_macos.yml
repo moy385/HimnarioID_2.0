@@ -11,6 +11,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -57,11 +60,14 @@ jobs:
           ls -lh dist/
 
       - name: Upload to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload ${{ github.ref_name }} dist/MQ_App-macos-x64.dmg --clobber
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          fi
+          gh release upload "$TAG" dist/MQ_App-macos-x64.dmg --clobber
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
